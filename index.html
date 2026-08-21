@@ -155,7 +155,7 @@
             text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 85vh; overflow-y: auto;
         }
         .modal-title { font-size: 20px; font-weight: 800; color: var(--primary); margin: 0 0 15px 0; }
-        .modal-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; background: var(--primary); color: #FFF; cursor: pointer; margin-top: 10px; }
+        .modal-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; background: var(--primary); color: #FFF; cursor: margin-top: 10px; }
         .modal-btn-close { background: #F2F2F7; color: var(--text-main); }
         .textarea-box { width: 100%; height: 80px; padding: 10px; border-radius: 8px; border: 1px solid var(--border); box-sizing: border-box; resize: none; margin-bottom: 10px; font-size: 12px; }
 
@@ -992,6 +992,7 @@
         // 문제 1, 2, 7, 8, 9: 제품명 추천 필터
         function filterProductNames() {
             const storeCode = document.getElementById('storeCode').value;
+            const storeNameVal = document.getElementById('storeName').value.trim();
             const inputVal = document.getElementById('productName').value.trim();
             const listUl = document.getElementById('productList');
             listUl.innerHTML = '';
@@ -1011,25 +1012,20 @@
                     const prodName = row[11] || ""; // 문제 7: orders - product_name
                     let condition = false;
 
-const storeNameVal = document.getElementById('storeName').value.trim();
+                    if(storeCode || storeNameVal) {
+                        const rowAccountCode = cleanNumber(row[8]);
+                        const rowAccountName = row[9] || "";
+                        const rowClientName = row[7] || "";
 
-if(storeCode || storeNameVal) {
-    const targetStoreCode = cleanNumber(storeCode);
-    
-    const rowAccountCode = cleanNumber(row[8] || "");
-    const rowClientName = row[7] || "";  // orders - client_name (고객사명)
-    const rowAccountName = row[9] || ""; // orders - account_name (거래처명)
-
-    // 1. 코드가 정확히 일치하거나
-    // 2. 입력된 매장명이 주문 데이터의 거래처명 또는 고객사명에 포함되어 있으면 매칭 성공
-    const isCodeMatch = (targetStoreCode && rowAccountCode === targetStoreCode);
-    const isNameMatch = (storeNameVal && (rowAccountName.includes(storeNameVal) || rowClientName.includes(storeNameVal)));
-
-    condition = (isCodeMatch || isNameMatch) && prodName.includes(inputVal);
-} else {
-    // 매장명과 코드 모두 미입력 시 모든 제품명에서 추천
-    condition = prodName.includes(inputVal);
-}
+                        // 배차코드(storeCode)가 일치하거나 매장명(storeNameVal)이 거래처명/고객사명에 포함된 경우 모두 추출하도록 보완
+                        const isStoreMatch = (storeCode && rowAccountCode === cleanNumber(storeCode)) || 
+                                             (storeNameVal && (rowAccountName.includes(storeNameVal) || rowClientName.includes(storeNameVal)));
+                        
+                        condition = isStoreMatch && prodName.includes(inputVal);
+                    } else {
+                        // 문제 9: 매장명 미입력 시 모든 제품명에서 추천
+                        condition = prodName.includes(inputVal);
+                    }
 
                     if(condition && !seen.has(prodName)) { 
                         seen.add(prodName); 
