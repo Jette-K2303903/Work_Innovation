@@ -10,25 +10,20 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <!-- Leaflet 지도 라이브러리 (문제 8) -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root {
             --primary: #007AFF; --bg-color: #F0F2F7; --surface: #FFFFFF;
             --text-main: #1C1C1E; --text-sub: #8E8E93; --border: #E5E5EA;
         }
 
-        /* 문제 5: 전역 드래그 방지 및 텍스트 선택 가능 예외 처리 */
+        /* 문제 5: 텍스트 드래그 방지 */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
             margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-main);
             transition: all 0.3s ease; display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden;
-            user-select: none; /* 드래그 금지 */
-            -webkit-user-select: none;
-        }
-        input, textarea {
-            user-select: text; /* 입력창 드래그 허용 */
-            -webkit-user-select: text;
+            user-select: none; -webkit-user-select: none; /* 드래그 방지 */
         }
 
         /* 11시 방향 고정 메뉴 */
@@ -47,12 +42,15 @@
             padding: 80px 20px 60px; box-sizing: border-box; overflow-y: auto;
         }
         .sidebar.active { left: 0; }
+
         .sidebar-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.4); backdrop-filter: blur(3px);
             z-index: 998; display: none; opacity: 0; transition: opacity 0.3s ease;
         }
         .sidebar-overlay.active { display: block; opacity: 1; }
+
+        #menuContainer { display: flex; flex-direction: column; }
         .menu-list-btn {
             width: 100%; padding: 16px; border: none; border-radius: 12px;
             background: #F2F2F7; color: var(--text-main); font-size: 16px; font-weight: 600;
@@ -61,10 +59,6 @@
         .menu-list-btn:hover { background: #E5E5EA; }
         .menu-login-btn { background: var(--text-main); color: #FFF; margin-bottom: 20px; text-align: center; }
         .menu-login-btn:hover { background: #3A3A3C; }
-        
-        /* 메뉴 드래그 앤 드롭 표시 */
-        .draggable-menu { cursor: grab; padding: 10px; background: #FFF; border: 1px solid var(--border); margin-bottom: 5px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; }
-        .draggable-menu:active { cursor: grabbing; opacity: 0.7; }
         
         /* 톱니바퀴 설정 버튼 */
         .settings-btn {
@@ -102,17 +96,19 @@
         .flex-30 { flex: 3; display: flex; flex-direction: column; gap: 6px; position: relative; }
         .input-group label, .input-row label { font-size: 13px; font-weight: 600; color: var(--text-sub); }
         
-        /* 문제 4: 입력창 크기 통일 (높이 고정) */
+        /* 문제 4, 5: 입력창 드래그 허용 및 크기 통일 */
+        .input-box, .textarea-box { 
+            user-select: auto; -webkit-user-select: auto; 
+            box-sizing: border-box; height: 44px; /* 높이 통일 */
+        }
         .input-box {
             width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border);
-            background: #FAFAFC; font-size: 14px; color: var(--text-main); box-sizing: border-box; height: 45px;
-        }
-        input[type="date"].input-box {
-            appearance: none; -webkit-appearance: none;
+            background: #FAFAFC; font-size: 14px; color: var(--text-main);
         }
         .input-box:focus { outline: none; border-color: var(--primary); background: #FFF; }
         .input-box[readonly] { background: #E5E5EA; color: #8E8E93; cursor: not-allowed; }
         select.input-box { -webkit-appearance: none; appearance: none; }
+        .textarea-box { width: 100%; height: 80px; padding: 10px; border-radius: 8px; border: 1px solid var(--border); resize: none; margin-bottom: 10px; font-size: 12px; }
 
         /* 자동완성 */
         .autocomplete-list {
@@ -122,8 +118,7 @@
         }
         .autocomplete-list li { padding: 10px; border-bottom: 1px solid #F0F2F7; cursor: pointer; font-size: 14px; }
         .autocomplete-list li:hover { background: #F0F2F7; }
-        
-        .reason-manage-btn { font-size: 12px; color: var(--primary); cursor: pointer; float: right; font-weight: normal; }
+        .autocomplete-list li.delete-reason-btn { background: #FFE5E5; color: #FF3B30; text-align: center; font-weight: bold; }
 
         /* 업로드 내역 */
         .history-top-bar { display: none; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px; margin-bottom: 20px; }
@@ -133,10 +128,9 @@
         .history-thumb { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; background: #F2F2F7; }
         .history-info { flex: 1; font-size: 14px; }
         .history-info p { margin: 2px 0; }
-        .btn-small { padding: 6px 10px; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; }
+        .btn-small { padding: 6px 10px; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; height: auto; }
         .btn-delete { background: #FFE5E5; color: #FF3B30; }
         .btn-confirm { background: #FF3B30; color: #FFF; }
-        .btn-outline { border: 1px solid var(--primary); color: var(--primary); background: #FFF; }
         .status-red { color: #FF3B30; font-weight: bold; }
 
         /* 연락처 리스트 공통 */
@@ -155,15 +149,14 @@
             text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 85vh; overflow-y: auto;
         }
         .modal-title { font-size: 20px; font-weight: 800; color: var(--primary); margin: 0 0 15px 0; }
-        .modal-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; background: var(--primary); color: #FFF; cursor: pointer; margin-top: 10px; }
+        .modal-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; background: var(--primary); color: #FFF; cursor: pointer; margin-top: 10px; height: auto;}
         .modal-btn-close { background: #F2F2F7; color: var(--text-main); }
-        .textarea-box { width: 100%; height: 80px; padding: 10px; border-radius: 8px; border: 1px solid var(--border); box-sizing: border-box; resize: none; margin-bottom: 10px; font-size: 12px; }
         
         .storage-info { font-size: 12px; color: var(--primary); cursor: pointer; margin-left: 10px; font-weight: normal; }
         .driver-name-click { cursor: pointer; color: var(--text-main); }
         .driver-name-click:hover { color: var(--primary); text-decoration: underline; }
 
-        /* PC 화면 4:6 비율 */
+        /* PC 화면 4:6 비율 레이아웃 */
         body.pc-mode { flex-direction: row; overflow: hidden; }
         body.pc-mode .menu-toggle-btn { display: none; }
         body.pc-mode .sidebar-overlay { display: none !important; }
@@ -175,8 +168,20 @@
             flex: 6; max-width: 100%; height: 100vh; overflow-y: auto; padding: 40px 60px;
         }
 
-        /* 오류 확인 모드 텍스트 바 (문제 12) */
-        #errorLogBar { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: #FF3B30; color: #FFF; padding: 10px; font-size: 12px; z-index: 10000; word-break: break-all; max-height: 100px; overflow-y: auto;}
+        /* 문제 12: 오류 확인 모드 디버그 창 */
+        #devDebugBox {
+            position: fixed; bottom: 0; left: 0; width: 100%; max-height: 200px;
+            background: rgba(255, 230, 230, 0.95); color: #D8000C;
+            border-top: 2px solid #FF3B30; overflow-y: auto; padding: 10px; font-size: 11px; font-family: monospace;
+            z-index: 10000; display: none; text-align: left;
+        }
+
+        /* 드래그 앤 드롭 아이템 (문제 6) */
+        .draggable-item {
+            padding: 10px; margin-bottom: 5px; background: #F2F2F7; border-radius: 8px;
+            cursor: grab; display: flex; justify-content: space-between; align-items: center;
+        }
+        .draggable-item:active { cursor: grabbing; opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -187,10 +192,10 @@
     <!-- 사이드바 -->
     <div id="sideMenu" class="sidebar">
         <button id="authBtn" class="menu-list-btn menu-login-btn" onclick="handleAuthClick()">🔒 로그인</button>
-        <!-- 메뉴 컨테이너 (순서 변경 가능 반영) -->
-        <div id="menuListContainer"></div>
-
-        <button id="settingsBtn" class="settings-btn" onclick="openSettingsModal()">⚙️</button>
+        <div id="menuContainer">
+            <!-- JS로 동적 생성 및 순서 관리 -->
+        </div>
+        <button id="settingsBtn" class="settings-btn" onclick="openSettingsAuth()">⚙️</button>
     </div>
 
     <!-- 메인 콘텐츠 영역 -->
@@ -210,9 +215,9 @@
             <div class="form-card">
                 <div class="input-row">
                     <div class="flex-60">
-                        <!-- 문제 10: 사유 리스트 자동완성 -->
-                        <label>사유 <span class="reason-manage-btn" id="reasonManageBtn" style="display:none;" onclick="openReasonManageModal()">목록관리</span></label>
-                        <input type="text" id="reasonText" class="input-box" placeholder="사유를 기입/선택하세요" oninput="filterReasons()" onfocus="filterReasons()" autocomplete="off">
+                        <label>사유</label>
+                        <!-- 문제 10: 사유 자동완성 -->
+                        <input type="text" id="reasonText" class="input-box" placeholder="사유를 기입하세요" oninput="filterReasons()" autocomplete="off">
                         <ul id="reasonList" class="autocomplete-list"></ul>
                     </div>
                     <div class="flex-40">
@@ -280,7 +285,7 @@
                 📂 업로드 내역 <span id="storageInfo" class="storage-info" onclick="toggleStorageDisplay()"></span>
             </h2>
             <div id="historyTopBar" class="history-top-bar">
-                <select id="historyDateSelect" class="input-box" style="width:130px; padding: 8px;" onchange="renderHistoryList()"></select>
+                <select id="historyDateSelect" class="input-box" style="width:130px; padding: 8px; height:auto;" onchange="renderHistoryList()"></select>
                 <button class="btn-small" onclick="selectAllHistory()">전체선택</button>
                 <button class="btn-small" onclick="downloadSelectedHistory()">다운로드</button>
                 <button class="btn-small btn-delete" onclick="deleteSelectedHistory()">삭제</button>
@@ -302,11 +307,11 @@
             <div id="officeListContainer" class="contact-list"></div>
         </div>
 
-        <!-- 뷰 4: 현장 연락처 (기사 연락처) / 문제 5(이름변경) -->
+        <!-- 뷰 4: 기사 연락처 -->
         <div id="driverContactView" class="view-section">
-            <h2 style="font-size:18px; margin-top:0;">📱 현장 연락처</h2>
+            <h2 style="font-size:18px; margin-top:0;">📱 기사 연락처</h2>
             <div class="search-bar-fixed">
-                <input type="text" id="driverSearchInput" class="input-box" placeholder="매장명, 기사이름, 차량번호 검색" oninput="handleDriverStoreSearch()" autocomplete="off">
+                <input type="text" id="driverSearchInput" class="input-box" placeholder="매장명, 기사명, 차량번호, 전화번호 검색" oninput="handleDriverStoreSearch()" autocomplete="off">
                 <ul id="driverStoreSuggest" class="autocomplete-list"></ul>
             </div>
             <div id="driverEditForm" style="display:none; margin-bottom:20px;">
@@ -317,90 +322,103 @@
             <div id="driverListContainer" class="contact-list"></div>
         </div>
 
-        <!-- 뷰 5: 배차 내역 (지도뷰) / 문제 8 -->
-        <div id="dispatchMapView" class="view-section">
-            <h2 style="font-size:18px; margin-top:0;">🗺️ 배차 내역 지도</h2>
-            <div id="mapContainer" style="width: 100%; height: 60vh; border-radius: 12px; margin-top:10px; background: #E5E5EA; z-index: 1;"></div>
+        <!-- 뷰 5: 현장 연락처 (목록 4 대체) -->
+        <div id="list4View" class="view-section">
+            <h2 style="font-size:18px; margin-top:0;">📋 현장 연락처</h2>
+            <p style="font-size:14px; color:var(--text-sub);">등록된 현장 연락처가 없습니다.</p>
+        </div>
+
+        <!-- 뷰 6: 배차 내역 (지도 - 문제 8) -->
+        <div id="mapView" class="view-section">
+            <h2 style="font-size:18px; margin-top:0;">🗺️ 배차 내역 (지도)</h2>
+            <div id="mapContainer" style="width: 100%; height: 70vh; border-radius: 12px; overflow: hidden; border: 1px solid var(--border);"></div>
         </div>
         
-        <!-- 예비 버튼 리스트 (문제 9) -->
-        <div id="dummyListView" class="view-section"></div>
+        <!-- 더미 뷰 (문제 9) -->
+        <div id="dummy1View" class="view-section"><h2 style="font-size:18px;">목록 1</h2></div>
+        <div id="dummy2View" class="view-section"><h2 style="font-size:18px;">목록 2</h2></div>
     </div>
 
-    <!-- 로그인 모달 -->
+    <!-- 로그인/설정 모달 공용화 -->
     <div id="loginModal" class="modal-overlay" onclick="if(event.target===this) closeLoginModal()">
         <div class="modal-box">
-            <h2 class="modal-title">시스템 로그인</h2>
-            <input type="password" id="loginPassword" class="input-box" placeholder="비밀번호" style="text-align:center; margin-bottom:10px;" onkeydown="if(event.key === 'Enter') processLogin()">
-            <button class="modal-btn" onclick="processLogin()">로그인</button>
+            <h2 id="authTitle" class="modal-title">시스템 확인</h2>
+            <input type="password" id="loginPassword" class="input-box" placeholder="비밀번호" style="text-align:center; margin-bottom:10px;" onkeydown="if(event.key === 'Enter') processAuth()">
+            <button class="modal-btn" onclick="processAuth()">확인</button>
             <button class="modal-btn modal-btn-close" onclick="closeLoginModal()">취소</button>
         </div>
     </div>
 
-    <!-- 시스템 관리 (설정) 모달 -->
+    <!-- 시스템 설정 메인 모달 -->
     <div id="settingsModal" class="modal-overlay" onclick="if(event.target===this) closeSettingsModal()">
-        <div class="modal-box" style="max-width:500px;">
+        <div class="modal-box" style="max-width:350px;">
             <h2 class="modal-title">시스템 설정</h2>
             
-            <div style="text-align:left; font-size:14px; margin-bottom: 15px;">
-                <button class="btn-small btn-outline" style="width:100%; padding:10px; margin-bottom:10px;" onclick="openOrderUploadModal()">📦 주문업로드 덮어씌우기</button>
-                <button class="btn-small btn-outline" style="width:100%; padding:10px;" onclick="openDispatchUploadModal()">🚚 배차업로드 덮어씌우기</button>
-            </div>
+            <!-- 문제 11: 덮어씌우기 개별 버튼화 -->
+            <button class="menu-list-btn" onclick="openSubModal('orderUploadModal')" style="text-align:center;">📦 주문업로드 덮어씌우기</button>
+            <button class="menu-list-btn" onclick="openSubModal('dispatchUploadModal')" style="text-align:center;">🚚 배차업로드 덮어씌우기</button>
             
             <div style="text-align:left; font-size:14px; margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
-                <label style="display:block; margin-bottom:10px;">데이터 유지기간(일): <input type="number" id="autoDeleteDaysInput" class="input-box" style="width:60px; padding:6px;" value="7"></label>
-                <label style="display:block; margin-bottom:10px;">작성완료 자동닫힘(초): <input type="number" id="autoCloseSecondsInput" class="input-box" style="width:60px; padding:6px;" value="2"></label>
-                <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); margin-top:5px; width:100%; padding:10px;" onclick="openListManageModal()">📋 비로그인 목록/순서 관리</button>
+                <label style="display:block; margin-bottom:10px;">유지기간(일): <input type="number" id="autoDeleteDaysInput" class="input-box" style="width:70px; padding:6px; display:inline-block;" value="7"></label>
+                <label style="display:block; margin-bottom:10px;">자동닫힘(초): <input type="number" id="autoCloseSecondsInput" class="input-box" style="width:70px; padding:6px; display:inline-block;" value="2"></label>
+                
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); margin-top:5px; flex:1; padding:10px;" onclick="openListManageModal()">📋 목록 관리</button>
+                    <!-- 문제 10: 사유 목록 관리 버튼 -->
+                    <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); margin-top:5px; flex:1; padding:10px;" onclick="openReasonManageModal()">📝 사유 관리</button>
+                </div>
             </div>
 
-            <button class="modal-btn" style="margin-top:25px;" onclick="saveSystemSettings()">기본 설정 저장</button>
+            <button class="modal-btn" style="margin-top:25px;" onclick="saveSystemSettings()">설정 저장 (적용)</button>
             <button class="modal-btn modal-btn-close" onclick="closeSettingsModal()">닫기</button>
         </div>
     </div>
 
-    <!-- 주문업로드 모달 (문제 11) -->
-    <div id="orderUploadModal" class="modal-overlay" onclick="if(event.target===this) document.getElementById('orderUploadModal').style.display='none'">
-        <div class="modal-box" style="max-width:500px;">
+    <!-- 서브 모달: 주문업로드 -->
+    <div id="orderUploadModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box">
             <h2 class="modal-title">주문업로드 덮어씌우기</h2>
-            <textarea id="orderUploadData" class="textarea-box" placeholder="데이터를 붙여넣으세요. (기존 데이터는 삭제됩니다)" style="height: 150px;"></textarea>
-            <button class="modal-btn" onclick="saveOrderUpload()">주문데이터 저장</button>
-            <button class="modal-btn modal-btn-close" onclick="document.getElementById('orderUploadModal').style.display='none'">닫기</button>
+            <textarea id="orderUploadData" class="textarea-box" placeholder="데이터를 붙여넣으세요. 기존 데이터는 완전히 삭제됩니다."></textarea>
+            <button class="modal-btn" onclick="saveUploadData('order')">저장</button>
+            <button class="modal-btn modal-btn-close" onclick="this.parentElement.parentElement.style.display='none'">닫기</button>
         </div>
     </div>
 
-    <!-- 배차업로드 모달 (문제 11) -->
-    <div id="dispatchUploadModal" class="modal-overlay" onclick="if(event.target===this) document.getElementById('dispatchUploadModal').style.display='none'">
-        <div class="modal-box" style="max-width:500px;">
+    <!-- 서브 모달: 배차업로드 -->
+    <div id="dispatchUploadModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box">
             <h2 class="modal-title">배차업로드 덮어씌우기</h2>
-            <textarea id="dispatchUploadData" class="textarea-box" placeholder="데이터를 붙여넣으세요. (기존 데이터는 삭제됩니다)" style="height: 150px;"></textarea>
-            <button class="modal-btn" onclick="saveDispatchUpload()">배차데이터 저장</button>
-            <button class="modal-btn modal-btn-close" onclick="document.getElementById('dispatchUploadModal').style.display='none'">닫기</button>
+            <textarea id="dispatchUploadData" class="textarea-box" placeholder="데이터를 붙여넣으세요. 기존 데이터는 완전히 삭제됩니다."></textarea>
+            <button class="modal-btn" onclick="saveUploadData('dispatch')">저장</button>
+            <button class="modal-btn modal-btn-close" onclick="this.parentElement.parentElement.style.display='none'">닫기</button>
         </div>
     </div>
 
-    <!-- 비로그인 목록 관리 팝업 (문제 6 순서변경 포함) -->
+    <!-- 목록 순서 및 노출 관리 팝업 (문제 6) -->
     <div id="listManageModal" class="modal-overlay" onclick="if(event.target===this) closeListManageModal()">
         <div class="modal-box" style="max-width:300px;">
-            <h2 class="modal-title" style="font-size:18px;">비로그인 목록 노출 설정</h2>
-            <p style="font-size:12px; color:#8E8E93; text-align:left;">항목을 체크하고 위아래로 드래그하여 순서를 변경하세요.</p>
-            <div id="menuDragContainer" style="text-align:left; display:flex; flex-direction:column; margin-bottom:20px;">
+            <h2 class="modal-title" style="font-size:18px;">메뉴 정렬 및 노출 설정</h2>
+            <p style="font-size:12px; color:#666; margin-bottom:15px;">드래그하여 순서를 변경하세요.</p>
+            <div id="menuSortContainer" style="text-align:left; display:flex; flex-direction:column; margin-bottom:20px;">
                 <!-- 동적 렌더링 -->
             </div>
             <button class="modal-btn" onclick="saveListManage()">저장</button>
             <button class="modal-btn modal-btn-close" onclick="closeListManageModal()">취소</button>
         </div>
     </div>
-    
+
     <!-- 사유 목록 관리 팝업 (문제 10) -->
-    <div id="reasonManageModal" class="modal-overlay" onclick="if(event.target===this) closeReasonManageModal()">
+    <div id="reasonManageModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:300px;">
             <h2 class="modal-title" style="font-size:18px;">사유 목록 관리</h2>
-            <div style="display:flex; gap:10px; margin-bottom:15px;">
-                <input type="text" id="newReasonInput" class="input-box" placeholder="추가할 사유 입력">
-                <button class="btn-small" style="background:var(--primary); color:#FFF;" onclick="addReason()">추가</button>
+            <div style="display:flex; gap:5px; margin-bottom:15px;">
+                <input type="text" id="newReasonInput" class="input-box" placeholder="새 사유 입력">
+                <button class="btn-small btn-confirm" onclick="addReason()">추가</button>
             </div>
-            <div id="reasonManageList" style="text-align:left; max-height:150px; overflow-y:auto; margin-bottom:15px; border:1px solid var(--border); border-radius:8px; padding:5px;"></div>
-            <button class="modal-btn" onclick="closeReasonManageModal()">닫기</button>
+            <ul id="reasonManageList" style="list-style:none; padding:0; text-align:left; max-height:200px; overflow-y:auto;">
+                <!-- 동적 렌더링 -->
+            </ul>
+            <button class="modal-btn modal-btn-close" onclick="this.parentElement.parentElement.style.display='none'">닫기</button>
         </div>
     </div>
 
@@ -421,8 +439,8 @@
         </div>
     </div>
 
-    <!-- 에러 표시 디버그 바 (문제 12) -->
-    <div id="errorLogBar"></div>
+    <!-- 디버깅 창 (문제 12) -->
+    <div id="devDebugBox"></div>
 
     <script>
         // --- Supabase 연동 설정 ---
@@ -431,47 +449,50 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let isMenuOpen = false; let menuInactivityTimer; let isLoggedIn = false;
+        let isErrorMode = false; // 문제 12 플래그
+        let authContext = 'login'; // 'login' or 'settings'
         const ADMIN_PWD = "alfdid13579!!";
-        let isErrorCheckMode = false;
+        const ERROR_PWD = "K2303903";
+
         let currentImgSrc = "";
         
         let orderDataList = []; let dispatchDataList = [];
         let historyDataList = [];
         let officeContacts = []; let driverContacts = [];
         
-        // 메뉴 설정 기초값
-        let menuItemsData = [
-            { id: 'menuHome', key: 'home', icon: '🏠', text: '홈화면', view: 'formView', visible: true },
-            { id: 'menuOffice', key: 'office', icon: '📞', text: '사무실 연락처', view: 'officeContactView', visible: true },
-            { id: 'menuDriver', key: 'driver', icon: '📱', text: '현장 연락처', view: 'driverContactView', visible: true },
-            { id: 'menuHistory', key: 'history', icon: '📂', text: '업로드 내역', view: 'historyView', visible: true },
-            { id: 'menuDispatchMap', key: 'dispatchMap', icon: '🗺️', text: '배차 내역', view: 'dispatchMapView', visible: false },
-            { id: 'menuDummy1', key: 'dummy1', icon: '📋', text: '예비 목록 1', view: 'dummyListView', visible: false },
-            { id: 'menuDummy2', key: 'dummy2', icon: '📋', text: '예비 목록 2', view: 'dummyListView', visible: false }
+        let reasonListArray = [];
+        
+        // 문제 6 & 9: 메뉴 동적 관리 배열
+        let menus = [
+            { id: 'menuHome', icon: '🏠', text: '홈화면', view: 'formView', visible: true, nonUser: true },
+            { id: 'menuOffice', icon: '📞', text: '사무실 연락처', view: 'officeContactView', visible: true, nonUser: true },
+            { id: 'menuDriver', icon: '📱', text: '기사 연락처', view: 'driverContactView', visible: true, nonUser: true },
+            { id: 'menuHistory', icon: '📂', text: '업로드 내역', view: 'historyView', visible: true, nonUser: true },
+            { id: 'menuList4', icon: '📋', text: '현장 연락처', view: 'list4View', visible: true, nonUser: false },
+            { id: 'menuList5', icon: '🗺️', text: '배차 내역', view: 'mapView', visible: true, nonUser: false },
+            { id: 'menuDummy1', icon: '🔘', text: '목록 1', view: 'dummy1View', visible: true, nonUser: false },
+            { id: 'menuDummy2', icon: '🔘', text: '목록 2', view: 'dummy2View', visible: true, nonUser: false }
         ];
-        
-        let defaultReasons = ["파손", "수량부족", "오배송", "기타"];
+
         let autoDeleteDays = 7;
-        let autoCloseSeconds = 2;
         let savePopupTimer;
-        let leafletMap = null;
         
-        const STORAGE_TOTAL = 1100; // 기준 MB
+        const STORAGE_TOTAL = 1100; // 1.1GB 고정 기준 (MB)
         let showRemainingStorage = true;
+        let mapInstance = null; // Leaflet 맵 객체
 
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('writeDate').value = new Date().toISOString().split('T')[0];
             await fetchInitialData();
-            updateMenuUI();
+            renderMenuUI();
             renderOfficeList();
             renderDriverList();
             setInterval(checkAutoDelete, 60000); 
         });
 
-        // --- Supabase에서 데이터 불러오기 ---
+        // --- Supabase 데이터 통신 ---
         async function fetchInitialData() {
             try {
-                // 앱 설정 로드
                 const { data: set_data } = await supabaseClient.from('app_settings').select('*').eq('id', 1).single();
                 if(set_data) {
                     if(set_data.order_tsv) orderDataList = parseTSV(set_data.order_tsv);
@@ -481,16 +502,16 @@
                         document.getElementById('autoDeleteDaysInput').value = autoDeleteDays;
                     }
                     if(set_data.auto_close_sec) {
-                        autoCloseSeconds = set_data.auto_close_sec;
-                        document.getElementById('autoCloseSecondsInput').value = autoCloseSeconds;
+                        document.getElementById('autoCloseSecondsInput').value = set_data.auto_close_sec;
                     }
-                    if(set_data.reasons_json) defaultReasons = JSON.parse(set_data.reasons_json);
-                    if(set_data.menu_order_json) menuItemsData = JSON.parse(set_data.menu_order_json);
+                    if(set_data.reasons_json) reasonListArray = JSON.parse(set_data.reasons_json);
+                    if(set_data.menu_order_json) {
+                        const savedOrder = JSON.parse(set_data.menu_order_json);
+                        if(savedOrder.length === menus.length) menus = savedOrder;
+                    }
                 }
 
-                // 업로드 내역 조회
-                const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
-                if (histErr) console.error("업로드 내역 로드 에러:", histErr.message);
+                const { data: histData } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
                 if (histData) {
                     historyDataList = histData.map(d => ({
                         id: d.id, status: d.status, reason: d.reason, author: d.author, date: d.date,
@@ -500,30 +521,17 @@
                     }));
                 }
                 
-                // 사무실 연락처 조회
-                const { data: offData, error: offErr } = await supabaseClient.from('office_contacts').select('*');
-                if (offErr) console.error("사무실 연락처 로드 에러:", offErr.message);
+                const { data: offData } = await supabaseClient.from('office_contacts').select('*');
                 if (offData) officeContacts = offData;
 
-                // 기사 연락처 조회
-                const { data: drvData, error: drvErr } = await supabaseClient.from('driver_contacts').select('*');
-                if (drvErr) console.error("기사 연락처 로드 에러:", drvErr.message);
+                const { data: drvData } = await supabaseClient.from('driver_contacts').select('*');
                 if (drvData) driverContacts = drvData;
                 
             } catch(e) { console.error("데이터 로드 실패", e); }
             renderStorage();
-            updateMenuUI(); // 순서 반영
         }
 
-        /* --- 에러 표시 디버깅 기능 --- */
-        function logErrorCheck(msg) {
-            if(!isErrorCheckMode) return;
-            const bar = document.getElementById('errorLogBar');
-            bar.style.display = 'block';
-            bar.innerHTML += `<div>${msg}</div>`;
-        }
-
-        /* --- 메뉴 제어 및 UI 갱신 --- */
+        /* --- 메뉴 제어 및 UI (문제 6, 9) --- */
         function toggleMenu() { isMenuOpen ? closeMenu() : openMenu(); }
         function openMenu() {
             document.getElementById('sideMenu').classList.add('active');
@@ -544,266 +552,248 @@
         }
         window.addEventListener('mousemove', resetInactivityTimer);
         window.addEventListener('touchstart', resetInactivityTimer);
-        window.addEventListener('keydown', resetInactivityTimer);
 
-        function updateMenuUI() {
-            const container = document.getElementById('menuListContainer');
+        function renderMenuUI() {
+            const container = document.getElementById('menuContainer');
             container.innerHTML = '';
-            
-            menuItemsData.forEach(item => {
-                if (isLoggedIn || item.visible) {
+            menus.forEach(m => {
+                if(isLoggedIn || m.nonUser) {
+                    let text = m.text;
+                    if(isLoggedIn && m.id === 'menuOffice') text = "사무실 연락처 편집";
+                    if(isLoggedIn && m.id === 'menuDriver') text = "기사 연락처 편집";
+
                     const btn = document.createElement('button');
-                    btn.id = item.id;
-                    btn.className = "menu-list-btn";
-                    
-                    let btnText = `${item.icon} ${item.text}`;
-                    if(isLoggedIn && item.key === 'office') btnText = "📞 사무실 연락처 편집";
-                    if(isLoggedIn && item.key === 'driver') btnText = "📱 현장 연락처 편집";
-                    
-                    btn.innerText = btnText;
-                    btn.onclick = () => showView(item.view);
-                    
-                    // 더미 버튼 동작 제한
-                    if(item.key.includes('dummy')) btn.onclick = () => {}; 
-                    
+                    btn.className = 'menu-list-btn';
+                    btn.id = m.id;
+                    btn.innerHTML = `${m.icon} ${text}`;
+                    btn.onclick = () => showView(m.view);
                     container.appendChild(btn);
                 }
             });
 
             document.getElementById('officeEditForm').style.display = isLoggedIn ? 'block' : 'none';
             document.getElementById('driverEditForm').style.display = isLoggedIn ? 'block' : 'none';
-            document.getElementById('reasonManageBtn').style.display = isLoggedIn ? 'inline' : 'none';
             renderStorage();
         }
 
         function showView(viewId) {
-            if(viewId === 'dummyListView') return; // 아무 동작 없음
-            
+            // 예비용 버튼 무반응 처리 (문제 9)
+            if(viewId === 'dummy1View' || viewId === 'dummy2View') return;
+
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
             
             if(viewId === 'historyView') {
                 document.getElementById('historyTopBar').style.display = isLoggedIn ? 'flex' : 'none';
-                updateHistoryDates();
-                renderHistoryList();
+                updateHistoryDates(); renderHistoryList();
             }
-            if(viewId === 'dispatchMapView') {
-                setTimeout(renderDispatchMap, 100);
+            if(viewId === 'mapView') {
+                setTimeout(initMap, 300); // 렌더링 딜레이 후 지도 로드
             }
             if(!document.body.classList.contains('pc-mode')) closeMenu();
         }
 
+        /* --- 로그인 및 권한 (문제 12 포함) --- */
         function handleAuthClick() {
             if (isLoggedIn) {
-                isLoggedIn = false; document.body.classList.remove('pc-mode');
+                isLoggedIn = false; isErrorMode = false;
+                document.body.classList.remove('pc-mode');
                 document.getElementById('authBtn').innerHTML = "🔒 로그인";
                 document.getElementById('settingsBtn').style.display = "none";
-                document.getElementById('errorLogBar').style.display = "none";
-                isErrorCheckMode = false;
-                updateMenuUI(); showView('formView'); closeMenu();
+                document.getElementById('devDebugBox').style.display = 'none';
+                renderMenuUI(); showView('formView'); closeMenu();
             } else {
+                authContext = 'login';
+                document.getElementById('authTitle').innerText = "시스템 로그인";
                 document.getElementById('loginPassword').value = "";
                 document.getElementById('loginModal').style.display = 'flex';
                 document.getElementById('loginPassword').focus();
             }
         }
+        function openSettingsAuth() {
+            authContext = 'settings';
+            document.getElementById('authTitle').innerText = "설정 접근 (개발자모드 가능)";
+            document.getElementById('loginPassword').value = "";
+            document.getElementById('loginModal').style.display = 'flex';
+            document.getElementById('loginPassword').focus();
+        }
         function closeLoginModal() { document.getElementById('loginModal').style.display = 'none'; }
-        function processLogin() {
+        
+        function processAuth() {
             const pwd = document.getElementById('loginPassword').value;
-            if (pwd === ADMIN_PWD) {
+            if (authContext === 'login' && pwd === ADMIN_PWD) {
                 isLoggedIn = true; closeLoginModal();
                 document.body.classList.add('pc-mode');
                 document.getElementById('authBtn').innerHTML = "🔓 로그아웃";
                 document.getElementById('menuOverlay').classList.remove('active');
                 document.getElementById('settingsBtn').style.display = "block";
                 
-                updateMenuUI();
+                renderMenuUI();
                 if(document.getElementById('historyView').classList.contains('active')) showView('historyView');
                 renderDriverList(); 
                 isMenuOpen = true; 
-            } else if (pwd === "K2303903") {
-                isErrorCheckMode = true; 
+            } else if (authContext === 'settings') {
                 closeLoginModal();
-                alert("오류 확인 모드로 전환되었습니다.");
+                if(pwd === ERROR_PWD) { // 문제 12
+                    isErrorMode = !isErrorMode;
+                    alert(isErrorMode ? "🛠️ 오류 확인 모드가 활성화되었습니다." : "🛠️ 오류 확인 모드가 해제되었습니다.");
+                    document.getElementById('devDebugBox').style.display = isErrorMode ? 'block' : 'none';
+                    if(!isErrorMode) document.getElementById('devDebugBox').innerHTML = '';
+                } else if(pwd === ADMIN_PWD) {
+                    document.getElementById('settingsModal').style.display = 'flex';
+                } else {
+                    alert("❌ 비밀번호 오류");
+                }
             } else { alert("❌ 비밀번호 오류"); }
         }
 
-        function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
-        function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
-        function openOrderUploadModal() { document.getElementById('orderUploadModal').style.display = 'flex'; }
-        function openDispatchUploadModal() { document.getElementById('dispatchUploadModal').style.display = 'flex'; }
-        
-        async function saveOrderUpload() {
-            const rawOrder = document.getElementById('orderUploadData').value;
-            if(rawOrder.trim()) {
-                orderDataList = parseTSV(rawOrder);
-                await supabaseClient.from('app_settings').upsert([{ id: 1, order_tsv: rawOrder }]);
-                document.getElementById('orderUploadData').value = '';
-                alert("주문업로드 데이터가 성공적으로 덮어씌워졌습니다.");
-                document.getElementById('orderUploadModal').style.display='none';
-            }
-        }
-        async function saveDispatchUpload() {
-            const rawDispatch = document.getElementById('dispatchUploadData').value;
-            if(rawDispatch.trim()) {
-                dispatchDataList = parseTSV(rawDispatch);
-                await supabaseClient.from('app_settings').upsert([{ id: 1, dispatch_tsv: rawDispatch }]);
-                document.getElementById('dispatchUploadData').value = '';
-                alert("배차업로드 데이터가 성공적으로 덮어씌워졌습니다.");
-                document.getElementById('dispatchUploadModal').style.display='none';
-            }
-        }
-        
-        async function saveSystemSettings() {
-            autoDeleteDays = parseInt(document.getElementById('autoDeleteDaysInput').value) || 7;
-            autoCloseSeconds = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
-            
-            await supabaseClient.from('app_settings').upsert([{ 
-                id: 1, auto_delete_days: autoDeleteDays, auto_close_sec: autoCloseSeconds 
-            }]);
-            
-            alert("기본 설정이 DB에 저장되었습니다.");
-            closeSettingsModal();
+        // --- 디버깅 (문제 12) ---
+        function addDebugLog(msg) {
+            if(!isErrorMode) return;
+            const box = document.getElementById('devDebugBox');
+            box.innerHTML = `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>` + box.innerHTML;
         }
 
-        // --- 목록 관리 (순서 변경 및 표시) ---
+        // --- 모달 헬퍼 ---
+        function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
+        function openSubModal(id) { document.getElementById(id).style.display = 'flex'; }
+
+        // --- 목록 정렬 관리 (문제 6) ---
         function openListManageModal() {
-            const container = document.getElementById('menuDragContainer');
+            const container = document.getElementById('menuSortContainer');
             container.innerHTML = '';
-            menuItemsData.forEach((item, index) => {
+            menus.forEach((m, idx) => {
                 const div = document.createElement('div');
-                div.className = 'draggable-menu';
-                div.draggable = true;
-                div.dataset.index = index;
+                div.className = 'draggable-item';
+                div.draggable = true; div.dataset.index = idx;
                 div.innerHTML = `
-                    <label><input type="checkbox" class="menu-chk" ${item.visible ? 'checked' : ''} data-key="${item.key}"> ${item.text}</label>
-                    <span style="color:#CCC;">☰</span>
+                    <span>${m.icon} ${m.text}</span>
+                    <input type="checkbox" ${m.nonUser ? 'checked' : ''} onchange="menus[${idx}].nonUser = this.checked">
                 `;
+                
                 // Drag Events
-                div.addEventListener('dragstart', handleDragStart);
-                div.addEventListener('dragover', handleDragOver);
-                div.addEventListener('drop', handleDrop);
+                div.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', idx); e.target.style.opacity = '0.5'; });
+                div.addEventListener('dragend', (e) => { e.target.style.opacity = '1'; });
+                div.addEventListener('dragover', (e) => { e.preventDefault(); });
+                div.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const fromIdx = e.dataTransfer.getData('text/plain');
+                    const toIdx = idx;
+                    if(fromIdx === toIdx) return;
+                    
+                    const movedItem = menus.splice(fromIdx, 1)[0];
+                    menus.splice(toIdx, 0, movedItem);
+                    openListManageModal(); // Re-render
+                });
                 container.appendChild(div);
             });
             document.getElementById('listManageModal').style.display = 'flex';
         }
         function closeListManageModal() { document.getElementById('listManageModal').style.display = 'none'; }
-        
-        let dragSrcEl = null;
-        function handleDragStart(e) {
-            dragSrcEl = this;
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', this.outerHTML);
-            this.style.opacity = '0.4';
-        }
-        function handleDragOver(e) { e.preventDefault(); return false; }
-        function handleDrop(e) {
-            e.stopPropagation();
-            if (dragSrcEl !== this) {
-                const container = document.getElementById('menuDragContainer');
-                const children = Array.from(container.children);
-                const fromIdx = children.indexOf(dragSrcEl);
-                const toIdx = children.indexOf(this);
-                
-                if (fromIdx < toIdx) this.after(dragSrcEl);
-                else this.before(dragSrcEl);
-            }
-            dragSrcEl.style.opacity = '1';
-            return false;
-        }
-
         async function saveListManage() {
-            const container = document.getElementById('menuDragContainer');
-            const newOrder = [];
-            Array.from(container.children).forEach(div => {
-                const chk = div.querySelector('.menu-chk');
-                const key = chk.dataset.key;
-                const originalItem = menuItemsData.find(i => i.key === key);
-                originalItem.visible = chk.checked;
-                newOrder.push(originalItem);
-            });
-            menuItemsData = newOrder;
-            
-            await supabaseClient.from('app_settings').upsert([{ id: 1, menu_order_json: JSON.stringify(menuItemsData) }]);
-            updateMenuUI(); closeListManageModal(); alert('메뉴 설정이 저장되었습니다.');
+            const { error } = await supabaseClient.from('app_settings').update({ menu_order_json: JSON.stringify(menus) }).eq('id', 1);
+            if(!error) {
+                renderMenuUI(); closeListManageModal(); alert('메뉴 순서 및 노출 설정이 저장되었습니다.');
+            } else { alert("저장 실패"); }
         }
 
-        // --- 사유 목록 관리 ---
-        function openReasonManageModal() { renderReasonManageList(); document.getElementById('reasonManageModal').style.display = 'flex'; }
-        function closeReasonManageModal() { document.getElementById('reasonManageModal').style.display = 'none'; }
+        // --- 사유 목록 관리 (문제 10) ---
+        function openReasonManageModal() {
+            renderReasonManageList();
+            document.getElementById('reasonManageModal').style.display = 'flex';
+        }
         function renderReasonManageList() {
-            document.getElementById('reasonManageList').innerHTML = defaultReasons.map((r, i) => `
-                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #F0F2F7;">
+            const ul = document.getElementById('reasonManageList');
+            ul.innerHTML = reasonListArray.map((r, i) => `
+                <li style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #EEE;">
                     <span>${r}</span>
                     <button class="btn-small btn-delete" onclick="deleteReason(${i})">삭제</button>
-                </div>
+                </li>
             `).join('');
         }
         async function addReason() {
-            const v = document.getElementById('newReasonInput').value.trim();
-            if(v && !defaultReasons.includes(v)) {
-                defaultReasons.push(v); document.getElementById('newReasonInput').value = '';
-                await supabaseClient.from('app_settings').upsert([{ id: 1, reasons_json: JSON.stringify(defaultReasons) }]);
+            const val = document.getElementById('newReasonInput').value.trim();
+            if(val && !reasonListArray.includes(val)) {
+                reasonListArray.push(val);
+                await supabaseClient.from('app_settings').update({ reasons_json: JSON.stringify(reasonListArray) }).eq('id', 1);
+                document.getElementById('newReasonInput').value = '';
                 renderReasonManageList();
             }
         }
         async function deleteReason(idx) {
-            defaultReasons.splice(idx, 1);
-            await supabaseClient.from('app_settings').upsert([{ id: 1, reasons_json: JSON.stringify(defaultReasons) }]);
+            reasonListArray.splice(idx, 1);
+            await supabaseClient.from('app_settings').update({ reasons_json: JSON.stringify(reasonListArray) }).eq('id', 1);
             renderReasonManageList();
         }
         function filterReasons() {
-            const v = document.getElementById('reasonText').value.trim();
-            const listUl = document.getElementById('reasonList');
-            listUl.innerHTML = '';
-            
-            let matches = defaultReasons;
-            if(v) matches = defaultReasons.filter(r => r.includes(v));
-            
+            const val = document.getElementById('reasonText').value.trim();
+            const ul = document.getElementById('reasonList');
+            ul.innerHTML = '';
+            if(!val) { ul.style.display = 'none'; return; }
+            const matches = reasonListArray.filter(r => r.includes(val));
             if(matches.length > 0) {
-                listUl.style.display = 'block';
+                ul.style.display = 'block';
                 matches.forEach(m => {
                     const li = document.createElement('li'); li.textContent = m;
-                    li.onclick = () => { document.getElementById('reasonText').value = m; listUl.style.display = 'none'; };
-                    listUl.appendChild(li);
+                    li.onclick = () => { document.getElementById('reasonText').value = m; ul.style.display = 'none'; };
+                    ul.appendChild(li);
                 });
-            } else listUl.style.display = 'none';
+            } else { ul.style.display = 'none'; }
         }
 
-        document.addEventListener('click', e => {
-            if(e.target.id !== 'reasonText') document.getElementById('reasonList').style.display = 'none';
-            if(e.target.id !== 'storeName') document.getElementById('storeList').style.display = 'none';
-            if(e.target.id !== 'productName') document.getElementById('productList').style.display = 'none';
-            if(e.target.id !== 'driverSearchInput') document.getElementById('driverStoreSuggest').style.display = 'none';
-        });
+        // --- 시스템 설정 저장 (문제 11 분리) ---
+        async function saveSystemSettings() {
+            autoDeleteDays = parseInt(document.getElementById('autoDeleteDaysInput').value) || 7;
+            const autoCloseSec = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
+            
+            const { error } = await supabaseClient.from('app_settings').update({ 
+                auto_delete_days: autoDeleteDays, auto_close_sec: autoCloseSec 
+            }).eq('id', 1);
+            if(error) alert("저장 실패"); else { alert("저장 완료"); closeSettingsModal(); }
+        }
 
-        // --- 자동 삭제 ---
+        async function saveUploadData(type) {
+            const raw = document.getElementById(`${type}UploadData`).value;
+            if(!raw.trim()) return alert("데이터를 입력하세요.");
+            
+            let parsed = parseTSV(raw);
+            const payload = {};
+            if(type === 'order') { payload.order_tsv = raw; orderDataList = parsed; }
+            if(type === 'dispatch') { payload.dispatch_tsv = raw; dispatchDataList = parsed; }
+
+            const { error } = await supabaseClient.from('app_settings').update(payload).eq('id', 1);
+            if(error) alert("업로드 실패: " + error.message);
+            else {
+                document.getElementById(`${type}UploadData`).value = '';
+                alert("기존 데이터를 완벽히 삭제하고 새 데이터로 덮어씌웠습니다.");
+                document.getElementById(`${type}UploadModal`).style.display = 'none';
+                checkOrderMatches(); renderDriverList(); renderStorage();
+            }
+        }
+
+        // --- 데이터 유지기간 삭제 처리 (문제 13) ---
         async function checkAutoDelete() {
             const now = new Date();
-            // 20시 30분에 과거 데이터 초기화
+            // today 기준 D-7 20:30 시점에 D-7 삭제
             if(now.getHours() === 20 && now.getMinutes() === 30) {
                 const cutoff = new Date();
                 cutoff.setDate(cutoff.getDate() - autoDeleteDays); 
                 const cutoffStr = cutoff.toISOString().split('T')[0];
                 
                 await supabaseClient.from('upload_history').delete().lte('date', cutoffStr);
-                
                 historyDataList = historyDataList.filter(item => item.date > cutoffStr);
-                updateHistoryDates(); renderHistoryList();
-                console.log("자동 데이터 삭제 및 DB 초기화 완료");
+                updateHistoryDates(); renderHistoryList(); renderStorage();
+                console.log(`[${cutoffStr}] 이전 데이터 자동 초기화 완료`);
             }
         }
 
-        // --- 스토리지 ---
         function toggleStorageDisplay() { showRemainingStorage = !showRemainingStorage; renderStorage(); }
         function renderStorage() {
             const el = document.getElementById('storageInfo');
             if(!isLoggedIn) { el.style.display = 'none'; return; }
             el.style.display = 'inline';
-            
             const payloadString = JSON.stringify(historyDataList) + JSON.stringify(orderDataList) + JSON.stringify(dispatchDataList);
             const sizeMB = (new Blob([payloadString]).size / (1024 * 1024)).toFixed(1);
-
             if(showRemainingStorage) {
                 const remain = (STORAGE_TOTAL - sizeMB).toFixed(1);
                 const pct = Math.floor((remain / STORAGE_TOTAL) * 100);
@@ -814,7 +804,6 @@
             }
         }
 
-        // --- TSV ---
         function parseTSV(text) {
             if(!text.trim()) return [];
             return text.split('\n').filter(line => line.trim() !== '').map(line => line.split('\t'));
@@ -832,8 +821,8 @@
             }
         }
         function cleanNumber(str) { return str ? str.replace(/,/g, '') : ""; }
-
-        // --- 문제 1: 매장코드 기반 기사 자동 매칭 로직 ---
+        
+        // --- 문제 1: 매장명 입력시 코드 및 운전자 자동매칭 ---
         function handleStoreInput() {
             const val = document.getElementById('storeName').value.trim();
             if(!val) {
@@ -853,12 +842,12 @@
             if(!inputVal) { listUl.style.display = 'none'; return; }
             
             const matches = [], seen = new Set();
-            orderDataList.forEach((row, rowIdx) => {
+            orderDataList.forEach(row => {
                 if(row.length > 9) {
                     const deliveryDate = (row[1]||"").replace(/-/g,'');
                     const storeName = row[9] || "";
                     if(deliveryDate.includes(date) && storeName.includes(inputVal) && !seen.has(storeName)) {
-                        seen.add(storeName); matches.push({row, rowIdx});
+                        seen.add(storeName); matches.push(row);
                     }
                 }
             });
@@ -866,47 +855,48 @@
             if(matches.length > 0) {
                 listUl.style.display = 'block';
                 matches.forEach(m => {
-                    const li = document.createElement('li'); li.textContent = m.row[9];
-                    li.onclick = () => selectStore(m.row[9], cleanNumber(m.row[8]), m.rowIdx);
+                    const li = document.createElement('li'); li.textContent = m[9];
+                    li.onclick = () => selectStore(m[9], cleanNumber(m[8]));
                     listUl.appendChild(li);
                 });
             } else { listUl.style.display = 'none'; }
         }
 
-        function selectStore(name, code, rowIndex) {
+        function selectStore(name, code) {
             document.getElementById('storeName').value = name;
             document.getElementById('storeCode').value = code;
             document.getElementById('storeList').style.display = 'none';
-            findDispatchDriverAndCenter(code, true); // 코드로 기사 찾기
+            findDispatchDriverAndCenter(name, code); // 코드 우선 기반으로 기사 찾기 전달
             document.getElementById('productName').value = '';
             document.getElementById('productCode').value = '';
-            
-            logErrorCheck(`매장선택: 주문업로드 ${rowIndex+1}행 매칭 [코드:${code}]`);
         }
 
-        // 문제 1 적용: 배차업로드 B행(사업장코드) 비교
-        function findDispatchDriverAndCenter(matchValue, isCode = false) {
+        // 배차 업로드 B행(사업장코드: 1), D행(매장명: 3), H행(운전자: 7) 자동매칭 (문제 1)
+        function findDispatchDriverAndCenter(storeNameMatch, codeMatch="") {
             let driverName = "정보 없음", centerInfo = "", driverContact = "";
+            let matchRowIndex = -1;
+            
             for(let i=0; i<dispatchDataList.length; i++) {
                 let row = dispatchDataList[i];
                 if(row.length > 7) {
-                    let isMatch = false;
-                    if(isCode) isMatch = (cleanNumber(row[1]) === matchValue);
-                    else isMatch = ((row[3] || "").trim() === matchValue.trim());
-                    
-                    if(isMatch) {
-                        driverName = row[7] || "정보 없음"; // H행 기사명
-                        centerInfo = row[16] || ""; // Q행 메인센터
+                    let code = (row[1] || "").trim();
+                    let name = (row[3] || "").trim();
+                    if((codeMatch && code === codeMatch) || (name === storeNameMatch.trim())) {
+                        driverName = row[7] || "정보 없음";
+                        centerInfo = row[16] || ""; 
+                        matchRowIndex = i + 1; // 엑셀 행번호 기준
                         const foundDriver = driverContacts.find(d => d.name === driverName);
                         if(foundDriver) { driverContact = ` (${foundDriver.phone})`; }
-                        
-                        logErrorCheck(`기사자동매칭: 배차업로드 ${i+1}행 매칭 [기사:${driverName}]`);
                         break;
                     }
                 }
             }
             document.getElementById('driverName').value = driverName + driverContact;
             document.getElementById('mainCenter').value = centerInfo;
+            
+            if(matchRowIndex !== -1) {
+                addDebugLog(`[매장 자동매칭] 배차업로드 ${matchRowIndex}행 데이터 호출됨: ${JSON.stringify(dispatchDataList[matchRowIndex-1])}`);
+            }
         }
 
         function filterProductNames() {
@@ -918,30 +908,31 @@
             if(!inputVal) { listUl.style.display = 'none'; return; }
             
             const matches = [], seen = new Set();
-            orderDataList.forEach((row, rowIdx) => {
+            orderDataList.forEach((row, i) => {
                 if(row.length > 11) {
                     const rowStoreCode = cleanNumber(row[8]);
                     const prodName = row[11] || "";
                     const deliveryDate = (row[1]||"").replace(/-/g,'');
                     let condition = false;
-                    if(!storeCode) { condition = deliveryDate.includes(date) && prodName.includes(inputVal); } 
-                    else { condition = (rowStoreCode === storeCode && prodName.includes(inputVal)); }
+                    if(!storeCode) condition = deliveryDate.includes(date) && prodName.includes(inputVal);
+                    else condition = (rowStoreCode === storeCode && prodName.includes(inputVal));
 
-                    if(condition && !seen.has(prodName)) { seen.add(prodName); matches.push({row, rowIdx}); }
+                    if(condition && !seen.has(prodName)) { 
+                        seen.add(prodName); row._origIndex = i+1; matches.push(row); 
+                    }
                 }
             });
 
             if(matches.length > 0) {
                 listUl.style.display = 'block';
                 matches.forEach(m => {
-                    const li = document.createElement('li'); li.textContent = m.row[11];
+                    const li = document.createElement('li'); li.textContent = m[11];
                     li.onclick = () => {
-                        document.getElementById('productName').value = m.row[11];
-                        document.getElementById('productCode').value = cleanNumber(m.row[10]);
-                        document.getElementById('productUnit').value = m.row[16] || "";
+                        document.getElementById('productName').value = m[11];
+                        document.getElementById('productCode').value = cleanNumber(m[10]);
+                        document.getElementById('productUnit').value = m[16] || "";
                         
-                        let rVal = m.row[17] || "";
-                        let inbound = m.row[4] || "";
+                        let rVal = m[17] || "", inbound = m[4] || "";
                         if(rVal === "범용위탁") inbound = "웰스토리";
                         else if(rVal === "범용" || rVal === "전용" || rVal === "지정") inbound = "밀양";
                         else if(rVal === "원앤원") inbound = "천안센터";
@@ -950,7 +941,7 @@
 
                         document.getElementById('inboundCenter').value = inbound;
                         listUl.style.display = 'none';
-                        logErrorCheck(`제품선택: 주문업로드 ${m.rowIdx+1}행 매칭`);
+                        addDebugLog(`[제품 자동매칭] 주문업로드 ${m._origIndex}행 데이터 호출됨: ${JSON.stringify(m)}`);
                     };
                     listUl.appendChild(li);
                 });
@@ -959,14 +950,23 @@
 
         function checkOrderMatches() {
             document.getElementById('storeList').style.display = 'none';
+            const sName = document.getElementById('storeName').value;
             const sCode = document.getElementById('storeCode').value;
-            if(sCode) findDispatchDriverAndCenter(sCode, true);
+            if(sName) findDispatchDriverAndCenter(sName, sCode);
         }
+        
+        document.addEventListener('click', e => {
+            if(e.target.id !== 'storeName') document.getElementById('storeList').style.display = 'none';
+            if(e.target.id !== 'productName') document.getElementById('productList').style.display = 'none';
+            if(e.target.id !== 'reasonText') document.getElementById('reasonList').style.display = 'none';
+            if(e.target.id !== 'driverSearchInput') document.getElementById('driverStoreSuggest').style.display = 'none';
+        });
 
         async function saveFormData() {
             if(!document.getElementById('storeName').value || !document.getElementById('productName').value) {
                 alert("매장명과 제품명을 입력해주세요."); return;
             }
+
             const insertData = {
                 id: Date.now(),
                 status: 'active',
@@ -1001,14 +1001,15 @@
             
             document.getElementById('saveSuccessModal').style.display = 'flex';
             clearTimeout(savePopupTimer);
-            savePopupTimer = setTimeout(closeSaveSuccessModal, autoCloseSeconds * 1000);
+            const delay = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
+            savePopupTimer = setTimeout(closeSaveSuccessModal, delay * 1000);
         }
         function closeSaveSuccessModal() {
             document.getElementById('saveSuccessModal').style.display = 'none';
             clearTimeout(savePopupTimer);
         }
 
-        // --- 업로드 내역 ---
+        /* --- 업로드 내역 뷰 --- */
         function updateHistoryDates() {
             const select = document.getElementById('historyDateSelect');
             const uniqueDates = [...new Set(historyDataList.map(h => h.date))].sort((a,b) => b.localeCompare(a));
@@ -1020,7 +1021,8 @@
                 return;
             }
             select.innerHTML = uniqueDates.map(d => `<option value="${d}">${d}</option>`).join('');
-            if (uniqueDates.includes(todayStr) && (!currentVal || currentVal === todayStr)) { select.value = todayStr; }
+            
+            if (uniqueDates.includes(todayStr) && (!currentVal || currentVal === todayStr)) { select.value = todayStr; } 
             else if (uniqueDates.includes(currentVal)) { select.value = currentVal; } 
             else { select.selectedIndex = 0; }
         }
@@ -1028,11 +1030,13 @@
         function renderHistoryList() {
             const container = document.getElementById('historyListContainer');
             container.innerHTML = '';
+            
             let visibleItems = historyDataList.filter(i => isLoggedIn || i.status !== 'delete_requested');
             if (isLoggedIn) {
                 const selectedDate = document.getElementById('historyDateSelect').value;
                 if(selectedDate) visibleItems = visibleItems.filter(i => i.date === selectedDate);
             }
+
             if(visibleItems.length === 0) {
                 container.innerHTML = '<p style="text-align:center; color:#8E8E93;">표시할 내역이 없습니다.</p>'; return;
             }
@@ -1040,8 +1044,12 @@
             visibleItems.forEach(item => {
                 const div = document.createElement('div'); div.className = 'history-item';
                 let actionHtml = '';
+                
                 if(item.status === 'delete_requested') {
-                    actionHtml = `<span class="status-red">[삭제요청]</span><button class="btn-small btn-confirm" onclick="confirmDelete(${item.id})">삭제 확정</button>`;
+                    actionHtml = `
+                        <span class="status-red">[삭제요청]</span>
+                        <button class="btn-small btn-confirm" onclick="confirmDelete(${item.id})">삭제 확정</button>
+                    `;
                 } else {
                     actionHtml = `<button class="btn-small btn-delete" onclick="requestDelete(${item.id})">삭제</button>`;
                 }
@@ -1063,11 +1071,13 @@
                 container.appendChild(div);
             });
         }
+
         function selectAllHistory() {
             const checkboxes = document.querySelectorAll('.hist-chk');
             const allChecked = Array.from(checkboxes).every(cb => cb.checked);
             checkboxes.forEach(cb => cb.checked = !allChecked);
         }
+
         async function deleteSelectedHistory() {
             const checkedIds = Array.from(document.querySelectorAll('.hist-chk:checked')).map(cb => parseInt(cb.value));
             if(checkedIds.length === 0) return alert("삭제할 항목을 선택하세요.");
@@ -1079,18 +1089,59 @@
                 updateHistoryDates(); renderHistoryList(); renderStorage();
             }
         }
-        async function downloadSelectedHistory() { /* 동일로직 생략 방지 차원 유지 (이전 코드 참조) */ alert('엑셀 다운로드 로직은 이전과 동일하게 동작합니다.'); }
+        
+        async function downloadSelectedHistory() {
+            const checkedIds = Array.from(document.querySelectorAll('.hist-chk:checked')).map(cb => parseInt(cb.value));
+            const dateStr = document.getElementById('historyDateSelect').value;
+            
+            let itemsToExport = [];
+            if(checkedIds.length > 0) itemsToExport = historyDataList.filter(i => checkedIds.includes(i.id));
+            else itemsToExport = historyDataList.filter(i => i.date === dateStr);
+
+            if(itemsToExport.length === 0) return alert("다운로드할 데이터가 없습니다.");
+            alert("엑셀 파일을 생성 중입니다. 잠시만 기다려주세요.");
+
+            try {
+                const workbook = new ExcelJS.Workbook();
+                const sheet = workbook.addWorksheet('특이사항');
+                sheet.addRow(['공란', '배송일자', '메인센터명', '고객사코드', '고객사명', '거래처코드', '거래처명', '제품코드', '제품명', '온도', '단위', '품목지정', '재고타입', '수량', '내용', '상세내용', '주체', '귀책', '입고', '자료등록']);
+
+                itemsToExport.forEach((item) => {
+                    let orderInfo = orderDataList.find(r => r.length > 11 && cleanNumber(r[10]) === item.pCode && cleanNumber(r[8]) === item.sCode) || [];
+                    let safeSheetName = (item.store || '거래처').substring(0, 31).replace(/[\\/?*\[\]]/g, '');
+                    
+                    const row = sheet.addRow([
+                        '', item.date, item.mCenter, item.sCode, (orderInfo[7]||item.store), (orderInfo[8]||''), (orderInfo[9]||item.store),
+                        item.pCode, item.product, (orderInfo[15]||''), item.unit, (orderInfo[17]||''), (orderInfo[18]||''),
+                        item.qty, item.reason, `${item.store} 상세`, '', '', '', ''
+                    ]);
+
+                    if (item.img && item.img.startsWith('data:image')) {
+                        const imgId = workbook.addImage({ base64: item.img, extension: 'png' });
+                        let imgSheet = workbook.getWorksheet(safeSheetName);
+                        if (!imgSheet) imgSheet = workbook.addWorksheet(safeSheetName);
+                        imgSheet.addImage(imgId, 'A1:H20');
+                        
+                        row.getCell(16).value = { text: `${item.store} (사유 : ${item.reason})\n\n\n${item.reason}`, hyperlink: `#'${safeSheetName}'!A1` };
+                    }
+                });
+                const buffer = await workbook.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), `특이사항_${dateStr}.xlsx`);
+            } catch(e) { alert("엑셀 다운로드 오류: " + e.message); }
+        }
+
         async function requestDelete(id) {
             const item = historyDataList.find(i => i.id === id);
             if(item) { 
                 const { error } = await supabaseClient.from('upload_history').update({ status: 'delete_requested' }).eq('id', id);
-                if (error) return;
+                if (error) { alert("상태 변경 실패: " + error.message); return; }
                 item.status = 'delete_requested'; renderHistoryList(); 
             }
         }
+        
         async function confirmDelete(id) {
             const { error } = await supabaseClient.from('upload_history').delete().eq('id', id);
-            if (error) return;
+            if (error) { alert("삭제 실패: " + error.message); return; }
             historyDataList = historyDataList.filter(i => i.id !== id);
             updateHistoryDates(); renderHistoryList(); renderStorage();
         }
@@ -1101,12 +1152,14 @@
             if(name && tel) {
                 const insertData = { name, rank, tel };
                 const { error } = await supabaseClient.from('office_contacts').insert([insertData]);
-                if (error) return;
+                if (error) { alert("연락처 저장 실패!\n원인: " + error.message); return; }
+                
                 officeContacts.push(insertData);
                 document.getElementById('offName').value=''; document.getElementById('offRank').value=''; document.getElementById('offTel').value='';
                 renderOfficeList();
             }
         }
+        
         function renderOfficeList() {
             document.getElementById('officeListContainer').innerHTML = officeContacts.map(c => `
                 <div class="contact-card">
@@ -1119,7 +1172,6 @@
             `).join('');
         }
 
-        // --- 문제 7: 기사 연락처 ---
         async function saveDriverContacts() {
             const data = document.getElementById('driverUploadData').value;
             const parsedData = parseTSV(data).map(r => ({
@@ -1127,16 +1179,18 @@
             })).filter(d => d.name);
             
             if (parsedData.length > 0) {
-                await supabaseClient.from('driver_contacts').delete().neq('id', 0); 
-                await supabaseClient.from('driver_contacts').insert(parsedData);
-            } else return alert("잘못된 데이터");
+                const { error: delError } = await supabaseClient.from('driver_contacts').delete().neq('id', 0); 
+                if (delError) { alert("기존 연락처 삭제 실패!\n원인: " + delError.message); return; }
+                const { error: insError } = await supabaseClient.from('driver_contacts').insert(parsedData);
+                if (insError) { alert("기사 저장 실패!\n원인: " + insError.message); return; }
+            } else { alert("입력된 데이터가 없거나 형식이 잘못되었습니다."); return; }
 
             driverContacts = parsedData;
             document.getElementById('driverUploadData').value = '';
-            alert("데이터가 성공적으로 덮어씌워졌습니다."); renderDriverList();
+            alert("기사 연락처 데이터가 성공적으로 덮어씌워졌습니다."); renderDriverList();
         }
 
-        // 자동완성 및 다중 필드 매칭 (기사명, 차량, 매장, 폰)
+        // --- 문제 7: 포괄적 검색 및 자동완성 강화 ---
         function handleDriverStoreSearch() {
             const search = document.getElementById('driverSearchInput').value.trim();
             const suggestList = document.getElementById('driverStoreSuggest');
@@ -1144,24 +1198,24 @@
             
             if(!isLoggedIn && search) {
                 const matches = new Set();
-                dispatchDataList.forEach(r => {
+                dispatchDataList.forEach((r, idx) => {
                     if(r.length > 7) {
-                        const storeName = r[3] || ""; const driverName = r[7] || ""; 
-                        const vehicleNo = r[6] || ""; const phone = r[15] || "";
-                        if(storeName.includes(search) || driverName.includes(search) || vehicleNo.includes(search) || phone.includes(search)) {
-                            // 추천 단어는 매장명, 혹은 기사명 제공
-                            if(storeName.includes(search)) matches.add(storeName);
-                            if(driverName.includes(search)) matches.add(driverName);
+                        const storeName = r[3] || "";
+                        const driverName = r[7] || "";
+                        const vehicleNo = r[6] || "";
+                        const contact = r[15] || ""; // P행 연락처
+                        if(storeName.includes(search) || driverName.includes(search) || vehicleNo.includes(search) || contact.includes(search)) {
+                            matches.add(storeName);
                         }
                     }
                 });
                 if(matches.size > 0) {
                     suggestList.style.display = 'block';
-                    matches.forEach(m => {
-                        const li = document.createElement('li'); li.textContent = m;
+                    matches.forEach(store => {
+                        const li = document.createElement('li'); li.textContent = store;
                         li.onclick = () => {
-                            document.getElementById('driverSearchInput').value = m;
-                            suggestList.style.display = 'none'; filterDriversList(m);
+                            document.getElementById('driverSearchInput').value = store;
+                            suggestList.style.display = 'none'; filterDriversList(store);
                         };
                         suggestList.appendChild(li);
                     });
@@ -1173,28 +1227,32 @@
 
         function filterDriversList(searchStr) {
             let list = driverContacts;
-            if(!isLoggedIn && searchStr) {
+            if(searchStr) {
                 const matchedDriverNames = new Set();
-                dispatchDataList.forEach(r => { 
+                dispatchDataList.forEach((r, idx) => { 
                     if(r.length > 7) {
-                        const storeName = r[3] || ""; const driverName = r[7] || ""; 
-                        const vehicleNo = r[6] || ""; const phone = r[15] || "";
-                        if(storeName === searchStr || driverName === searchStr || vehicleNo === searchStr || phone === searchStr ||
-                           storeName.includes(searchStr) || driverName.includes(searchStr) || vehicleNo.includes(searchStr) || phone.includes(searchStr)) {
+                        const storeName = r[3] || "";
+                        const driverName = r[7] || "";
+                        const vehicleNo = r[6] || "";
+                        const contact = r[15] || "";
+                        if(storeName === searchStr || driverName === searchStr || vehicleNo === searchStr || contact === searchStr ||
+                           storeName.includes(searchStr) || driverName.includes(searchStr) || vehicleNo.includes(searchStr) || contact.includes(searchStr)) {
                             matchedDriverNames.add(driverName);
+                            addDebugLog(`[기사검색] 배차업로드 ${idx+1}행 데이터 참조됨: ${JSON.stringify(r)}`); // 문제 12 디버그
                         }
                     }
                 });
                 list = list.filter(d => matchedDriverNames.has(d.name));
-            } else if (!isLoggedIn) {
-                list = []; // 검색 안하면 비워둠
             }
             renderDriverListToDOM(list);
         }
 
         function renderDriverList() {
             let list = driverContacts;
-            if(!isLoggedIn) { list = []; }
+            if(!isLoggedIn) {
+                const dispatchDriverNames = new Set(dispatchDataList.map(r => r[7]));
+                list = list.filter(d => dispatchDriverNames.has(d.name));
+            }
             filterDriversList(document.getElementById('driverSearchInput').value.trim());
         }
 
@@ -1215,7 +1273,7 @@
         function showDriverDetailModal(driverName) {
             if(isLoggedIn) return; 
             let html = ''; const seen = new Set();
-            dispatchDataList.forEach((r, idx) => {
+            dispatchDataList.forEach(r => {
                 if(r.length > 11 && r[7] === driverName) {
                     const store = r[3] || '', addr = r[4] || '', key = r[11] || '';
                     if(!seen.has(store)) {
@@ -1223,7 +1281,6 @@
                         html += `<div style="margin-bottom:10px; border-bottom:1px solid #F0F2F7; padding-bottom:8px;">
                             <strong>${store}</strong><br><span style="color:#666;">${addr} | 열쇠: ${key}</span>
                         </div>`;
-                        logErrorCheck(`배차상세: 배차업로드 ${idx+1}행 조회`);
                     }
                 }
             });
@@ -1231,66 +1288,49 @@
             document.getElementById('driverDetailModal').style.display = 'flex';
         }
 
-        // --- 문제 8: 배차 내역 지도 시각화 (Leaflet JS) ---
-        function getDistinctColors(n) {
-            const colors = [];
-            for(let i=0; i<n; i++) {
-                // 네온/형광 방지: Saturation(50-80%), Lightness(30-60%)
-                const hue = i * (360 / n);
-                colors.push(`hsl(${hue}, 70%, 45%)`); 
-            }
-            return colors;
-        }
-
-        function renderDispatchMap() {
-            if(!leafletMap) {
-                // 시작점: 영남권(밀양/대구 중심 35.5, 128.5)
-                leafletMap = L.map('mapContainer').setView([35.500, 128.500], 8);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; OpenStreetMap contributors'
-                }).addTo(leafletMap);
-            }
+        // --- 문제 8: 지도 연동 로직 (Leaflet.js) ---
+        function initMap() {
+            if(mapInstance) { mapInstance.invalidateSize(); return; } // 중복 생성 방지 및 크기 보정
             
-            // 레이어 초기화
-            leafletMap.eachLayer(layer => {
-                if(layer instanceof L.Marker || layer instanceof L.Polyline) leafletMap.removeLayer(layer);
-            });
+            // 영남권 중심점
+            mapInstance = L.map('mapContainer').setView([35.53, 128.59], 8);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(mapInstance);
 
-            const drivers = {};
-            // J행(9), K행(10) 좌표 파싱
+            const colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000', '#c2a5cf', '#a6dba0', '#dfc27d', '#80cdc1', '#f1b6da', '#b8e186', '#d01c8b', '#4dac26'];
+            
+            // 기사별로 좌표 그룹화
+            const driverRoutes = {};
             dispatchDataList.forEach(r => {
-                if(r.length > 10 && r[9] && r[10]) {
-                    const lat = parseFloat(r[9]); const lng = parseFloat(r[10]);
-                    const driver = r[7] || '미지정';
-                    const store = r[3] || '매장명 없음';
-                    
-                    if(!isNaN(lat) && !isNaN(lng)) {
-                        if(!drivers[driver]) drivers[driver] = [];
-                        drivers[driver].push({ lat, lng, store });
+                if(r.length > 10) {
+                    const driver = r[7];
+                    const store = r[3];
+                    const lat = parseFloat(r[9]);  // J행 (위도)
+                    const lng = parseFloat(r[10]); // K행 (경도)
+                    if(driver && lat && lng) {
+                        if(!driverRoutes[driver]) driverRoutes[driver] = [];
+                        driverRoutes[driver].push({ lat, lng, store });
                     }
                 }
             });
 
-            const driverNames = Object.keys(drivers);
-            const colors = getDistinctColors(driverNames.length > 30 ? 30 : driverNames.length);
-
-            driverNames.forEach((driver, idx) => {
-                const color = colors[idx % colors.length];
-                const points = drivers[driver];
-                const latlngs = [];
-
-                points.forEach(pt => {
-                    latlngs.push([pt.lat, pt.lng]);
-                    const markerHtml = `<div style="background-color:${color}; width:12px; height:12px; border-radius:50%; border:2px solid #FFF;"></div>`;
-                    const icon = L.divIcon({ html: markerHtml, className: '', iconSize: [16,16] });
-                    L.marker([pt.lat, pt.lng], { icon }).addTo(leafletMap).bindPopup(`<b>${driver}</b><br>${pt.store}`);
+            let colorIdx = 0;
+            for(let driver in driverRoutes) {
+                const route = driverRoutes[driver];
+                const polylineCoords = route.map(loc => [loc.lat, loc.lng]);
+                const c = colors[colorIdx % colors.length]; colorIdx++;
+                
+                // 선 그리기
+                L.polyline(polylineCoords, { color: c, weight: 3, opacity: 0.8 }).addTo(mapInstance);
+                
+                // 마커 추가
+                route.forEach(loc => {
+                    L.circleMarker([loc.lat, loc.lng], {
+                        radius: 6, fillColor: c, color: '#000', weight: 1, fillOpacity: 1
+                    }).addTo(mapInstance).bindPopup(`<b>${driver}</b><br>${loc.store}`);
                 });
-
-                // 경로 선 그리기
-                if(latlngs.length > 1) {
-                    L.polyline(latlngs, { color: color, weight: 3, opacity: 0.8 }).addTo(leafletMap);
-                }
-            });
+            }
         }
     </script>
 </body>
