@@ -921,7 +921,8 @@
             for(let r of orderDataList) {
                 if(r.length > 9) {
                     const deliveryDate = (r[1]||"").replace(/\D/g, '');
-                    if(deliveryDate === date && r[9] === val) { 
+                    // 문제 1 대응: includes 로직으로 유연성 강화
+                    if(deliveryDate.includes(date) && r[9] === val) { 
                         matchedCode = cleanNumber(r[8]); 
                         break; 
                     }
@@ -946,7 +947,8 @@
                 if(row.length > 9) {
                     const deliveryDate = (row[1]||"").replace(/\D/g, '');
                     const storeName = row[9] || ""; // orders - account_name 기준
-                    if(deliveryDate === date && storeName.includes(inputVal) && !seen.has(storeName)) {
+                    // 문제 1 대응: includes 로직으로 유연성 강화
+                    if(deliveryDate.includes(date) && storeName.includes(inputVal) && !seen.has(storeName)) {
                         seen.add(storeName); matches.push(row);
                     }
                 }
@@ -1008,9 +1010,12 @@
                 if(storeRow) targetClientCode = cleanNumber(storeRow[6]);
             }
 
+            const date = document.getElementById('writeDate').value.replace(/\D/g, '');
+
             orderDataList.forEach(row => {
                 if(row.length > 11) {
                     const prodName = row[11] || ""; // 문제 7: orders - product_name
+                    const deliveryDate = (row[1]||"").replace(/\D/g, '');
                     let condition = false;
 
                     if(storeCode) {
@@ -1018,8 +1023,8 @@
                         const rowClientCode = cleanNumber(row[6]);
                         condition = (rowClientCode === targetClientCode) && prodName.includes(inputVal);
                     } else {
-                        // 문제 9: 매장명 미입력 시 모든 제품명에서 추천
-                        condition = prodName.includes(inputVal);
+                        // 문제 9: 매장명 미입력 시 모든 제품명에서 추천 (문제 1 대응 includes 로직 유지)
+                        condition = deliveryDate.includes(date) && prodName.includes(inputVal);
                     }
 
                     if(condition && !seen.has(prodName)) { 
@@ -1339,19 +1344,17 @@
             alert("기사 연락처 데이터가 성공적으로 덮어씌워졌습니다."); renderDriverList();
         }
 
-        // 문제 2: 비로그인 유저는 기사 리스트를 배차업로드 기준으로 필터링하여 제공
         function filterDriversList(searchStr) {
             let list = driverContacts;
             
             if(!isLoggedIn) {
-                // 비로그인: 배차업로드 데이터에서 기사 정보를 자체 추출
                 const dispatchDriverNames = new Set();
                 const dispatchDriverMap = new Map();
                 
                 dispatchDataList.forEach(r => {
-                    if(r.length > 15 && r[7]) { // 기사명 존재
+                    if(r.length > 15 && r[7]) { 
                         dispatchDriverNames.add(r[7]);
-                        if(r[15]) { // 배차 데이터에 연락처가 있는 경우
+                        if(r[15]) { 
                             dispatchDriverMap.set(r[7], {
                                 name: r[7], region: r[8] || r[3] || '', vehicle: r[6] || '', phone: r[15]
                             });
@@ -1359,10 +1362,8 @@
                     }
                 });
 
-                // 1차적으로 DB 기사 중 현재 배차된 기사 정보만 필터 (차량번호, 전화번호 최신성 보장)
                 let filteredList = driverContacts.filter(d => dispatchDriverNames.has(d.name));
                 
-                // 2차적으로 DB에는 없으나 배차리스트에는 있는 기사 정보를 병합
                 const dbNames = new Set(filteredList.map(d => d.name));
                 dispatchDriverNames.forEach(name => {
                     if(!dbNames.has(name) && dispatchDriverMap.has(name)) {
@@ -1383,7 +1384,6 @@
                         d.region.includes(searchStr)
                     );
                 } else {
-                    // 로그인: 통합 검색 지원
                     const matchedDriverNames = new Set();
                     dispatchDataList.forEach(r => { 
                         if(r.length > 15) {
@@ -1498,7 +1498,6 @@
 
         function renderMap() {
             if(!map) {
-                // 문제 1: 투명한 스타일링이 적용되고 육안 시인성이 가장 좋은 OpenStreetMap 적용
                 map = L.map('map').setView([35.3, 128.0], 8);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap contributors'
@@ -1520,15 +1519,15 @@
                     const driver = r[7];
                     const lng = parseFloat(r[9]);
                     const lat = parseFloat(r[10]);
-                    let transport = r[12];
-                    if (!transport) transport = '기타'; 
+                    let filterGroup = r[8]; // 문제 2: region_type(권역) 기준으로 그룹핑 적용
+                    if (!filterGroup) filterGroup = '기타'; 
                     const store = r[3];
 
                     if(driver && !isNaN(lat) && !isNaN(lng)) {
-                        if(!driverRoutes[driver]) driverRoutes[driver] = { transport, points: [], storeNames: [] };
+                        if(!driverRoutes[driver]) driverRoutes[driver] = { filterGroup, points: [], storeNames: [] };
                         driverRoutes[driver].points.push([lat, lng]);
                         driverRoutes[driver].storeNames.push(store);
-                        validTransports.add(transport);
+                        validTransports.add(filterGroup);
                     }
                 }
             });
@@ -1545,17 +1544,21 @@
             let colorIdx = 0;
             for(const driver in driverRoutes) {
                 const route = driverRoutes[driver];
-                const tLayer = transportLayers[route.transport];
+                const tLayer = transportLayers[route.filterGroup];
                 const color = MAP_COLORS[colorIdx % MAP_COLORS.length];
                 colorIdx++;
 
+                // 문제 3: 경로선 클릭 시 배송기사 이름이 팝업에 강조 표시되도록 개선
                 if(route.points.length > 1) {
-                    L.polyline(route.points, { color, weight: 3, opacity: 0.8 }).bindPopup(driver + ' 코스').addTo(tLayer);
+                    L.polyline(route.points, { color, weight: 3, opacity: 0.8 })
+                     .bindPopup(`<div style="font-size:14px; font-weight:bold; color:var(--primary);">배송기사: ${driver}</div><div style="font-size:12px; color:#666;">경로 확인됨</div>`)
+                     .addTo(tLayer);
                 }
 
+                // 문제 3: 마커 클릭 시 매장명과 함께 배송기사 이름이 강조 표시되도록 개선
                 route.points.forEach((pt, idx) => {
                     L.circleMarker(pt, { radius: 6, color: '#fff', weight: 1, fillColor: color, fillOpacity: 1 })
-                     .bindPopup(`<b>${route.storeNames[idx]}</b><br>기사: ${driver}`)
+                     .bindPopup(`<div style="font-size:13px;"><b>${route.storeNames[idx]}</b><br><span style="color:var(--primary); font-weight:bold;">배송기사: ${driver}</span></div>`)
                      .addTo(tLayer);
                 });
             }
