@@ -1011,14 +1011,25 @@
                     const prodName = row[11] || ""; // 문제 7: orders - product_name
                     let condition = false;
 
-                    if(storeCode) {
-                        // 문제 1: 매장코드를 기준으로 orders - account_code 와 일치하는 제품명만 추천
-                        const rowAccountCode = cleanNumber(row[8]);
-                        condition = (rowAccountCode === cleanNumber(storeCode)) && prodName.includes(inputVal);
-                    } else {
-                        // 문제 9: 매장명 미입력 시 모든 제품명에서 추천
-                        condition = prodName.includes(inputVal);
-                    }
+const storeNameVal = document.getElementById('storeName').value.trim();
+
+if(storeCode || storeNameVal) {
+    const targetStoreCode = cleanNumber(storeCode);
+    
+    const rowAccountCode = cleanNumber(row[8] || "");
+    const rowClientName = row[7] || "";  // orders - client_name (고객사명)
+    const rowAccountName = row[9] || ""; // orders - account_name (거래처명)
+
+    // 1. 코드가 정확히 일치하거나
+    // 2. 입력된 매장명이 주문 데이터의 거래처명 또는 고객사명에 포함되어 있으면 매칭 성공
+    const isCodeMatch = (targetStoreCode && rowAccountCode === targetStoreCode);
+    const isNameMatch = (storeNameVal && (rowAccountName.includes(storeNameVal) || rowClientName.includes(storeNameVal)));
+
+    condition = (isCodeMatch || isNameMatch) && prodName.includes(inputVal);
+} else {
+    // 매장명과 코드 모두 미입력 시 모든 제품명에서 추천
+    condition = prodName.includes(inputVal);
+}
 
                     if(condition && !seen.has(prodName)) { 
                         seen.add(prodName); 
