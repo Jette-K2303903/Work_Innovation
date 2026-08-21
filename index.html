@@ -6,7 +6,7 @@
     <title>밀양센터 야간 특이사항 관리</title>
     <!-- Supabase 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-    <!-- 엑셀 다운로드를 위한 ExcelJS 및 FileSaver 라이브러리 추가 -->
+    <!-- ExcelJS 및 FileSaver (엑셀 다운로드 및 이미지 시트 생성용) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
@@ -143,7 +143,7 @@
         .driver-name-click { cursor: pointer; color: var(--text-main); }
         .driver-name-click:hover { color: var(--primary); text-decoration: underline; }
 
-        /* PC 화면 4:6 비율 */
+        /* PC 화면 4:6 비율 레이아웃 */
         body.pc-mode { flex-direction: row; overflow: hidden; }
         body.pc-mode .menu-toggle-btn { display: none; }
         body.pc-mode .sidebar-overlay { display: none !important; }
@@ -193,14 +193,7 @@
                 <div class="input-row">
                     <div class="flex-60">
                         <label>사유</label>
-                        <select id="reasonText" class="input-box">
-                            <option value="" disabled selected>선택</option>
-                            <option value="파손">파손</option>
-                            <option value="분실">분실</option>
-                            <option value="과입고">과입고</option>
-                            <option value="미입고">미입고</option>
-                            <option value="기타">기타</option>
-                        </select>
+                        <input type="text" id="reasonText" class="input-box" placeholder="사유를 직접 기입하세요">
                     </div>
                     <div class="flex-40">
                         <label>작성자</label>
@@ -293,7 +286,7 @@
         <div id="driverContactView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">📱 기사 연락처</h2>
             <div class="search-bar-fixed">
-                <input type="text" id="driverSearchInput" class="input-box" placeholder="매장명 또는 배송기사, 차량번호 검색" oninput="handleDriverStoreSearch()" autocomplete="off">
+                <input type="text" id="driverSearchInput" class="input-box" placeholder="매장명 또는 배송기사 이름, 차량번호 검색" oninput="handleDriverStoreSearch()" autocomplete="off">
                 <ul id="driverStoreSuggest" class="autocomplete-list"></ul>
             </div>
             <div id="driverEditForm" style="display:none; margin-bottom:20px;">
@@ -372,13 +365,13 @@
     </div>
 
     <script>
-        // Supabase 연동 정보
+        // --- Supabase 연동 설정 ---
         const SUPABASE_URL = 'https://whmltqxmramimlwrdkma.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobWx0cXhtcmFtaW1sd3Jka21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4MjczMzAsImV4cCI6MjEwMTQwMzMzMH0.W60TYb4NIRR7lXpbgQlj1h7yGGPcXRSh3Ui3IuFH-j0';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let isMenuOpen = false; let menuInactivityTimer; let isLoggedIn = false;
-        const ADMIN_PWD = "a13579!!";
+        const ADMIN_PWD = "alfdid13579!!";
         let currentImgSrc = "";
         
         let orderDataList = []; let dispatchDataList = [];
@@ -389,7 +382,7 @@
         let autoDeleteDays = 7;
         let savePopupTimer;
         
-        const STORAGE_TOTAL = 1100; // 1.1GB (단위 MB)
+        const STORAGE_TOTAL = 1100; // 1.1GB 고정 기준 (MB)
         let showRemainingStorage = true;
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -401,10 +394,10 @@
             setInterval(checkAutoDelete, 60000); 
         });
 
-        /* --- Supabase 데이터 가져오기 로직 --- */
+        // --- Supabase에서 데이터 불러오기 ---
         async function fetchInitialData() {
             try {
-                // 앱 세팅 및 원본 TSV 데이터 로드
+                // 앱 설정 및 TSV 데이터 로드
                 const { data: set_data } = await supabaseClient.from('app_settings').select('*').eq('id', 1).single();
                 if(set_data) {
                     if(set_data.order_tsv) orderDataList = parseTSV(set_data.order_tsv);
@@ -418,21 +411,29 @@
                     }
                 }
 
-                // 업로드 내역 로드
-                const { data: hist_data } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
-                if(hist_data) historyDataList = hist_data;
+                // 업로드 내역 조회
+                const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
+                if (histErr) console.error("업로드 내역 로드 에러:", histErr.message);
+                if (histData) {
+                    historyDataList = histData.map(d => ({
+                        id: d.id, status: d.status, reason: d.reason, author: d.author, date: d.date,
+                        driver: d.driver, store: d.store, sCode: d.store_code, mCenter: d.main_center,
+                        product: d.product, pCode: d.product_code, iCenter: d.inbound_center,
+                        qty: d.qty, unit: d.unit, img: d.img_url
+                    }));
+                }
+                
+                // 사무실 연락처 조회
+                const { data: offData, error: offErr } = await supabaseClient.from('office_contacts').select('*');
+                if (offErr) console.error("사무실 연락처 로드 에러:", offErr.message);
+                if (offData) officeContacts = offData;
 
-                // 사무실 연락처 로드
-                const { data: off_data } = await supabaseClient.from('office_contacts').select('*');
-                if(off_data) officeContacts = off_data;
-
-                // 기사 연락처 로드
-                const { data: drv_data } = await supabaseClient.from('driver_contacts').select('*');
-                if(drv_data) driverContacts = drv_data;
-
-            } catch (error) {
-                console.error("데이터 초기화 실패:", error);
-            }
+                // 기사 연락처 조회
+                const { data: drvData, error: drvErr } = await supabaseClient.from('driver_contacts').select('*');
+                if (drvErr) console.error("기사 연락처 로드 에러:", drvErr.message);
+                if (drvData) driverContacts = drvData;
+                
+            } catch(e) { console.error("데이터 로드 실패", e); }
             renderStorage();
         }
 
@@ -510,12 +511,11 @@
                 
                 updateMenuUI();
                 if(document.getElementById('historyView').classList.contains('active')) showView('historyView');
-                renderDriverList();
+                renderDriverList(); 
                 isMenuOpen = true; 
             } else { alert("❌ 비밀번호 오류"); }
         }
 
-        /* --- 설정 및 목록 관리 --- */
         function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
         function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
         
@@ -548,26 +548,25 @@
             if(rawOrder.trim()) orderDataList = parseTSV(rawOrder);
             if(rawDispatch.trim()) dispatchDataList = parseTSV(rawDispatch);
             
-            // Supabase 데이터 완전 덮어씌우기
             const updatePayload = {
-                id: 1, 
-                auto_delete_days: autoDeleteDays, 
+                id: 1,
+                auto_delete_days: autoDeleteDays,
                 auto_close_sec: autoCloseSec
             };
             if(rawOrder.trim()) updatePayload.order_tsv = rawOrder;
             if(rawDispatch.trim()) updatePayload.dispatch_tsv = rawDispatch;
 
             const { error } = await supabaseClient.from('app_settings').upsert([updatePayload]);
-            if (error) {
-                alert("DB 설정 저장 실패: " + error.message);
+            if(error) {
+                alert("설정 저장 실패: " + error.message);
                 return;
             }
             
             document.getElementById('orderUploadData').value = '';
             document.getElementById('dispatchUploadData').value = '';
             
-            alert("설정이 DB에 저장되었으며 신규 데이터로 덮어씌워졌습니다.");
-            closeSettingsModal(); checkOrderMatches(); renderDriverList();
+            alert("설정이 DB에 저장되었으며 연동 완료되었습니다.");
+            closeSettingsModal(); checkOrderMatches(); renderDriverList(); renderStorage();
         }
 
         async function checkAutoDelete() {
@@ -578,35 +577,34 @@
                 const cutoffStr = cutoff.toISOString().split('T')[0];
                 
                 await supabaseClient.from('upload_history').delete().lte('date', cutoffStr);
-                historyDataList = historyDataList.filter(item => item.date > cutoffStr);
                 
+                historyDataList = historyDataList.filter(item => item.date > cutoffStr);
                 updateHistoryDates(); renderHistoryList(); renderStorage();
                 console.log("자동 데이터 삭제 및 DB 초기화 완료");
             }
         }
 
-        /* --- 실시간 스토리지 용량 표시 (문제 2) --- */
         function toggleStorageDisplay() {
             showRemainingStorage = !showRemainingStorage;
             renderStorage();
         }
+
         function renderStorage() {
             const el = document.getElementById('storageInfo');
             if(!isLoggedIn) { el.style.display = 'none'; return; }
             el.style.display = 'inline';
             
-            // JSON Byte 용량 측정으로 실시간 DB 용량 근사치 계산
-            const stringifiedData = JSON.stringify(historyDataList) + JSON.stringify(orderDataList) + JSON.stringify(dispatchDataList);
-            const sizeInBytes = new Blob([stringifiedData]).size;
-            const currentUsedMB = (sizeInBytes / (1024 * 1024)).toFixed(1);
-            
+            // 실제 Supabase 데이터의 JSON 바이트 크기 기반 잔여 용량 계산
+            const payloadString = JSON.stringify(historyDataList) + JSON.stringify(orderDataList) + JSON.stringify(dispatchDataList);
+            const sizeMB = (new Blob([payloadString]).size / (1024 * 1024)).toFixed(1);
+
             if(showRemainingStorage) {
-                const remain = (STORAGE_TOTAL - currentUsedMB).toFixed(1);
+                const remain = (STORAGE_TOTAL - sizeMB).toFixed(1);
                 const pct = Math.floor((remain / STORAGE_TOTAL) * 100);
                 el.innerText = `잔여량 ${pct}% (${Number(remain).toLocaleString()}mb)`;
             } else {
-                const pct = Math.floor((currentUsedMB / STORAGE_TOTAL) * 100);
-                el.innerText = `사용량 ${pct}% (${Number(currentUsedMB).toLocaleString()}mb)`;
+                const pct = Math.floor((sizeMB / STORAGE_TOTAL) * 100);
+                el.innerText = `사용량 ${pct}% (${Number(sizeMB).toLocaleString()}mb)`;
             }
         }
 
@@ -627,19 +625,18 @@
             }
         }
 
-        /* --- 폼 로직 --- */
         function cleanNumber(str) { return str ? str.replace(/,/g, '') : ""; }
         
         function handleStoreInput() {
             const val = document.getElementById('storeName').value.trim();
+            const codeVal = document.getElementById('storeCode').value.trim();
             if(!val) {
                 document.getElementById('storeCode').value = '';
                 document.getElementById('mainCenter').value = '';
                 document.getElementById('driverName').value = '정보 없음';
             }
             filterStoreNames();
-            // 문제 3: 직접 매장명을 정확히 기입한 경우 배차기사 찾기
-            findDispatchDriverAndCenter(val); 
+            findDispatchDriverAndCenter(val, codeVal);
         }
 
         function filterStoreNames() {
@@ -674,19 +671,32 @@
             document.getElementById('storeName').value = name;
             document.getElementById('storeCode').value = code;
             document.getElementById('storeList').style.display = 'none';
-            findDispatchDriverAndCenter(name);
+            findDispatchDriverAndCenter(name, code);
             document.getElementById('productName').value = '';
             document.getElementById('productCode').value = '';
         }
 
-        function findDispatchDriverAndCenter(storeNameMatch) {
+        function findDispatchDriverAndCenter(storeNameMatch, storeCodeMatch = "") {
             let driverName = "정보 없음", centerInfo = "", driverContact = "";
             for(let row of dispatchDataList) {
-                if(row.length > 7 && (row[3] || "").trim() === storeNameMatch.trim()) {
-                    driverName = row[7] || "정보 없음"; centerInfo = row[16] || "";
-                    const foundDriver = driverContacts.find(d => d.name === driverName);
-                    if(foundDriver) { driverContact = ` (${foundDriver.phone})`; }
-                    break;
+                if(row.length > 7) {
+                    const dispatchStoreCode = cleanNumber(row[1] || "");
+                    const dispatchStoreName = (row[3] || "").trim();
+                    
+                    let isMatch = false;
+                    if(storeCodeMatch) {
+                        isMatch = (dispatchStoreName === storeNameMatch.trim() && dispatchStoreCode === storeCodeMatch.trim());
+                    } else {
+                        isMatch = (dispatchStoreName === storeNameMatch.trim());
+                    }
+
+                    if(isMatch) {
+                        driverName = row[7] || "정보 없음"; // 배차 업로드 H행(인덱스 7)
+                        centerInfo = row[16] || ""; // Q행 메인센터
+                        const foundDriver = driverContacts.find(d => d.name === driverName);
+                        if(foundDriver) { driverContact = ` (${foundDriver.phone})`; }
+                        break;
+                    }
                 }
             }
             document.getElementById('driverName').value = driverName + driverContact;
@@ -724,14 +734,14 @@
                         document.getElementById('productCode').value = cleanNumber(m[10]);
                         document.getElementById('productUnit').value = m[16] || "";
                         
-                        // 문제 8 조건 매칭
-                        let r_val = m[17] || "";
-                        let inbound = m[4] || ""; // 기본 센터명
-                        if(r_val === "범용위탁") inbound = "웰스토리";
-                        else if(r_val === "범용" || r_val === "전용" || r_val === "지정") inbound = "밀양";
-                        else if(r_val === "원앤원") inbound = "천안센터";
-                        else if(r_val === "범용유통" || r_val === "위탁") inbound = "오산센터";
-                        else if(r_val === "이천간선") inbound = "이천센터";
+                        // 문제 8: 주문업로드 R행 품목지정 조건별 입고센터 자동 매칭
+                        let rVal = m[17] || "";
+                        let inbound = m[4] || "";
+                        if(rVal === "범용위탁") inbound = "웰스토리";
+                        else if(rVal === "범용" || rVal === "전용" || rVal === "지정") inbound = "밀양";
+                        else if(rVal === "원앤원") inbound = "천안센터";
+                        else if(rVal === "범용유통" || rVal === "위탁") inbound = "오산센터";
+                        else if(rVal === "이천간선") inbound = "이천센터";
 
                         document.getElementById('inboundCenter').value = inbound;
                         listUl.style.display = 'none';
@@ -744,7 +754,8 @@
         function checkOrderMatches() {
             document.getElementById('storeList').style.display = 'none';
             const sName = document.getElementById('storeName').value;
-            if(sName) findDispatchDriverAndCenter(sName);
+            const sCode = document.getElementById('storeCode').value;
+            if(sName) findDispatchDriverAndCenter(sName, sCode);
         }
         
         document.addEventListener('click', e => {
@@ -753,33 +764,41 @@
             if(e.target.id !== 'driverSearchInput') document.getElementById('driverStoreSuggest').style.display = 'none';
         });
 
-        /* --- 폼 저장 팝업 --- */
+        // --- 폼 작성 완료 및 Supabase DB 저장 로직 ---
         async function saveFormData() {
             if(!document.getElementById('storeName').value || !document.getElementById('productName').value) {
                 alert("매장명과 제품명을 입력해주세요."); return;
             }
-            
-            const newRecord = {
-                id: Date.now(), status: 'active',
-                reason: document.getElementById('reasonText').value, author: document.getElementById('authorName').value,
-                date: document.getElementById('writeDate').value, driver: document.getElementById('driverName').value,
-                store: document.getElementById('storeName').value, store_code: document.getElementById('storeCode').value,
-                main_center: document.getElementById('mainCenter').value, product: document.getElementById('productName').value,
-                product_code: document.getElementById('productCode').value, inbound_center: document.getElementById('inboundCenter').value,
-                qty: document.getElementById('productQty').value ? Number(document.getElementById('productQty').value) : null, 
+
+            const insertData = {
+                id: Date.now(),
+                status: 'active',
+                reason: document.getElementById('reasonText').value,
+                author: document.getElementById('authorName').value,
+                date: document.getElementById('writeDate').value,
+                driver: document.getElementById('driverName').value,
+                store: document.getElementById('storeName').value,
+                store_code: document.getElementById('storeCode').value,
+                main_center: document.getElementById('mainCenter').value,
+                product: document.getElementById('productName').value,
+                product_code: document.getElementById('productCode').value,
+                inbound_center: document.getElementById('inboundCenter').value,
+                qty: document.getElementById('productQty').value ? Number(document.getElementById('productQty').value) : null,
                 unit: document.getElementById('productUnit').value,
                 img_url: currentImgSrc
             };
 
-            const { error } = await supabaseClient.from('upload_history').insert([newRecord]);
-            if (error) { alert("저장 실패: " + error.message); return; }
+            const { error } = await supabaseClient.from('upload_history').insert([insertData]);
+            if (error) { 
+                alert("데이터 저장 실패!\n원인: " + error.message); 
+                return; 
+            }
 
-            // 로컬 변수 매핑 동기화
             historyDataList.unshift({
-                id: newRecord.id, status: newRecord.status, reason: newRecord.reason, author: newRecord.author, date: newRecord.date,
-                driver: newRecord.driver, store: newRecord.store, sCode: newRecord.store_code, mCenter: newRecord.main_center,
-                product: newRecord.product, pCode: newRecord.product_code, iCenter: newRecord.inbound_center,
-                qty: newRecord.qty, unit: newRecord.unit, img: newRecord.img_url
+                id: insertData.id, status: insertData.status, reason: insertData.reason, author: insertData.author,
+                date: insertData.date, driver: insertData.driver, store: insertData.store, sCode: insertData.store_code,
+                mCenter: insertData.main_center, product: insertData.product, pCode: insertData.product_code,
+                iCenter: insertData.inbound_center, qty: insertData.qty, unit: insertData.unit, img: insertData.img_url
             });
             
             document.querySelectorAll('#formView .input-box').forEach(el => { if(el.id !== 'writeDate') el.value = ''; });
@@ -814,9 +833,7 @@
                 select.value = todayStr;
             } else if (uniqueDates.includes(currentVal)) {
                 select.value = currentVal;
-            } else {
-                select.selectedIndex = 0;
-            }
+            } else { select.selectedIndex = 0; }
         }
 
         function renderHistoryList() {
@@ -824,7 +841,6 @@
             container.innerHTML = '';
             
             let visibleItems = historyDataList.filter(i => isLoggedIn || i.status !== 'delete_requested');
-            
             if (isLoggedIn) {
                 const selectedDate = document.getElementById('historyDateSelect').value;
                 if(selectedDate) visibleItems = visibleItems.filter(i => i.date === selectedDate);
@@ -836,8 +852,8 @@
 
             visibleItems.forEach(item => {
                 const div = document.createElement('div'); div.className = 'history-item';
-                
                 let actionHtml = '';
+                
                 if(item.status === 'delete_requested') {
                     actionHtml = `
                         <span class="status-red">[삭제요청]</span>
@@ -870,20 +886,20 @@
             const allChecked = Array.from(checkboxes).every(cb => cb.checked);
             checkboxes.forEach(cb => cb.checked = !allChecked);
         }
-        
+
         async function deleteSelectedHistory() {
             const checkedIds = Array.from(document.querySelectorAll('.hist-chk:checked')).map(cb => parseInt(cb.value));
             if(checkedIds.length === 0) return alert("삭제할 항목을 선택하세요.");
             if(confirm("선택한 항목을 완전 삭제하시겠습니까?")) {
                 const { error } = await supabaseClient.from('upload_history').delete().in('id', checkedIds);
-                if (error) return alert("삭제 실패: " + error.message);
+                if (error) { alert("삭제 실패: " + error.message); return; }
                 
                 historyDataList = historyDataList.filter(i => !checkedIds.includes(i.id));
                 updateHistoryDates(); renderHistoryList(); renderStorage();
             }
         }
-
-        /* --- 엑셀 다운로드 (문제 5) --- */
+        
+        // --- 엑셀 다운로드 (문제 5: 하이퍼링크 및 개별 시트 이미지 저장 포함) ---
         async function downloadSelectedHistory() {
             const checkedIds = Array.from(document.querySelectorAll('.hist-chk:checked')).map(cb => parseInt(cb.value));
             const dateStr = document.getElementById('historyDateSelect').value;
@@ -896,7 +912,7 @@
             }
 
             if(itemsToExport.length === 0) return alert("다운로드할 데이터가 없습니다.");
-            alert("다운로드를 준비 중입니다. 파일 생성까지 잠시만 기다려주세요.");
+            alert("엑셀 파일을 생성 중입니다. 잠시만 기다려주세요.");
 
             try {
                 const workbook = new ExcelJS.Workbook();
@@ -904,9 +920,9 @@
                 
                 sheet.addRow(['공란', '배송일자', '메인센터명', '고객사코드', '고객사명', '거래처코드', '거래처명', '제품코드', '제품명', '온도', '단위', '품목지정', '재고타입', '수량', '내용', '상세내용', '주체', '귀책', '입고', '자료등록']);
 
-                itemsToExport.forEach((item, index) => {
+                itemsToExport.forEach((item) => {
                     let orderInfo = orderDataList.find(r => r.length > 11 && cleanNumber(r[10]) === item.pCode && cleanNumber(r[8]) === item.sCode) || [];
-                    let safeName = item.store.substring(0, 31).replace(/[\\/?*\[\]]/g, ''); 
+                    let safeSheetName = (item.store || '거래처').substring(0, 31).replace(/[\\/?*\[\]]/g, '');
                     
                     const row = sheet.addRow([
                         '', item.date, item.mCenter, item.sCode, (orderInfo[7]||item.store), (orderInfo[8]||''), (orderInfo[9]||item.store),
@@ -914,24 +930,24 @@
                         item.qty, item.reason, `${item.store} 상세`, '', '', '', ''
                     ]);
 
-                    if(item.img && item.img.startsWith('data:image')) {
+                    if (item.img && item.img.startsWith('data:image')) {
                         const imgId = workbook.addImage({ base64: item.img, extension: 'png' });
-                        let imgSheet = workbook.getWorksheet(safeName);
-                        if(!imgSheet) imgSheet = workbook.addWorksheet(safeName);
+                        let imgSheet = workbook.getWorksheet(safeSheetName);
+                        if (!imgSheet) imgSheet = workbook.addWorksheet(safeSheetName);
                         imgSheet.addImage(imgId, 'A1:H20');
                         
-                        // 하이퍼링크 및 사유 적용
-                        row.getCell(16).value = { 
-                            text: `${item.store} (사유 : ${item.reason})\n\n\n${item.reason}`, 
-                            hyperlink: `#'${safeName}'!A1` 
+                        // 하이퍼링크 2칸 띄우고 아래 사유 기입
+                        row.getCell(16).value = {
+                            text: `${item.store} (사유 : ${item.reason})\n\n\n${item.reason}`,
+                            hyperlink: `#'${safeSheetName}'!A1`
                         };
                     }
                 });
 
                 const buffer = await workbook.xlsx.writeBuffer();
-                saveAs(new Blob([buffer]), `업로드내역_${dateStr}.xlsx`);
-            } catch (error) {
-                alert("엑셀 생성 오류: " + error);
+                saveAs(new Blob([buffer]), `특이사항_${dateStr}.xlsx`);
+            } catch(e) {
+                alert("엑셀 다운로드 오류: " + e.message);
             }
         }
 
@@ -939,30 +955,32 @@
             const item = historyDataList.find(i => i.id === id);
             if(item) { 
                 const { error } = await supabaseClient.from('upload_history').update({ status: 'delete_requested' }).eq('id', id);
-                if (!error) { item.status = 'delete_requested'; renderHistoryList(); }
+                if (error) { alert("상태 변경 실패: " + error.message); return; }
+                item.status = 'delete_requested'; renderHistoryList(); 
             }
         }
+        
         async function confirmDelete(id) {
             const { error } = await supabaseClient.from('upload_history').delete().eq('id', id);
-            if (!error) {
-                historyDataList = historyDataList.filter(i => i.id !== id);
-                updateHistoryDates(); renderHistoryList(); renderStorage();
-            }
+            if (error) { alert("삭제 실패: " + error.message); return; }
+            historyDataList = historyDataList.filter(i => i.id !== id);
+            updateHistoryDates(); renderHistoryList(); renderStorage();
         }
 
-        /* --- 사무실 연락처 --- */
+        // --- 사무실 연락처 ---
         async function saveOfficeContact() {
             const name = document.getElementById('offName').value, rank = document.getElementById('offRank').value, tel = document.getElementById('offTel').value;
             if(name && tel) {
-                const insertData = { id: Date.now(), name, rank, tel };
+                const insertData = { name, rank, tel };
                 const { error } = await supabaseClient.from('office_contacts').insert([insertData]);
-                if(error) return alert("저장 실패");
+                if (error) { alert("연락처 저장 실패!\n원인: " + error.message); return; }
                 
                 officeContacts.push(insertData);
                 document.getElementById('offName').value=''; document.getElementById('offRank').value=''; document.getElementById('offTel').value='';
                 renderOfficeList();
             }
         }
+        
         function renderOfficeList() {
             document.getElementById('officeListContainer').innerHTML = officeContacts.map(c => `
                 <div class="contact-card">
@@ -975,36 +993,48 @@
             `).join('');
         }
 
-        /* --- 기사 연락처 (문제 1) --- */
+        // --- 기사 연락처 덮어씌우기 ---
         async function saveDriverContacts() {
             const data = document.getElementById('driverUploadData').value;
-            const parsedData = parseTSV(data).map((r, i) => ({
-                id: Date.now() + i, name: r[0]||'', region: r[1]||'', phone: r[2]||'', vehicle: r[3]||'', transport: r[4]||'', note: r[5]||''
+            const parsedData = parseTSV(data).map(r => ({
+                name: r[0]||'', region: r[1]||'', phone: r[2]||'', vehicle: r[3]||'', transport: r[4]||'', note: r[5]||''
             })).filter(d => d.name);
             
-            await supabaseClient.from('driver_contacts').delete().neq('id', 0);
-            const { error } = await supabaseClient.from('driver_contacts').insert(parsedData);
-            if(error) return alert("저장 실패");
+            if (parsedData.length > 0) {
+                const { error: delError } = await supabaseClient.from('driver_contacts').delete().neq('id', 0); 
+                if (delError) { alert("기존 연락처 삭제 실패!\n원인: " + delError.message); return; }
+                
+                const { error: insError } = await supabaseClient.from('driver_contacts').insert(parsedData);
+                if (insError) { alert("기사 저장 실패!\n원인: " + insError.message); return; }
+            } else {
+                alert("입력된 데이터가 없거나 형식이 잘못되었습니다.");
+                return;
+            }
 
             driverContacts = parsedData;
             document.getElementById('driverUploadData').value = '';
-            alert("기사 연락처 데이터가 덮어씌워졌습니다."); renderDriverList();
+            alert("기사 연락처 데이터가 성공적으로 덮어씌워졌습니다."); renderDriverList();
         }
 
+        // --- 검색 및 추천 리스트 매칭 ---
         function handleDriverStoreSearch() {
             const search = document.getElementById('driverSearchInput').value.trim();
             const suggestList = document.getElementById('driverStoreSuggest');
             suggestList.innerHTML = '';
             
-            if(search) {
+            if(!isLoggedIn && search) {
                 const matches = new Set();
                 dispatchDataList.forEach(r => {
-                    // D행(매장명), H행(배송기사 이름), G행(차량번호) 포함 여부 체크
-                    if(r.length > 7 && ((r[3]||"").includes(search) || (r[7]||"").includes(search) || (r[6]||"").includes(search))) {
-                        matches.add(r[3]); // 매장명을 추천 리스트로 전달
+                    if(r.length > 7) {
+                        const storeName = r[3] || "";
+                        const driverName = r[7] || "";
+                        const vehicleNo = r[6] || "";
+                        // D행(매장명) 이나 H행(기사명), G행(차량번호) 중 하나라도 포함되면 추천 리스트에 매장명 추가
+                        if(storeName.includes(search) || driverName.includes(search) || vehicleNo.includes(search)) {
+                            matches.add(storeName);
+                        }
                     }
                 });
-                
                 if(matches.size > 0) {
                     suggestList.style.display = 'block';
                     matches.forEach(store => {
@@ -1024,13 +1054,20 @@
         function filterDriversList(searchStr) {
             let list = driverContacts;
             if(searchStr) {
-                const matchedNames = new Set();
+                const matchedDriverNames = new Set();
                 dispatchDataList.forEach(r => { 
-                    if(r.length > 7 && ((r[3]||"").includes(searchStr) || (r[7]||"").includes(searchStr) || (r[6]||"").includes(searchStr))) {
-                        matchedNames.add(r[7]); 
+                    if(r.length > 7) {
+                        const storeName = r[3] || "";
+                        const driverName = r[7] || "";
+                        const vehicleNo = r[6] || "";
+                        // 완전 일치 혹은 부분 일치하는 경우 해당 기사 이름 확보
+                        if(storeName === searchStr || driverName === searchStr || vehicleNo === searchStr ||
+                           storeName.includes(searchStr) || driverName.includes(searchStr) || vehicleNo.includes(searchStr)) {
+                            matchedDriverNames.add(driverName);
+                        }
                     }
                 });
-                list = list.filter(d => matchedNames.has(d.name));
+                list = list.filter(d => matchedDriverNames.has(d.name));
             }
             renderDriverListToDOM(list);
         }
