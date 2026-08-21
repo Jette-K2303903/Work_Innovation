@@ -311,7 +311,7 @@
             <div id="officeListContainer" class="contact-list"></div>
         </div>
 
-        <!-- 뷰 추가: 현장 연락처 (기존 목록 4 대체) -->
+        <!-- 문제 5: 뷰 추가: 현장 연락처 (기존 목록 4 대체) -->
         <div id="fieldContactView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">👷 현장 연락처</h2>
             <div id="fieldEditForm" style="display:none; background:#FFF; padding:15px; border-radius:12px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
@@ -340,7 +340,7 @@
             <div id="driverListContainer" class="contact-list"></div>
         </div>
 
-        <!-- 문제 8: 뷰 추가: 배차 내역 지도 -->
+        <!-- 문제 8: 뷰 추가: 배차 내역 지도 (기존 목록 5 대체) -->
         <div id="mapView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">🗺️ 배차 내역 (지도)</h2>
             <div id="transportFilters" style="margin-bottom:15px; display:flex; flex-wrap:wrap; gap:10px; background:#fff; padding:10px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05);"></div>
@@ -363,7 +363,7 @@
         <div class="modal-box" style="max-width:500px;">
             <h2 class="modal-title">시스템 설정</h2>
 
-            <!-- 개별 덮어씌우기 버튼 -->
+            <!-- 문제 10: 개별 덮어씌우기 버튼으로 변경 -->
             <button class="modal-btn" style="background:#4A90E2;" onclick="document.getElementById('orderUploadModal').style.display='flex'">📤 주문업로드 데이터 덮어씌우기</button>
             <button class="modal-btn" style="background:#50E3C2; color:#1C1C1E;" onclick="document.getElementById('dispatchUploadModal').style.display='flex'">📥 배차업로드 데이터 덮어씌우기</button>
 
@@ -373,7 +373,7 @@
 
                 <div style="display:flex; gap:10px; margin-top:5px;">
                     <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="openListManageModal()">📋 비로그인 목록 관리</button>
-                    <!-- 사유 목록 관리 버튼 -->
+                    <!-- 문제 9: 사유 목록 관리 버튼 -->
                     <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="document.getElementById('reasonManageModal').style.display='flex'; renderReasonManageList();">📝 사유 목록 관리</button>
                 </div>
             </div>
@@ -383,7 +383,7 @@
         </div>
     </div>
 
-    <!-- 개별 업로드 팝업 -->
+    <!-- 문제 10: 개별 업로드 팝업 -->
     <div id="orderUploadModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box">
             <h2 class="modal-title" style="font-size:18px;">주문업로드 새로 덮어씌우기</h2>
@@ -402,7 +402,7 @@
         </div>
     </div>
 
-    <!-- 사유 목록 관리 팝업 -->
+    <!-- 문제 9: 사유 목록 관리 팝업 -->
     <div id="reasonManageModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box">
             <h2 class="modal-title" style="font-size:18px;">사유 목록 관리</h2>
@@ -552,7 +552,7 @@
                 if (offErr) console.error("사무실 연락처 로드 에러:", offErr.message);
                 if (offData) officeContacts = offData;
 
-                // 현장 연락처 조회
+                // 현장 연락처 조회 (DB 테이블이 없다면 자동 무시)
                 const { data: fldData, error: fldErr } = await supabaseClient.from('field_contacts').select('*');
                 if (!fldErr && fldData) fieldContacts = fldData;
 
@@ -658,7 +658,7 @@
         function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
         function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
 
-        // --- 드래그 앤 드롭 설정 ---
+        // --- 드래그 앤 드롭 설정 (문제 6) ---
         function setupDragAndDrop() {
             let draggedItem = null;
             document.querySelectorAll('.sortable-item').forEach(item => {
@@ -725,7 +725,7 @@
             } else alert('저장 실패: ' + error.message);
         }
 
-        // --- 데이터 개별 덮어씌우기 저장 기능 ---
+        // --- 데이터 개별 덮어씌우기 저장 기능 (문제 10) ---
         async function saveNewOrderData() {
             const rawOrder = document.getElementById('newOrderData').value;
             if(rawOrder.trim()) {
@@ -799,7 +799,7 @@
             closeSettingsModal();
         }
 
-        // --- 자동 삭제 ---
+        // --- 문제 11: 지정된 시점에 D-7 데이터 삭제 ---
         async function checkAutoDelete() {
             const now = new Date();
             if(now.getHours() === 20 && now.getMinutes() === 30) {
@@ -857,7 +857,7 @@
 
         function cleanNumber(str) { return str ? str.replace(/,/g, '') : ""; }
 
-        // --- 사유 검색 및 자동 추천 ---
+        // --- 사유 검색 및 자동 추천 (문제 9) ---
         function filterReasons() {
             const inputVal = document.getElementById('reasonText').value.trim();
             const listUl = document.getElementById('reasonListUl');
@@ -903,23 +903,28 @@
             renderReasonManageList();
         }
 
-        // --- 문제 4: 매장코드 자동 매칭 로직 ---
+        // 문제 4: 주문업로드에서 매장명을 선택 시 매장코드 자동 매칭 및 연계 로직
         function handleStoreInput() {
             const val = document.getElementById('storeName').value.trim();
             if(!val) {
                 document.getElementById('storeCode').value = '';
                 document.getElementById('mainCenter').value = '';
                 document.getElementById('driverName').value = '정보 없음';
+                document.getElementById('productName').value = '';
+                document.getElementById('productCode').value = '';
                 return;
             }
             filterStoreNames();
 
             let matchedCode = "";
-            const searchClean = val.replace(/\s+/g, '').toLowerCase(); // 공백, 대소문자 무시 비교
+            const date = document.getElementById('writeDate').value.replace(/\D/g, '');
             for(let r of orderDataList) {
-                if(r.length > 9 && r[9].replace(/\s+/g, '').toLowerCase() === searchClean) { 
-                    matchedCode = cleanNumber(r[8]); 
-                    break; 
+                if(r.length > 9) {
+                    const deliveryDate = (r[1]||"").replace(/\D/g, '');
+                    if(deliveryDate === date && r[9] === val) { 
+                        matchedCode = cleanNumber(r[8]); 
+                        break; 
+                    }
                 }
             }
             if(matchedCode) {
@@ -928,11 +933,10 @@
             }
         }
 
-        // --- 문제 3: 홈화면 매장명 비슷한 매장명 추천 (정규식 필터링) ---
+        // 문제 3: 홈화면 매장명은 주문업로드(orders - account_name) 매장명에서 추천리스트를 띄우도록 설정
         function filterStoreNames() {
             const date = document.getElementById('writeDate').value.replace(/\D/g, '');
             const inputVal = document.getElementById('storeName').value.trim();
-            const searchClean = inputVal.replace(/\s+/g, '').toLowerCase();
             const listUl = document.getElementById('storeList');
             listUl.innerHTML = '';
             if(!inputVal) { listUl.style.display = 'none'; return; }
@@ -941,10 +945,8 @@
             orderDataList.forEach(row => {
                 if(row.length > 9) {
                     const deliveryDate = (row[1]||"").replace(/\D/g, '');
-                    const storeName = row[9] || "";
-                    const storeClean = storeName.replace(/\s+/g, '').toLowerCase();
-                    // 공백이나 대소문자 차이를 무시하고 추천리스트에 표출 (비슷한 매장명 로직 적용)
-                    if(deliveryDate === date && storeClean.includes(searchClean) && !seen.has(storeName)) {
+                    const storeName = row[9] || ""; // orders - account_name 기준
+                    if(deliveryDate === date && storeName.includes(inputVal) && !seen.has(storeName)) {
                         seen.add(storeName); matches.push(row);
                     }
                 }
@@ -964,12 +966,12 @@
             document.getElementById('storeName').value = name;
             document.getElementById('storeCode').value = code;
             document.getElementById('storeList').style.display = 'none';
-            findDispatchDriverAndCenter(code); // 매장코드로 기사/센터 자동 매칭
+            findDispatchDriverAndCenter(code); // 매장코드로 기사 및 메인센터 자동 매칭
             document.getElementById('productName').value = '';
             document.getElementById('productCode').value = '';
         }
 
-        // --- 문제 4, 문제 6: 배차기사 자동매칭 및 메인센터 출력 ---
+        // 문제 4, 6: 배차업로드에서 '매장코드' 기준으로 배차기사(driver_name) 및 메인센터(main_center) 자동매칭
         function findDispatchDriverAndCenter(storeCodeMatch) {
             let driverName = "정보 없음", centerInfo = "", driverContact = "";
             const cleanTarget = cleanNumber(storeCodeMatch);
@@ -977,11 +979,11 @@
             for(let row of dispatchDataList) {
                 if(row.length > 7 && cleanNumber(row[1]) === cleanTarget) { 
                     driverName = row[7] || "정보 없음"; 
-                    centerInfo = row[16] || ""; // 문제 6: 메인센터를 배차업로드 main_center(Q행)에서 추출
-                    const foundDriver = driverContacts.find(d => d.name === driverName);
+                    centerInfo = row[16] || ""; // 문제 6 반영: 메인센터를 배차업로드 main_center에서 매칭 (Q행)
                     
+                    const foundDriver = driverContacts.find(d => d.name === driverName);
                     if(foundDriver) { driverContact = ` (${foundDriver.phone})`; }
-                    else if(row[15]) { driverContact = ` (${row[15]})`; }
+                    else if(row[15]) { driverContact = ` (${row[15]})`; } // 배차 리스트 자체 연락처 백업
                     break;
                 }
             }
@@ -989,26 +991,41 @@
             document.getElementById('mainCenter').value = centerInfo;
         }
 
+        // 문제 7, 8, 9: 제품명 추천 필터
         function filterProductNames() {
             const storeCode = document.getElementById('storeCode').value;
             const inputVal = document.getElementById('productName').value.trim();
-            const date = document.getElementById('writeDate').value.replace(/\D/g, '');
             const listUl = document.getElementById('productList');
             listUl.innerHTML = '';
             if(!inputVal) { listUl.style.display = 'none'; return; }
 
             const matches = [], seen = new Set();
+            
+            // 문제 8 대비: 매장명이 입력되어 매장코드가 있는 경우, 해당 매장의 고객사 코드(client_code) 추출
+            let targetClientCode = "";
+            if(storeCode) {
+                const storeRow = orderDataList.find(r => r.length > 9 && cleanNumber(r[8]) === storeCode);
+                if(storeRow) targetClientCode = cleanNumber(storeRow[6]);
+            }
+
             orderDataList.forEach(row => {
                 if(row.length > 11) {
-                    const rowStoreCode = cleanNumber(row[8]);
-                    const prodName = row[11] || "";
-                    const deliveryDate = (row[1]||"").replace(/\D/g, '');
+                    const prodName = row[11] || ""; // 문제 7: orders - product_name
                     let condition = false;
-                    
-                    if(!storeCode) { condition = (deliveryDate === date) && prodName.includes(inputVal); } 
-                    else { condition = (rowStoreCode === storeCode && prodName.includes(inputVal)); }
 
-                    if(condition && !seen.has(prodName)) { seen.add(prodName); matches.push(row); }
+                    if(storeCode) {
+                        // 문제 8: 매장명 입력 시 고객사 코드(client_code)가 일치하는 제품만 추천
+                        const rowClientCode = cleanNumber(row[6]);
+                        condition = (rowClientCode === targetClientCode) && prodName.includes(inputVal);
+                    } else {
+                        // 문제 9: 매장명 미입력 시 모든 제품명에서 추천
+                        condition = prodName.includes(inputVal);
+                    }
+
+                    if(condition && !seen.has(prodName)) { 
+                        seen.add(prodName); 
+                        matches.push(row); 
+                    }
                 }
             });
 
@@ -1018,11 +1035,11 @@
                     const li = document.createElement('li'); li.textContent = m[11];
                     li.onclick = () => {
                         document.getElementById('productName').value = m[11];
-                        document.getElementById('productCode').value = cleanNumber(m[10]);
+                        document.getElementById('productCode').value = cleanNumber(m[10]); // 문제 7: 자동 매칭
                         document.getElementById('productUnit').value = m[16] || "";
 
-                        // --- 문제 5: 입고센터 표기 방법 ---
-                        let rVal = m[17] || ""; 
+                        // 문제 5: 입고센터 표기 방법 (item_designation 기준)
+                        let rVal = (m[17] || "").trim(); 
                         let inbound = m[4] || "";
                         if(rVal === "범용위탁") inbound = "웰스토리";
                         else if(rVal === "범용" || rVal === "전용" || rVal === "지정") inbound = "밀양센터"; 
@@ -1322,58 +1339,69 @@
             alert("기사 연락처 데이터가 성공적으로 덮어씌워졌습니다."); renderDriverList();
         }
 
-        // --- 문제 2: 비로그인 대상자 기사 연락처를 배차 업로드 기준으로 검색 및 연락 제어 ---
+        // 문제 2: 비로그인 유저는 기사 리스트를 배차업로드 기준으로 필터링하여 제공
         function filterDriversList(searchStr) {
             let list = driverContacts;
             
             if(!isLoggedIn) {
-                // 비로그인: 배차업로드 데이터에서 기사 정보를 자체 추출 (마스터 데이터와 연동)
+                // 비로그인: 배차업로드 데이터에서 기사 정보를 자체 추출
+                const dispatchDriverNames = new Set();
                 const dispatchDriverMap = new Map();
+                
                 dispatchDataList.forEach(r => {
-                    if(r.length > 15 && r[7]) { 
-                        const dName = r[7];
-                        const masterData = driverContacts.find(d => d.name === dName);
-                        dispatchDriverMap.set(dName, {
-                            name: dName,
-                            region: masterData ? masterData.region : (r[8] || r[3] || ''),
-                            vehicle: masterData ? masterData.vehicle : (r[6] || ''),
-                            phone: masterData ? masterData.phone : (r[15] || '') 
-                        });
+                    if(r.length > 15 && r[7]) { // 기사명 존재
+                        dispatchDriverNames.add(r[7]);
+                        if(r[15]) { // 배차 데이터에 연락처가 있는 경우
+                            dispatchDriverMap.set(r[7], {
+                                name: r[7], region: r[8] || r[3] || '', vehicle: r[6] || '', phone: r[15]
+                            });
+                        }
                     }
                 });
-                list = Array.from(dispatchDriverMap.values());
+
+                // 1차적으로 DB 기사 중 현재 배차된 기사 정보만 필터 (차량번호, 전화번호 최신성 보장)
+                let filteredList = driverContacts.filter(d => dispatchDriverNames.has(d.name));
+                
+                // 2차적으로 DB에는 없으나 배차리스트에는 있는 기사 정보를 병합
+                const dbNames = new Set(filteredList.map(d => d.name));
+                dispatchDriverNames.forEach(name => {
+                    if(!dbNames.has(name) && dispatchDriverMap.has(name)) {
+                        filteredList.push(dispatchDriverMap.get(name));
+                    } else if (!dbNames.has(name) && !dispatchDriverMap.has(name)) {
+                        filteredList.push({ name: name, region: '', vehicle: '', phone: '정보없음' });
+                    }
+                });
+                list = filteredList;
             }
 
             if(searchStr) {
-                const searchClean = searchStr.replace(/\s+/g, '').toLowerCase();
                 if(!isLoggedIn) {
-                    // 비로그인: 생성된 추출 리스트 내에서만 유사 검색 실행
                     list = list.filter(d => 
-                        d.name.replace(/\s+/g, '').toLowerCase().includes(searchClean) || 
-                        d.phone.replace(/[^0-9]/g, '').includes(searchClean.replace(/[^0-9]/g, '')) || 
-                        d.vehicle.replace(/\s+/g, '').toLowerCase().includes(searchClean) || 
-                        d.region.replace(/\s+/g, '').toLowerCase().includes(searchClean)
+                        d.name.includes(searchStr) || 
+                        d.phone.includes(searchStr) || 
+                        d.vehicle.includes(searchStr) || 
+                        d.region.includes(searchStr)
                     );
                 } else {
-                    // 로그인: 통합 검색 지원 (전체 마스터 기사 리스트 내에서 검색)
+                    // 로그인: 통합 검색 지원
                     const matchedDriverNames = new Set();
                     dispatchDataList.forEach(r => { 
                         if(r.length > 15) {
-                            const storeName = (r[3] || "").replace(/\s+/g, '').toLowerCase();
-                            const driverName = (r[7] || "").replace(/\s+/g, '').toLowerCase();
-                            const vehicleNo = (r[6] || "").replace(/\s+/g, '').toLowerCase();
-                            const phone = (r[15] || "").replace(/[^0-9]/g, '');
+                            const storeName = r[3] || "";
+                            const driverName = r[7] || "";
+                            const vehicleNo = r[6] || "";
+                            const phone = r[15] || "";
 
-                            if(storeName.includes(searchClean) || driverName.includes(searchClean) || vehicleNo.includes(searchClean) || phone.includes(searchClean.replace(/[^0-9]/g, ''))) {
-                                matchedDriverNames.add(r[7]); 
+                            if(storeName.includes(searchStr) || driverName.includes(searchStr) || vehicleNo.includes(searchStr) || phone.includes(searchStr)) {
+                                matchedDriverNames.add(driverName);
                             }
                         }
                     });
                     list = list.filter(d => 
                         matchedDriverNames.has(d.name) || 
-                        d.name.replace(/\s+/g, '').toLowerCase().includes(searchClean) || 
-                        d.phone.replace(/[^0-9]/g, '').includes(searchClean.replace(/[^0-9]/g, '')) || 
-                        d.vehicle.replace(/\s+/g, '').toLowerCase().includes(searchClean)
+                        d.name.includes(searchStr) || 
+                        d.phone.includes(searchStr) || 
+                        d.vehicle.includes(searchStr)
                     );
                 }
             }
@@ -1386,7 +1414,6 @@
             suggestList.innerHTML = '';
 
             if(search) {
-                const searchClean = search.replace(/\s+/g, '').toLowerCase();
                 const matches = new Set();
                 let exactMatchFound = false;
 
@@ -1396,21 +1423,15 @@
                         const driverName = r[7] || "";
                         const vehicleNo = r[6] || "";
                         const phone = r[15] || "";
-                        
-                        const cStore = storeName.replace(/\s+/g, '').toLowerCase();
-                        const cDriver = driverName.replace(/\s+/g, '').toLowerCase();
-                        const cVehicle = vehicleNo.replace(/\s+/g, '').toLowerCase();
-                        const cPhone = phone.replace(/[^0-9]/g, '');
-                        const cSearchNum = searchClean.replace(/[^0-9]/g, '');
 
-                        if(cStore === searchClean || cDriver === searchClean || cVehicle === searchClean || (cSearchNum && cPhone === cSearchNum)) {
+                        if(storeName === search || driverName === search || vehicleNo === search || phone === search) {
                             exactMatchFound = true;
                         }
 
-                        if(cStore.includes(searchClean)) matches.add(storeName);
-                        if(cDriver.includes(searchClean)) matches.add(driverName);
-                        if(cVehicle.includes(searchClean)) matches.add(vehicleNo);
-                        if(cSearchNum && cPhone.includes(cSearchNum)) matches.add(phone);
+                        if(storeName.includes(search)) matches.add(storeName);
+                        if(driverName.includes(search)) matches.add(driverName);
+                        if(vehicleNo.includes(search)) matches.add(vehicleNo);
+                        if(phone.includes(search)) matches.add(phone);
                     }
                 });
 
@@ -1466,7 +1487,7 @@
             document.getElementById('driverDetailModal').style.display = 'flex';
         }
 
-        // --- 문제 1: 배차 내역 (지도) 육안으로 잘 보이는 표준 OpenStreetMap 사용 ---
+        // --- 문제 8, 문제 1: 배차 내역 (지도) 투명바탕/깔끔한 렌더링 로직 ---
         let map;
         let transportLayers = {};
         const MAP_COLORS = [
@@ -1477,8 +1498,8 @@
 
         function renderMap() {
             if(!map) {
-                map = L.map('map').setView([35.3, 128.0], 8); // 영남권 시작 좌표
-                // 문제 1 대응: CSS 투명 적용 및 가장 대중적이고 선명하게 렌더링되는 기본 OpenStreetMap 타일 사용
+                // 문제 1: 투명한 스타일링이 적용되고 육안 시인성이 가장 좋은 OpenStreetMap 적용
+                map = L.map('map').setView([35.3, 128.0], 8);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap contributors'
                 }).addTo(map);
