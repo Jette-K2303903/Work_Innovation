@@ -155,7 +155,7 @@
             text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 85vh; overflow-y: auto;
         }
         .modal-title { font-size: 20px; font-weight: 800; color: var(--primary); margin: 0 0 15px 0; }
-        .modal-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; background: var(--primary); color: #FFF; cursor: pointer; margin-top: 10px; }
+        .modal-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; background: var(--primary); color: #FFF; cursor: margin-top: 10px; }
         .modal-btn-close { background: #F2F2F7; color: var(--text-main); }
         .textarea-box { width: 100%; height: 80px; padding: 10px; border-radius: 8px; border: 1px solid var(--border); box-sizing: border-box; resize: none; margin-bottom: 10px; font-size: 12px; }
 
@@ -917,12 +917,9 @@
             filterStoreNames();
 
             let matchedCode = "";
-            const date = document.getElementById('writeDate').value.replace(/\D/g, '');
             for(let r of orderDataList) {
                 if(r.length > 9) {
-                    const deliveryDate = (r[1]||"").replace(/\D/g, '');
-                    // 문제 1 대응: includes 로직으로 유연성 강화
-                    if(deliveryDate.includes(date) && r[9] === val) { 
+                    if(r[9] === val) { 
                         matchedCode = cleanNumber(r[8]); 
                         break; 
                     }
@@ -934,9 +931,8 @@
             }
         }
 
-        // 문제 3: 홈화면 매장명은 주문업로드(orders - account_name) 매장명에서 추천리스트를 띄우도록 설정
+        // 문제 1, 3: 홈화면 매장명은 주문업로드(orders - account_name) 매장명에서 추천리스트를 띄우도록 설정 (날짜 조건 제거)
         function filterStoreNames() {
-            const date = document.getElementById('writeDate').value.replace(/\D/g, '');
             const inputVal = document.getElementById('storeName').value.trim();
             const listUl = document.getElementById('storeList');
             listUl.innerHTML = '';
@@ -945,10 +941,9 @@
             const matches = [], seen = new Set();
             orderDataList.forEach(row => {
                 if(row.length > 9) {
-                    const deliveryDate = (row[1]||"").replace(/\D/g, '');
                     const storeName = row[9] || ""; // orders - account_name 기준
-                    // 문제 1 대응: includes 로직으로 유연성 강화
-                    if(deliveryDate.includes(date) && storeName.includes(inputVal) && !seen.has(storeName)) {
+                    // 문제 1: 날짜 비교 조건을 삭제하여 유사한 이름이 무조건 추천되도록 수정
+                    if(storeName.includes(inputVal) && !seen.has(storeName)) {
                         seen.add(storeName); matches.push(row);
                     }
                 }
@@ -1010,12 +1005,9 @@
                 if(storeRow) targetClientCode = cleanNumber(storeRow[6]);
             }
 
-            const date = document.getElementById('writeDate').value.replace(/\D/g, '');
-
             orderDataList.forEach(row => {
                 if(row.length > 11) {
                     const prodName = row[11] || ""; // 문제 7: orders - product_name
-                    const deliveryDate = (row[1]||"").replace(/\D/g, '');
                     let condition = false;
 
                     if(storeCode) {
@@ -1023,8 +1015,8 @@
                         const rowClientCode = cleanNumber(row[6]);
                         condition = (rowClientCode === targetClientCode) && prodName.includes(inputVal);
                     } else {
-                        // 문제 9: 매장명 미입력 시 모든 제품명에서 추천 (문제 1 대응 includes 로직 유지)
-                        condition = deliveryDate.includes(date) && prodName.includes(inputVal);
+                        // 문제 9: 매장명 미입력 시 모든 제품명에서 추천
+                        condition = prodName.includes(inputVal);
                     }
 
                     if(condition && !seen.has(prodName)) { 
@@ -1348,13 +1340,14 @@
             let list = driverContacts;
             
             if(!isLoggedIn) {
+                // 비로그인: 배차업로드 데이터에서 기사 정보를 자체 추출
                 const dispatchDriverNames = new Set();
                 const dispatchDriverMap = new Map();
                 
                 dispatchDataList.forEach(r => {
-                    if(r.length > 15 && r[7]) { 
+                    if(r.length > 15 && r[7]) { // 기사명 존재
                         dispatchDriverNames.add(r[7]);
-                        if(r[15]) { 
+                        if(r[15]) { // 배차 데이터에 연락처가 있는 경우
                             dispatchDriverMap.set(r[7], {
                                 name: r[7], region: r[8] || r[3] || '', vehicle: r[6] || '', phone: r[15]
                             });
@@ -1362,8 +1355,10 @@
                     }
                 });
 
+                // 1차적으로 DB 기사 중 현재 배차된 기사 정보만 필터 (차량번호, 전화번호 최신성 보장)
                 let filteredList = driverContacts.filter(d => dispatchDriverNames.has(d.name));
                 
+                // 2차적으로 DB에는 없으나 배차리스트에는 있는 기사 정보를 병합
                 const dbNames = new Set(filteredList.map(d => d.name));
                 dispatchDriverNames.forEach(name => {
                     if(!dbNames.has(name) && dispatchDriverMap.has(name)) {
@@ -1384,6 +1379,7 @@
                         d.region.includes(searchStr)
                     );
                 } else {
+                    // 로그인: 통합 검색 지원
                     const matchedDriverNames = new Set();
                     dispatchDataList.forEach(r => { 
                         if(r.length > 15) {
@@ -1487,9 +1483,9 @@
             document.getElementById('driverDetailModal').style.display = 'flex';
         }
 
-        // --- 문제 8, 문제 1: 배차 내역 (지도) 투명바탕/깔끔한 렌더링 로직 ---
+        // --- 문제 8, 문제 1, 2, 3: 배차 내역 (지도) 렌더링 로직 ---
         let map;
-        let transportLayers = {};
+        let regionLayers = {};
         const MAP_COLORS = [
             '#e6194B', '#3cb44b', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990',
             '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9', '#333333',
@@ -1498,6 +1494,7 @@
 
         function renderMap() {
             if(!map) {
+                // 투명한 스타일링이 적용되고 육안 시인성이 가장 좋은 OpenStreetMap 적용
                 map = L.map('map').setView([35.3, 128.0], 8);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap contributors'
@@ -1509,56 +1506,56 @@
             });
 
             document.getElementById('transportFilters').innerHTML = '';
-            transportLayers = {};
+            regionLayers = {};
 
             const driverRoutes = {}; 
-            const validTransports = new Set();
+            const validRegions = new Set();
 
             dispatchDataList.forEach(r => {
                 if(r.length > 12) {
                     const driver = r[7];
                     const lng = parseFloat(r[9]);
                     const lat = parseFloat(r[10]);
-                    let filterGroup = r[8]; // 문제 2: region_type(권역) 기준으로 그룹핑 적용
-                    if (!filterGroup) filterGroup = '기타'; 
+                    let region = r[8]; // 문제 2: region_type 기준
+                    if (!region) region = '기타'; 
                     const store = r[3];
 
                     if(driver && !isNaN(lat) && !isNaN(lng)) {
-                        if(!driverRoutes[driver]) driverRoutes[driver] = { filterGroup, points: [], storeNames: [] };
+                        if(!driverRoutes[driver]) driverRoutes[driver] = { region, points: [], storeNames: [] };
                         driverRoutes[driver].points.push([lat, lng]);
                         driverRoutes[driver].storeNames.push(store);
-                        validTransports.add(filterGroup);
+                        validRegions.add(region);
                     }
                 }
             });
 
-            validTransports.forEach(t => {
+            validRegions.forEach(t => {
                 const lbl = document.createElement('label');
                 lbl.style.marginRight = '10px';
                 lbl.style.fontSize = '14px';
-                lbl.innerHTML = `<input type="checkbox" checked onchange="toggleTransport('${t}', this.checked)"> ${t}`;
+                lbl.innerHTML = `<input type="checkbox" checked onchange="toggleRegion('${t}', this.checked)"> ${t}`;
                 document.getElementById('transportFilters').appendChild(lbl);
-                transportLayers[t] = L.layerGroup().addTo(map);
+                regionLayers[t] = L.layerGroup().addTo(map);
             });
 
             let colorIdx = 0;
             for(const driver in driverRoutes) {
                 const route = driverRoutes[driver];
-                const tLayer = transportLayers[route.filterGroup];
+                const tLayer = regionLayers[route.region];
                 const color = MAP_COLORS[colorIdx % MAP_COLORS.length];
                 colorIdx++;
 
-                // 문제 3: 경로선 클릭 시 배송기사 이름이 팝업에 강조 표시되도록 개선
                 if(route.points.length > 1) {
+                    // 문제 3: 선 클릭 시 배송기사 이름 명확히 표시
                     L.polyline(route.points, { color, weight: 3, opacity: 0.8 })
-                     .bindPopup(`<div style="font-size:14px; font-weight:bold; color:var(--primary);">배송기사: ${driver}</div><div style="font-size:12px; color:#666;">경로 확인됨</div>`)
+                     .bindPopup(`<div style='font-size:14px; font-weight:bold;'>배송기사: ${driver}</div>`)
                      .addTo(tLayer);
                 }
 
-                // 문제 3: 마커 클릭 시 매장명과 함께 배송기사 이름이 강조 표시되도록 개선
                 route.points.forEach((pt, idx) => {
+                    // 문제 3: 마커 클릭 시 배송기사 이름 명확히 표시
                     L.circleMarker(pt, { radius: 6, color: '#fff', weight: 1, fillColor: color, fillOpacity: 1 })
-                     .bindPopup(`<div style="font-size:13px;"><b>${route.storeNames[idx]}</b><br><span style="color:var(--primary); font-weight:bold;">배송기사: ${driver}</span></div>`)
+                     .bindPopup(`<div style='font-size:14px;'><b>${route.storeNames[idx]}</b><br><span style='color:var(--primary); font-weight:bold;'>배송기사: ${driver}</span></div>`)
                      .addTo(tLayer);
                 });
             }
@@ -1566,11 +1563,11 @@
             setTimeout(() => { map.invalidateSize(); }, 300);
         }
 
-        function toggleTransport(t, isChecked) {
+        function toggleRegion(t, isChecked) {
             if(isChecked) {
-                map.addLayer(transportLayers[t]);
+                map.addLayer(regionLayers[t]);
             } else {
-                map.removeLayer(transportLayers[t]);
+                map.removeLayer(regionLayers[t]);
             }
         }
     </script>
