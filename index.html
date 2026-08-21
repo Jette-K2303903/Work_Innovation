@@ -155,7 +155,7 @@
             text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 85vh; overflow-y: auto;
         }
         .modal-title { font-size: 20px; font-weight: 800; color: var(--primary); margin: 0 0 15px 0; }
-        .modal-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; background: var(--primary); color: #FFF; cursor: margin-top: 10px; }
+        .modal-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; background: var(--primary); color: #FFF; cursor: pointer; margin-top: 10px; }
         .modal-btn-close { background: #F2F2F7; color: var(--text-main); }
         .textarea-box { width: 100%; height: 80px; padding: 10px; border-radius: 8px; border: 1px solid var(--border); box-sizing: border-box; resize: none; margin-bottom: 10px; font-size: 12px; }
 
@@ -304,7 +304,6 @@
                 <div class="input-row" style="margin-bottom:10px;">
                     <input type="text" id="offName" class="input-box" placeholder="이름" style="flex:1;">
                     <input type="text" id="offRank" class="input-box" placeholder="직급" style="flex:1;">
-                    <input type="text" id="offTel" class="input-box" placeholder="연락처" style="flex:1;">
                 </div>
                 <input type="tel" id="offTel" class="input-box" placeholder="연락처 (예: 01012345678)" style="margin-bottom:10px;">
                 <button class="modal-btn" style="margin-top:0;" onclick="saveOfficeContact()">저장하기</button>
@@ -913,6 +912,7 @@
                 document.getElementById('driverName').value = '정보 없음';
                 document.getElementById('productName').value = '';
                 document.getElementById('productCode').value = '';
+                document.getElementById('inboundCenter').value = ''; // 문제 2: 연계 초기화
                 return;
             }
             filterStoreNames();
@@ -966,6 +966,7 @@
             findDispatchDriverAndCenter(code); // 매장코드로 기사 및 메인센터 자동 매칭
             document.getElementById('productName').value = '';
             document.getElementById('productCode').value = '';
+            document.getElementById('inboundCenter').value = ''; // 연계 초기화
         }
 
         // 문제 4, 6: 배차업로드에서 '매장코드' 기준으로 배차기사(driver_name) 및 메인센터(main_center) 자동매칭
@@ -988,32 +989,32 @@
             document.getElementById('mainCenter').value = centerInfo;
         }
 
-        // 문제 7, 8, 9: 제품명 추천 필터
+        // 문제 1, 2, 7, 8, 9: 제품명 추천 필터
         function filterProductNames() {
             const storeCode = document.getElementById('storeCode').value;
             const inputVal = document.getElementById('productName').value.trim();
             const listUl = document.getElementById('productList');
             listUl.innerHTML = '';
-            if(!inputVal) { listUl.style.display = 'none'; return; }
+            
+            // 문제 2: 제품명 입력란이 지워질 때 연관된 '제품코드', '입고센터' 초기화
+            if(!inputVal) { 
+                listUl.style.display = 'none'; 
+                document.getElementById('productCode').value = '';
+                document.getElementById('inboundCenter').value = '';
+                return; 
+            }
 
             const matches = [], seen = new Set();
             
-            // 문제 8 대비: 매장명이 입력되어 매장코드가 있는 경우, 해당 매장의 고객사 코드(client_code) 추출
-            let targetClientCode = "";
-            if(storeCode) {
-                const storeRow = orderDataList.find(r => r.length > 9 && cleanNumber(r[8]) === storeCode);
-                if(storeRow) targetClientCode = cleanNumber(storeRow[6]);
-            }
-
             orderDataList.forEach(row => {
                 if(row.length > 11) {
                     const prodName = row[11] || ""; // 문제 7: orders - product_name
                     let condition = false;
 
                     if(storeCode) {
-                        // 문제 8: 매장명 입력 시 고객사 코드(client_code)가 일치하는 제품만 추천
-                        const rowClientCode = cleanNumber(row[6]);
-                        condition = (rowClientCode === targetClientCode) && prodName.includes(inputVal);
+                        // 문제 1: 매장코드를 기준으로 orders - account_code 와 일치하는 제품명만 추천
+                        const rowAccountCode = cleanNumber(row[8]);
+                        condition = (rowAccountCode === cleanNumber(storeCode)) && prodName.includes(inputVal);
                     } else {
                         // 문제 9: 매장명 미입력 시 모든 제품명에서 추천
                         condition = prodName.includes(inputVal);
