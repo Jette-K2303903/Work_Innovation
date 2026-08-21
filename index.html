@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>매장 재고 관리 시스템</title>
-    <!-- Supabase 및 Excel 라이브러리 -->
+    <title>밀양센터 야간 특이사항 관리</title>
+    <!-- Supabase 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- 엑셀 다운로드를 위한 ExcelJS 및 FileSaver 라이브러리 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         :root {
             --primary: #007AFF; --bg-color: #F0F2F7; --surface: #FFFFFF;
@@ -108,7 +110,7 @@
         .history-top-bar { display: none; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px; margin-bottom: 20px; }
         .history-list { display: flex; flex-direction: column; gap: 15px; }
         .history-item { display: flex; gap: 15px; padding: 15px; background: #FFF; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); align-items: center; }
-        .history-checkbox-wrap { display: none; } /* 로그인 시에만 노출 */
+        .history-checkbox-wrap { display: none; } 
         .history-thumb { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; background: #F2F2F7; }
         .history-info { flex: 1; font-size: 14px; }
         .history-info p { margin: 2px 0; }
@@ -291,7 +293,7 @@
         <div id="driverContactView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">📱 기사 연락처</h2>
             <div class="search-bar-fixed">
-                <input type="text" id="driverSearchInput" class="input-box" placeholder="검색 (매장명, 기사명, 차량번호)" oninput="handleDriverStoreSearch()" autocomplete="off">
+                <input type="text" id="driverSearchInput" class="input-box" placeholder="매장명 또는 배송기사, 차량번호 검색" oninput="handleDriverStoreSearch()" autocomplete="off">
                 <ul id="driverStoreSuggest" class="autocomplete-list"></ul>
             </div>
             <div id="driverEditForm" style="display:none; margin-bottom:20px;">
@@ -370,7 +372,7 @@
     </div>
 
     <script>
-        // --- Supabase 연동 설정 ---
+        // Supabase 연동 정보
         const SUPABASE_URL = 'https://whmltqxmramimlwrdkma.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobWx0cXhtcmFtaW1sd3Jka21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4MjczMzAsImV4cCI6MjEwMTQwMzMzMH0.W60TYb4NIRR7lXpbgQlj1h7yGGPcXRSh3Ui3IuFH-j0';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -384,73 +386,53 @@
         let officeContacts = []; let driverContacts = [];
         
         let nonUserVisibility = { home: true, office: true, driver: true, history: true, list4: false, list5: false };
-        
-        // 설정 전역 변수
         let autoDeleteDays = 7;
-        let globalAutoCloseSeconds = 2; // 자동 닫힘 전역 설정
         let savePopupTimer;
         
-        const STORAGE_TOTAL = 1100; // 기준 MB
-        let storageUsed = 0; // 초기화
+        const STORAGE_TOTAL = 1100; // 1.1GB (단위 MB)
         let showRemainingStorage = true;
 
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('writeDate').value = new Date().toISOString().split('T')[0];
-            
-            // 앱 구동 시 실시간 데이터 로드
             await fetchInitialData();
-            
             updateMenuUI();
             renderOfficeList();
             renderDriverList();
             setInterval(checkAutoDelete, 60000); 
         });
 
-        // --- Supabase에서 데이터 불러오기 ---
+        /* --- Supabase 데이터 가져오기 로직 --- */
         async function fetchInitialData() {
             try {
-                // 1. 시스템 설정 및 주문/배차 불러오기
-                const { data: sysData, error: sysErr } = await supabaseClient.from('system_settings').select('*').eq('id', 1).single();
-                if (sysData) {
-                    if (sysData.order_data) orderDataList = parseTSV(sysData.order_data);
-                    if (sysData.dispatch_data) dispatchDataList = parseTSV(sysData.dispatch_data);
-                    autoDeleteDays = sysData.auto_delete_days || 7;
-                    globalAutoCloseSeconds = sysData.auto_close_sec || 2;
-                    document.getElementById('autoDeleteDaysInput').value = autoDeleteDays;
-                    document.getElementById('autoCloseSecondsInput').value = globalAutoCloseSeconds;
+                // 앱 세팅 및 원본 TSV 데이터 로드
+                const { data: set_data } = await supabaseClient.from('app_settings').select('*').eq('id', 1).single();
+                if(set_data) {
+                    if(set_data.order_tsv) orderDataList = parseTSV(set_data.order_tsv);
+                    if(set_data.dispatch_tsv) dispatchDataList = parseTSV(set_data.dispatch_tsv);
+                    if(set_data.auto_delete_days) {
+                        autoDeleteDays = set_data.auto_delete_days;
+                        document.getElementById('autoDeleteDaysInput').value = autoDeleteDays;
+                    }
+                    if(set_data.auto_close_sec) {
+                        document.getElementById('autoCloseSecondsInput').value = set_data.auto_close_sec;
+                    }
                 }
 
-                // 2. 업로드 내역 조회
-                const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
-                if (histData) {
-                    historyDataList = histData.map(d => ({
-                        id: d.id, status: d.status, reason: d.reason, author: d.author, date: d.date,
-                        driver: d.driver, store: d.store, sCode: d.store_code, mCenter: d.main_center,
-                        product: d.product, pCode: d.product_code, iCenter: d.inbound_center,
-                        qty: d.qty, unit: d.unit, img: d.img_url
-                    }));
-                }
-                
-                // 3. 사무실 연락처 조회
-                const { data: offData, error: offErr } = await supabaseClient.from('office_contacts').select('*');
-                if (offData) officeContacts = offData;
+                // 업로드 내역 로드
+                const { data: hist_data } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
+                if(hist_data) historyDataList = hist_data;
 
-                // 4. 기사 연락처 조회
-                const { data: drvData, error: drvErr } = await supabaseClient.from('driver_contacts').select('*');
-                if (drvData) driverContacts = drvData;
-                
-                calculateStorage();
-            } catch(e) { console.error("데이터 로드 실패", e); }
-        }
+                // 사무실 연락처 로드
+                const { data: off_data } = await supabaseClient.from('office_contacts').select('*');
+                if(off_data) officeContacts = off_data;
 
-        /* --- 용량 실시간 계산 --- */
-        function calculateStorage() {
-            let totalBytes = 0;
-            historyDataList.forEach(item => {
-                if (item.img) totalBytes += item.img.length * 0.75; // base64 대략적 바이트 환산
-                totalBytes += JSON.stringify(item).length;
-            });
-            storageUsed = (totalBytes / (1024 * 1024)).toFixed(2);
+                // 기사 연락처 로드
+                const { data: drv_data } = await supabaseClient.from('driver_contacts').select('*');
+                if(drv_data) driverContacts = drv_data;
+
+            } catch (error) {
+                console.error("데이터 초기화 실패:", error);
+            }
             renderStorage();
         }
 
@@ -528,11 +510,12 @@
                 
                 updateMenuUI();
                 if(document.getElementById('historyView').classList.contains('active')) showView('historyView');
-                renderDriverList(); 
+                renderDriverList();
                 isMenuOpen = true; 
             } else { alert("❌ 비밀번호 오류"); }
         }
 
+        /* --- 설정 및 목록 관리 --- */
         function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
         function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
         
@@ -556,27 +539,29 @@
             updateMenuUI(); closeListManageModal(); alert('비로그인 표시 여부가 확정되었습니다.');
         }
 
-        // --- Supabase 설정 저장 (주문/배차 업로드) ---
         async function saveSystemSettings() {
             const rawOrder = document.getElementById('orderUploadData').value;
             const rawDispatch = document.getElementById('dispatchUploadData').value;
-            
             autoDeleteDays = parseInt(document.getElementById('autoDeleteDaysInput').value) || 7;
-            globalAutoCloseSeconds = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
+            const autoCloseSec = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
             
             if(rawOrder.trim()) orderDataList = parseTSV(rawOrder);
             if(rawDispatch.trim()) dispatchDataList = parseTSV(rawDispatch);
             
-            // Supabase 데이터 덮어씌우기
-            const updateData = { 
+            // Supabase 데이터 완전 덮어씌우기
+            const updatePayload = {
+                id: 1, 
                 auto_delete_days: autoDeleteDays, 
-                auto_close_sec: globalAutoCloseSeconds 
+                auto_close_sec: autoCloseSec
             };
-            if(rawOrder.trim()) updateData.order_data = rawOrder;
-            if(rawDispatch.trim()) updateData.dispatch_data = rawDispatch;
+            if(rawOrder.trim()) updatePayload.order_tsv = rawOrder;
+            if(rawDispatch.trim()) updatePayload.dispatch_tsv = rawDispatch;
 
-            const { error } = await supabaseClient.from('system_settings').update(updateData).eq('id', 1);
-            if (error) { alert("설정 저장 실패: " + error.message); return; }
+            const { error } = await supabaseClient.from('app_settings').upsert([updatePayload]);
+            if (error) {
+                alert("DB 설정 저장 실패: " + error.message);
+                return;
+            }
             
             document.getElementById('orderUploadData').value = '';
             document.getElementById('dispatchUploadData').value = '';
@@ -592,15 +577,15 @@
                 cutoff.setDate(cutoff.getDate() - autoDeleteDays); 
                 const cutoffStr = cutoff.toISOString().split('T')[0];
                 
-                // Supabase에서 기한 지난 데이터 삭제
                 await supabaseClient.from('upload_history').delete().lte('date', cutoffStr);
-                
                 historyDataList = historyDataList.filter(item => item.date > cutoffStr);
-                updateHistoryDates(); renderHistoryList(); calculateStorage();
+                
+                updateHistoryDates(); renderHistoryList(); renderStorage();
                 console.log("자동 데이터 삭제 및 DB 초기화 완료");
             }
         }
 
+        /* --- 실시간 스토리지 용량 표시 (문제 2) --- */
         function toggleStorageDisplay() {
             showRemainingStorage = !showRemainingStorage;
             renderStorage();
@@ -609,13 +594,19 @@
             const el = document.getElementById('storageInfo');
             if(!isLoggedIn) { el.style.display = 'none'; return; }
             el.style.display = 'inline';
+            
+            // JSON Byte 용량 측정으로 실시간 DB 용량 근사치 계산
+            const stringifiedData = JSON.stringify(historyDataList) + JSON.stringify(orderDataList) + JSON.stringify(dispatchDataList);
+            const sizeInBytes = new Blob([stringifiedData]).size;
+            const currentUsedMB = (sizeInBytes / (1024 * 1024)).toFixed(1);
+            
             if(showRemainingStorage) {
-                const remain = Math.max(0, STORAGE_TOTAL - storageUsed);
+                const remain = (STORAGE_TOTAL - currentUsedMB).toFixed(1);
                 const pct = Math.floor((remain / STORAGE_TOTAL) * 100);
-                el.innerText = `잔여량 ${pct}% (${remain.toLocaleString()}mb)`;
+                el.innerText = `잔여량 ${pct}% (${Number(remain).toLocaleString()}mb)`;
             } else {
-                const pct = Math.floor((storageUsed / STORAGE_TOTAL) * 100);
-                el.innerText = `사용량 ${pct}% (${Number(storageUsed).toLocaleString()}mb)`;
+                const pct = Math.floor((currentUsedMB / STORAGE_TOTAL) * 100);
+                el.innerText = `사용량 ${pct}% (${Number(currentUsedMB).toLocaleString()}mb)`;
             }
         }
 
@@ -636,6 +627,7 @@
             }
         }
 
+        /* --- 폼 로직 --- */
         function cleanNumber(str) { return str ? str.replace(/,/g, '') : ""; }
         
         function handleStoreInput() {
@@ -646,6 +638,8 @@
                 document.getElementById('driverName').value = '정보 없음';
             }
             filterStoreNames();
+            // 문제 3: 직접 매장명을 정확히 기입한 경우 배차기사 찾기
+            findDispatchDriverAndCenter(val); 
         }
 
         function filterStoreNames() {
@@ -688,7 +682,7 @@
         function findDispatchDriverAndCenter(storeNameMatch) {
             let driverName = "정보 없음", centerInfo = "", driverContact = "";
             for(let row of dispatchDataList) {
-                if(row.length > 7 && (row[3] || "") === storeNameMatch) {
+                if(row.length > 7 && (row[3] || "").trim() === storeNameMatch.trim()) {
                     driverName = row[7] || "정보 없음"; centerInfo = row[16] || "";
                     const foundDriver = driverContacts.find(d => d.name === driverName);
                     if(foundDriver) { driverContact = ` (${foundDriver.phone})`; }
@@ -729,7 +723,17 @@
                         document.getElementById('productName').value = m[11];
                         document.getElementById('productCode').value = cleanNumber(m[10]);
                         document.getElementById('productUnit').value = m[16] || "";
-                        document.getElementById('inboundCenter').value = m[4] || "";
+                        
+                        // 문제 8 조건 매칭
+                        let r_val = m[17] || "";
+                        let inbound = m[4] || ""; // 기본 센터명
+                        if(r_val === "범용위탁") inbound = "웰스토리";
+                        else if(r_val === "범용" || r_val === "전용" || r_val === "지정") inbound = "밀양";
+                        else if(r_val === "원앤원") inbound = "천안센터";
+                        else if(r_val === "범용유통" || r_val === "위탁") inbound = "오산센터";
+                        else if(r_val === "이천간선") inbound = "이천센터";
+
+                        document.getElementById('inboundCenter').value = inbound;
                         listUl.style.display = 'none';
                     };
                     listUl.appendChild(li);
@@ -749,56 +753,50 @@
             if(e.target.id !== 'driverSearchInput') document.getElementById('driverStoreSuggest').style.display = 'none';
         });
 
-        // --- 폼 작성 완료 및 Supabase DB 저장 로직 ---
+        /* --- 폼 저장 팝업 --- */
         async function saveFormData() {
             if(!document.getElementById('storeName').value || !document.getElementById('productName').value) {
                 alert("매장명과 제품명을 입력해주세요."); return;
             }
-
-            const insertData = {
-                id: Date.now(),
-                status: 'active',
-                reason: document.getElementById('reasonText').value,
-                author: document.getElementById('authorName').value,
-                date: document.getElementById('writeDate').value,
-                driver: document.getElementById('driverName').value,
-                store: document.getElementById('storeName').value,
-                store_code: document.getElementById('storeCode').value,
-                main_center: document.getElementById('mainCenter').value,
-                product: document.getElementById('productName').value,
-                product_code: document.getElementById('productCode').value,
-                inbound_center: document.getElementById('inboundCenter').value,
-                qty: document.getElementById('productQty').value ? Number(document.getElementById('productQty').value) : null,
+            
+            const newRecord = {
+                id: Date.now(), status: 'active',
+                reason: document.getElementById('reasonText').value, author: document.getElementById('authorName').value,
+                date: document.getElementById('writeDate').value, driver: document.getElementById('driverName').value,
+                store: document.getElementById('storeName').value, store_code: document.getElementById('storeCode').value,
+                main_center: document.getElementById('mainCenter').value, product: document.getElementById('productName').value,
+                product_code: document.getElementById('productCode').value, inbound_center: document.getElementById('inboundCenter').value,
+                qty: document.getElementById('productQty').value ? Number(document.getElementById('productQty').value) : null, 
                 unit: document.getElementById('productUnit').value,
                 img_url: currentImgSrc
             };
 
-            const { error } = await supabaseClient.from('upload_history').insert([insertData]);
-            if (error) { 
-                console.error(error); alert("데이터 저장 실패: " + error.message); return; 
-            }
+            const { error } = await supabaseClient.from('upload_history').insert([newRecord]);
+            if (error) { alert("저장 실패: " + error.message); return; }
 
+            // 로컬 변수 매핑 동기화
             historyDataList.unshift({
-                id: insertData.id, status: insertData.status, reason: insertData.reason, author: insertData.author,
-                date: insertData.date, driver: insertData.driver, store: insertData.store, sCode: insertData.store_code,
-                mCenter: insertData.main_center, product: insertData.product, pCode: insertData.product_code,
-                iCenter: insertData.inbound_center, qty: insertData.qty, unit: insertData.unit, img: insertData.img_url
+                id: newRecord.id, status: newRecord.status, reason: newRecord.reason, author: newRecord.author, date: newRecord.date,
+                driver: newRecord.driver, store: newRecord.store, sCode: newRecord.store_code, mCenter: newRecord.main_center,
+                product: newRecord.product, pCode: newRecord.product_code, iCenter: newRecord.inbound_center,
+                qty: newRecord.qty, unit: newRecord.unit, img: newRecord.img_url
             });
             
             document.querySelectorAll('#formView .input-box').forEach(el => { if(el.id !== 'writeDate') el.value = ''; });
             document.getElementById('imagePreviewContainer').style.display = 'none'; currentImgSrc = "";
-            calculateStorage();
+            renderStorage(); 
             
             document.getElementById('saveSuccessModal').style.display = 'flex';
             clearTimeout(savePopupTimer);
-            savePopupTimer = setTimeout(closeSaveSuccessModal, globalAutoCloseSeconds * 1000);
+            const delay = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
+            savePopupTimer = setTimeout(closeSaveSuccessModal, delay * 1000);
         }
         function closeSaveSuccessModal() {
             document.getElementById('saveSuccessModal').style.display = 'none';
             clearTimeout(savePopupTimer);
         }
 
-        /* --- 업로드 내역 갱신 및 삭제 연동 --- */
+        /* --- 업로드 내역 뷰 --- */
         function updateHistoryDates() {
             const select = document.getElementById('historyDateSelect');
             const uniqueDates = [...new Set(historyDataList.map(h => h.date))].sort((a,b) => b.localeCompare(a));
@@ -816,7 +814,9 @@
                 select.value = todayStr;
             } else if (uniqueDates.includes(currentVal)) {
                 select.value = currentVal;
-            } else { select.selectedIndex = 0; }
+            } else {
+                select.selectedIndex = 0;
+            }
         }
 
         function renderHistoryList() {
@@ -824,6 +824,7 @@
             container.innerHTML = '';
             
             let visibleItems = historyDataList.filter(i => isLoggedIn || i.status !== 'delete_requested');
+            
             if (isLoggedIn) {
                 const selectedDate = document.getElementById('historyDateSelect').value;
                 if(selectedDate) visibleItems = visibleItems.filter(i => i.date === selectedDate);
@@ -835,8 +836,8 @@
 
             visibleItems.forEach(item => {
                 const div = document.createElement('div'); div.className = 'history-item';
-                let actionHtml = '';
                 
+                let actionHtml = '';
                 if(item.status === 'delete_requested') {
                     actionHtml = `
                         <span class="status-red">[삭제요청]</span>
@@ -869,124 +870,99 @@
             const allChecked = Array.from(checkboxes).every(cb => cb.checked);
             checkboxes.forEach(cb => cb.checked = !allChecked);
         }
-
-        // 여러 건 DB 삭제 연동
+        
         async function deleteSelectedHistory() {
             const checkedIds = Array.from(document.querySelectorAll('.hist-chk:checked')).map(cb => parseInt(cb.value));
             if(checkedIds.length === 0) return alert("삭제할 항목을 선택하세요.");
             if(confirm("선택한 항목을 완전 삭제하시겠습니까?")) {
                 const { error } = await supabaseClient.from('upload_history').delete().in('id', checkedIds);
-                if (error) { alert("삭제 실패: " + error.message); return; }
+                if (error) return alert("삭제 실패: " + error.message);
                 
                 historyDataList = historyDataList.filter(i => !checkedIds.includes(i.id));
-                updateHistoryDates(); renderHistoryList(); calculateStorage();
+                updateHistoryDates(); renderHistoryList(); renderStorage();
             }
         }
-        
-        // --- 엑셀 다운로드 (SheetJS 사용 및 하이퍼링크 추가) ---
-        function downloadSelectedHistory() {
+
+        /* --- 엑셀 다운로드 (문제 5) --- */
+        async function downloadSelectedHistory() {
             const checkedIds = Array.from(document.querySelectorAll('.hist-chk:checked')).map(cb => parseInt(cb.value));
             const dateStr = document.getElementById('historyDateSelect').value;
             
-            let itemsToDownload = historyDataList;
+            let itemsToExport = [];
             if(checkedIds.length > 0) {
-                itemsToDownload = itemsToDownload.filter(i => checkedIds.includes(i.id));
+                itemsToExport = historyDataList.filter(i => checkedIds.includes(i.id));
             } else {
-                itemsToDownload = itemsToDownload.filter(i => i.date === dateStr);
+                itemsToExport = historyDataList.filter(i => i.date === dateStr);
             }
-            
-            if(itemsToDownload.length === 0) return alert("다운로드할 데이터가 없습니다.");
 
-            const wb = XLSX.utils.book_new();
-            
-            const wsData = [
-                ["", "배송일자", "메인센터명", "고객사코드", "고객사명", "거래처코드", "거래처명", "제품코드", "제품명", "온도", "단위", "품목지정", "재고타입", "수량", "내용", "상세내용", "주체", "귀책", "입고", "자료등록"]
-            ];
-            
-            itemsToDownload.forEach(item => {
-                let orderInfo = orderDataList.find(o => cleanNumber(o[8]) === item.sCode && cleanNumber(o[10]) === item.pCode) || [];
-                const row = [
-                    "", // A
-                    item.date, // B
-                    item.mCenter, // C
-                    orderInfo[6] || "", // D
-                    orderInfo[7] || "", // E
-                    item.sCode, // F
-                    item.store, // G
-                    item.pCode, // H
-                    item.product, // I
-                    orderInfo[15] || "상온", // J
-                    item.unit, // K
-                    orderInfo[17] || "", // L
-                    orderInfo[18] || "", // M
-                    item.qty, // N
-                    item.reason, // O
-                    `${item.store} (사유 : ${item.reason})`, // P (하이퍼링크 위치)
-                    "-", "-", "", item.author // Q~T
-                ];
-                wsData.push(row);
+            if(itemsToExport.length === 0) return alert("다운로드할 데이터가 없습니다.");
+            alert("다운로드를 준비 중입니다. 파일 생성까지 잠시만 기다려주세요.");
+
+            try {
+                const workbook = new ExcelJS.Workbook();
+                const sheet = workbook.addWorksheet('특이사항');
                 
-                // 개별 사진 시트 생성
-                let sheetName = item.store.substring(0, 25);
-                const photoWsData = [
-                    ["사진 내역 (Base64 URL)"], [item.img || "사진없음"], [""], [""], [`사유 : ${item.reason}`]
-                ];
-                const photoWs = XLSX.utils.aoa_to_sheet(photoWsData);
-                try {
-                    XLSX.utils.book_append_sheet(wb, photoWs, sheetName);
-                } catch(e) {
-                    XLSX.utils.book_append_sheet(wb, photoWs, sheetName + "_" + item.id.toString().slice(-4));
-                    sheetName = sheetName + "_" + item.id.toString().slice(-4);
-                }
-            });
-            
-            const ws = XLSX.utils.aoa_to_sheet(wsData);
-            
-            // P열 (index 15) 하이퍼링크 매핑
-            for(let R = 1; R < wsData.length; ++R) {
-                const cellRef = XLSX.utils.encode_cell({c:15, r:R});
-                if(!ws[cellRef]) continue;
-                let storeName = wsData[R][6].substring(0, 25);
-                ws[cellRef].l = { Target: `#'${storeName}'!A1` };
-                ws[cellRef].s = { font: { color: { rgb: "0000FF" }, underline: true } };
+                sheet.addRow(['공란', '배송일자', '메인센터명', '고객사코드', '고객사명', '거래처코드', '거래처명', '제품코드', '제품명', '온도', '단위', '품목지정', '재고타입', '수량', '내용', '상세내용', '주체', '귀책', '입고', '자료등록']);
+
+                itemsToExport.forEach((item, index) => {
+                    let orderInfo = orderDataList.find(r => r.length > 11 && cleanNumber(r[10]) === item.pCode && cleanNumber(r[8]) === item.sCode) || [];
+                    let safeName = item.store.substring(0, 31).replace(/[\\/?*\[\]]/g, ''); 
+                    
+                    const row = sheet.addRow([
+                        '', item.date, item.mCenter, item.sCode, (orderInfo[7]||item.store), (orderInfo[8]||''), (orderInfo[9]||item.store),
+                        item.pCode, item.product, (orderInfo[15]||''), item.unit, (orderInfo[17]||''), (orderInfo[18]||''),
+                        item.qty, item.reason, `${item.store} 상세`, '', '', '', ''
+                    ]);
+
+                    if(item.img && item.img.startsWith('data:image')) {
+                        const imgId = workbook.addImage({ base64: item.img, extension: 'png' });
+                        let imgSheet = workbook.getWorksheet(safeName);
+                        if(!imgSheet) imgSheet = workbook.addWorksheet(safeName);
+                        imgSheet.addImage(imgId, 'A1:H20');
+                        
+                        // 하이퍼링크 및 사유 적용
+                        row.getCell(16).value = { 
+                            text: `${item.store} (사유 : ${item.reason})\n\n\n${item.reason}`, 
+                            hyperlink: `#'${safeName}'!A1` 
+                        };
+                    }
+                });
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), `업로드내역_${dateStr}.xlsx`);
+            } catch (error) {
+                alert("엑셀 생성 오류: " + error);
             }
-            
-            XLSX.utils.book_append_sheet(wb, ws, "특이사항");
-            XLSX.writeFile(wb, `업로드내역_${dateStr}.xlsx`);
         }
 
-        // 상태 업데이트 DB 연동
         async function requestDelete(id) {
             const item = historyDataList.find(i => i.id === id);
             if(item) { 
                 const { error } = await supabaseClient.from('upload_history').update({ status: 'delete_requested' }).eq('id', id);
-                if (error) { alert("상태 변경 실패: " + error.message); return; }
-                item.status = 'delete_requested'; renderHistoryList(); 
+                if (!error) { item.status = 'delete_requested'; renderHistoryList(); }
             }
         }
-        
-        // 단일 항목 완전 삭제 DB 연동
         async function confirmDelete(id) {
             const { error } = await supabaseClient.from('upload_history').delete().eq('id', id);
-            if (error) { alert("삭제 실패: " + error.message); return; }
-            historyDataList = historyDataList.filter(i => i.id !== id);
-            updateHistoryDates(); renderHistoryList(); calculateStorage();
+            if (!error) {
+                historyDataList = historyDataList.filter(i => i.id !== id);
+                updateHistoryDates(); renderHistoryList(); renderStorage();
+            }
         }
 
-        // --- 사무실 연락처 DB 삽입 ---
+        /* --- 사무실 연락처 --- */
         async function saveOfficeContact() {
             const name = document.getElementById('offName').value, rank = document.getElementById('offRank').value, tel = document.getElementById('offTel').value;
             if(name && tel) {
-                const insertData = { name, rank, tel };
+                const insertData = { id: Date.now(), name, rank, tel };
                 const { error } = await supabaseClient.from('office_contacts').insert([insertData]);
-                if (error) { alert("저장 실패: " + error.message); return; }
+                if(error) return alert("저장 실패");
                 
                 officeContacts.push(insertData);
                 document.getElementById('offName').value=''; document.getElementById('offRank').value=''; document.getElementById('offTel').value='';
                 renderOfficeList();
             }
         }
-        
         function renderOfficeList() {
             document.getElementById('officeListContainer').innerHTML = officeContacts.map(c => `
                 <div class="contact-card">
@@ -999,24 +975,20 @@
             `).join('');
         }
 
-        // --- 기사 연락처 검색 및 DB 연동 ---
+        /* --- 기사 연락처 (문제 1) --- */
         async function saveDriverContacts() {
             const data = document.getElementById('driverUploadData').value;
-            const parsedData = parseTSV(data).map(r => ({
-                name: r[0]||'', region: r[1]||'', phone: r[2]||'', vehicle: r[3]||'', transport: r[4]||'', note: r[5]||''
+            const parsedData = parseTSV(data).map((r, i) => ({
+                id: Date.now() + i, name: r[0]||'', region: r[1]||'', phone: r[2]||'', vehicle: r[3]||'', transport: r[4]||'', note: r[5]||''
             })).filter(d => d.name);
             
-            if (parsedData.length > 0) {
-                const { error: delError } = await supabaseClient.from('driver_contacts').delete().neq('id', 0); 
-                if (delError) { alert("기존 연락처 삭제 실패: " + delError.message); return; }
-                
-                const { error: insError } = await supabaseClient.from('driver_contacts').insert(parsedData);
-                if (insError) { alert("기사 저장 실패: " + insError.message); return; }
-            } else { alert("입력된 데이터가 없습니다."); return; }
+            await supabaseClient.from('driver_contacts').delete().neq('id', 0);
+            const { error } = await supabaseClient.from('driver_contacts').insert(parsedData);
+            if(error) return alert("저장 실패");
 
             driverContacts = parsedData;
             document.getElementById('driverUploadData').value = '';
-            alert("기사 연락처 데이터가 성공적으로 덮어씌워졌습니다."); renderDriverList();
+            alert("기사 연락처 데이터가 덮어씌워졌습니다."); renderDriverList();
         }
 
         function handleDriverStoreSearch() {
@@ -1024,11 +996,15 @@
             const suggestList = document.getElementById('driverStoreSuggest');
             suggestList.innerHTML = '';
             
-            if(!isLoggedIn && search) {
+            if(search) {
                 const matches = new Set();
                 dispatchDataList.forEach(r => {
-                    if(r.length > 3 && (r[3]||"").includes(search)) matches.add(r[3]);
+                    // D행(매장명), H행(배송기사 이름), G행(차량번호) 포함 여부 체크
+                    if(r.length > 7 && ((r[3]||"").includes(search) || (r[7]||"").includes(search) || (r[6]||"").includes(search))) {
+                        matches.add(r[3]); // 매장명을 추천 리스트로 전달
+                    }
                 });
+                
                 if(matches.size > 0) {
                     suggestList.style.display = 'block';
                     matches.forEach(store => {
@@ -1045,14 +1021,16 @@
             filterDriversList(search);
         }
 
-        // 차량번호, 이름, 매장명 검색 렌더링
         function filterDriversList(searchStr) {
             let list = driverContacts;
             if(searchStr) {
                 const matchedNames = new Set();
-                dispatchDataList.forEach(r => { if(r.length > 7 && (r[3]||"").includes(searchStr)) matchedNames.add(r[7]); });
-                
-                list = list.filter(d => matchedNames.has(d.name) || d.name.includes(searchStr) || d.vehicle.includes(searchStr));
+                dispatchDataList.forEach(r => { 
+                    if(r.length > 7 && ((r[3]||"").includes(searchStr) || (r[7]||"").includes(searchStr) || (r[6]||"").includes(searchStr))) {
+                        matchedNames.add(r[7]); 
+                    }
+                });
+                list = list.filter(d => matchedNames.has(d.name));
             }
             renderDriverListToDOM(list);
         }
