@@ -251,7 +251,7 @@
             </div>
         </div>
 
-        <!-- 뷰 2: 업로드 내역 (문제 3, 4, 5, 14) -->
+        <!-- 뷰 2: 업로드 내역 -->
         <div id="historyView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">
                 📂 업로드 내역 <span id="storageInfo" class="storage-info" onclick="toggleStorageDisplay()"></span>
@@ -279,7 +279,7 @@
             <div id="officeListContainer" class="contact-list"></div>
         </div>
 
-        <!-- 뷰 4: 기사 연락처 (문제 10, 11) -->
+        <!-- 뷰 4: 기사 연락처 -->
         <div id="driverContactView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">📱 기사 연락처</h2>
             <div class="search-bar-fixed">
@@ -327,7 +327,7 @@
         </div>
     </div>
 
-    <!-- 목록 관리 팝업 (문제 9) -->
+    <!-- 목록 관리 팝업 -->
     <div id="listManageModal" class="modal-overlay" onclick="if(event.target===this) closeListManageModal()">
         <div class="modal-box" style="max-width:300px;">
             <h2 class="modal-title" style="font-size:18px;">비로그인 목록 노출 설정</h2>
@@ -344,7 +344,7 @@
         </div>
     </div>
 
-    <!-- 기사 상세 내역 팝업 (문제 12) -->
+    <!-- 기사 상세 내역 팝업 -->
     <div id="driverDetailModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:350px;">
             <h2 class="modal-title" style="font-size:18px;">기사 배차 상세</h2>
@@ -353,7 +353,7 @@
         </div>
     </div>
 
-    <!-- 저장 완료 팝업 (문제 13) -->
+    <!-- 저장 완료 팝업 -->
     <div id="saveSuccessModal" class="modal-overlay" onclick="if(event.target===this) closeSaveSuccessModal()">
         <div class="modal-box" style="max-width:250px; padding:40px 20px;">
             <h2 class="modal-title">저장완료</h2>
@@ -375,23 +375,50 @@
         let historyDataList = [];
         let officeContacts = []; let driverContacts = [];
         
-        // 문제 8, 9: 비로그인 대상자 메뉴 표시 여부
         let nonUserVisibility = { home: true, office: true, driver: true, history: true, list4: false, list5: false };
         let autoDeleteDays = 7;
         let savePopupTimer;
         
-        // 문제 14: 스토리지 정보
-        const STORAGE_TOTAL = 1100; // 기준 MB
-        let storageUsed = 97; // 임시 사용량
+        const STORAGE_TOTAL = 1100; 
+        let storageUsed = 97; 
         let showRemainingStorage = true;
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('writeDate').value = new Date().toISOString().split('T')[0];
+            
+            // --- [수정] 앱 진입 시 Supabase DB에서 데이터 불러오기 ---
+            await fetchInitialData();
+            
             updateMenuUI();
             renderOfficeList();
             renderDriverList();
-            setInterval(checkAutoDelete, 60000); // 1분마다 자동초기화 체크
+            setInterval(checkAutoDelete, 60000); 
         });
+
+        // --- [수정] Supabase에서 기존 데이터 연동 함수 추가 ---
+        async function fetchInitialData() {
+            try {
+                // 1. 업로드 내역 조회
+                const { data: histData } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
+                if (histData) {
+                    historyDataList = histData.map(d => ({
+                        id: d.id, status: d.status, reason: d.reason, author: d.author, date: d.date,
+                        driver: d.driver, store: d.store, sCode: d.store_code, mCenter: d.main_center,
+                        product: d.product, pCode: d.product_code, iCenter: d.inbound_center,
+                        qty: d.qty, unit: d.unit, img: d.img_url
+                    }));
+                }
+                
+                // 2. 사무실 연락처 조회
+                const { data: offData } = await supabaseClient.from('office_contacts').select('*');
+                if (offData) officeContacts = offData;
+
+                // 3. 기사 연락처 조회
+                const { data: drvData } = await supabaseClient.from('driver_contacts').select('*');
+                if (drvData) driverContacts = drvData;
+                
+            } catch(e) { console.error("데이터 로드 실패", e); }
+        }
 
         /* --- 메뉴 제어 및 UI 갱신 --- */
         function toggleMenu() { isMenuOpen ? closeMenu() : openMenu(); }
@@ -467,12 +494,11 @@
                 
                 updateMenuUI();
                 if(document.getElementById('historyView').classList.contains('active')) showView('historyView');
-                renderDriverList(); // 재필터링 (문제 11)
+                renderDriverList(); 
                 isMenuOpen = true; 
             } else { alert("❌ 비밀번호 오류"); }
         }
 
-        /* --- 설정 및 목록 관리 (문제 6, 7, 9, 14) --- */
         function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
         function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
         
@@ -504,8 +530,6 @@
             if(rawOrder.trim()) orderDataList = parseTSV(rawOrder);
             if(rawDispatch.trim()) dispatchDataList = parseTSV(rawDispatch);
             
-            try { console.log("Supabase/Github에 데이터 설정 및 덮어쓰기 연동 완료"); } catch(e) { }
-            
             document.getElementById('orderUploadData').value = '';
             document.getElementById('dispatchUploadData').value = '';
             
@@ -513,13 +537,15 @@
             closeSettingsModal(); checkOrderMatches(); renderDriverList();
         }
 
-        function checkAutoDelete() {
+        async function checkAutoDelete() {
             const now = new Date();
-            // 문제 7: 20시 30분에 과거 8일부터 데이터 초기화
             if(now.getHours() === 20 && now.getMinutes() === 30) {
                 const cutoff = new Date();
                 cutoff.setDate(cutoff.getDate() - autoDeleteDays); 
                 const cutoffStr = cutoff.toISOString().split('T')[0];
+                
+                // --- [수정] Supabase에서 기한 지난 데이터 삭제 명령 추가 ---
+                await supabaseClient.from('upload_history').delete().lte('date', cutoffStr);
                 
                 historyDataList = historyDataList.filter(item => item.date > cutoffStr);
                 updateHistoryDates(); renderHistoryList();
@@ -562,8 +588,8 @@
             }
         }
 
-        /* --- 폼 로직 --- */
         function cleanNumber(str) { return str ? str.replace(/,/g, '') : ""; }
+        
         function handleStoreInput() {
             const val = document.getElementById('storeName').value.trim();
             if(!val) {
@@ -675,27 +701,50 @@
             if(e.target.id !== 'driverSearchInput') document.getElementById('driverStoreSuggest').style.display = 'none';
         });
 
-        /* --- 폼 저장 팝업 (문제 13) --- */
-        function saveFormData() {
+        // --- [수정] 폼 작성 완료 시 Supabase DB 삽입 로직 추가 ---
+        async function saveFormData() {
             if(!document.getElementById('storeName').value || !document.getElementById('productName').value) {
                 alert("매장명과 제품명을 입력해주세요."); return;
             }
+
+            const insertData = {
+                id: Date.now(),
+                status: 'active',
+                reason: document.getElementById('reasonText').value,
+                author: document.getElementById('authorName').value,
+                date: document.getElementById('writeDate').value,
+                driver: document.getElementById('driverName').value,
+                store: document.getElementById('storeName').value,
+                store_code: document.getElementById('storeCode').value,
+                main_center: document.getElementById('mainCenter').value,
+                product: document.getElementById('productName').value,
+                product_code: document.getElementById('productCode').value,
+                inbound_center: document.getElementById('inboundCenter').value,
+                qty: document.getElementById('productQty').value ? Number(document.getElementById('productQty').value) : null,
+                unit: document.getElementById('productUnit').value,
+                img_url: currentImgSrc
+            };
+
+            const { error } = await supabaseClient.from('upload_history').insert([insertData]);
+            
+            if (error) { 
+                console.error("데이터 저장 실패: ", error); 
+                alert("데이터 저장 실패"); 
+                return; 
+            }
+
+            // 프론트엔드 UI용 로컬 배열 반영
             historyDataList.unshift({
-                id: Date.now(), status: 'active',
-                reason: document.getElementById('reasonText').value, author: document.getElementById('authorName').value,
-                date: document.getElementById('writeDate').value, driver: document.getElementById('driverName').value,
-                store: document.getElementById('storeName').value, sCode: document.getElementById('storeCode').value,
-                mCenter: document.getElementById('mainCenter').value, product: document.getElementById('productName').value,
-                pCode: document.getElementById('productCode').value, iCenter: document.getElementById('inboundCenter').value,
-                qty: document.getElementById('productQty').value, unit: document.getElementById('productUnit').value,
-                img: currentImgSrc
+                id: insertData.id, status: insertData.status, reason: insertData.reason, author: insertData.author,
+                date: insertData.date, driver: insertData.driver, store: insertData.store, sCode: insertData.store_code,
+                mCenter: insertData.main_center, product: insertData.product, pCode: insertData.product_code,
+                iCenter: insertData.inbound_center, qty: insertData.qty, unit: insertData.unit, img: insertData.img_url
             });
             
             document.querySelectorAll('#formView .input-box').forEach(el => { if(el.id !== 'writeDate') el.value = ''; });
             document.getElementById('imagePreviewContainer').style.display = 'none'; currentImgSrc = "";
-            storageUsed += 1; renderStorage(); // 용량 증가 목업
+            storageUsed += 1; renderStorage(); 
             
-            // 저장 완료 모달 띄우기 및 자동 닫힘
             document.getElementById('saveSuccessModal').style.display = 'flex';
             clearTimeout(savePopupTimer);
             const delay = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
@@ -706,7 +755,7 @@
             clearTimeout(savePopupTimer);
         }
 
-        /* --- 업로드 내역 (문제 3, 4, 5) --- */
+        /* --- 업로드 내역 갱신 및 삭제 연동 --- */
         function updateHistoryDates() {
             const select = document.getElementById('historyDateSelect');
             const uniqueDates = [...new Set(historyDataList.map(h => h.date))].sort((a,b) => b.localeCompare(a));
@@ -724,9 +773,7 @@
                 select.value = todayStr;
             } else if (uniqueDates.includes(currentVal)) {
                 select.value = currentVal;
-            } else {
-                select.selectedIndex = 0;
-            }
+            } else { select.selectedIndex = 0; }
         }
 
         function renderHistoryList() {
@@ -734,7 +781,6 @@
             container.innerHTML = '';
             
             let visibleItems = historyDataList.filter(i => isLoggedIn || i.status !== 'delete_requested');
-            
             if (isLoggedIn) {
                 const selectedDate = document.getElementById('historyDateSelect').value;
                 if(selectedDate) visibleItems = visibleItems.filter(i => i.date === selectedDate);
@@ -746,8 +792,8 @@
 
             visibleItems.forEach(item => {
                 const div = document.createElement('div'); div.className = 'history-item';
-                
                 let actionHtml = '';
+                
                 if(item.status === 'delete_requested') {
                     actionHtml = `
                         <span class="status-red">[삭제요청]</span>
@@ -780,10 +826,13 @@
             const allChecked = Array.from(checkboxes).every(cb => cb.checked);
             checkboxes.forEach(cb => cb.checked = !allChecked);
         }
-        function deleteSelectedHistory() {
+
+        // --- [수정] 여러 건 DB 삭제 연동 ---
+        async function deleteSelectedHistory() {
             const checkedIds = Array.from(document.querySelectorAll('.hist-chk:checked')).map(cb => parseInt(cb.value));
             if(checkedIds.length === 0) return alert("삭제할 항목을 선택하세요.");
             if(confirm("선택한 항목을 완전 삭제하시겠습니까?")) {
+                await supabaseClient.from('upload_history').delete().in('id', checkedIds);
                 historyDataList = historyDataList.filter(i => !checkedIds.includes(i.id));
                 updateHistoryDates(); renderHistoryList();
             }
@@ -794,24 +843,38 @@
             if(checkedIds.length > 0) alert(`선택한 ${checkedIds.length}개의 데이터를 다운로드합니다.`);
             else alert(`${dateStr} 전체 데이터를 다운로드합니다.`);
         }
-        function requestDelete(id) {
+
+        // --- [수정] 상태 업데이트 DB 연동 ---
+        async function requestDelete(id) {
             const item = historyDataList.find(i => i.id === id);
-            if(item) { item.status = 'delete_requested'; renderHistoryList(); }
+            if(item) { 
+                await supabaseClient.from('upload_history').update({ status: 'delete_requested' }).eq('id', id);
+                item.status = 'delete_requested'; renderHistoryList(); 
+            }
         }
-        function confirmDelete(id) {
+        
+        // --- [수정] 단일 항목 완전 삭제 DB 연동 ---
+        async function confirmDelete(id) {
+            await supabaseClient.from('upload_history').delete().eq('id', id);
             historyDataList = historyDataList.filter(i => i.id !== id);
             updateHistoryDates(); renderHistoryList();
         }
 
-        /* --- 사무실 연락처 --- */
-        function saveOfficeContact() {
+        // --- [수정] 사무실 연락처 DB 삽입 추가 ---
+        async function saveOfficeContact() {
             const name = document.getElementById('offName').value, rank = document.getElementById('offRank').value, tel = document.getElementById('offTel').value;
             if(name && tel) {
-                officeContacts.push({ name, rank, tel });
+                const insertData = { name, rank, tel };
+                const { error } = await supabaseClient.from('office_contacts').insert([insertData]);
+                
+                if (error) { console.error("연락처 저장 실패", error); return; }
+                
+                officeContacts.push(insertData);
                 document.getElementById('offName').value=''; document.getElementById('offRank').value=''; document.getElementById('offTel').value='';
                 renderOfficeList();
             }
         }
+        
         function renderOfficeList() {
             document.getElementById('officeListContainer').innerHTML = officeContacts.map(c => `
                 <div class="contact-card">
@@ -824,12 +887,21 @@
             `).join('');
         }
 
-        /* --- 기사 연락처 (문제 10, 11, 12) --- */
-        function saveDriverContacts() {
+        // --- [수정] 기사 연락처 덮어씌우기 시 DB 삽입/삭제 추가 ---
+        async function saveDriverContacts() {
             const data = document.getElementById('driverUploadData').value;
-            driverContacts = parseTSV(data).map(r => ({
+            const parsedData = parseTSV(data).map(r => ({
                 name: r[0]||'', region: r[1]||'', phone: r[2]||'', vehicle: r[3]||'', transport: r[4]||'', note: r[5]||''
             })).filter(d => d.name);
+            
+            if (parsedData.length > 0) {
+                // 기존 기사 연락처 DB 상의 데이터 모두 삭제 후 덮어쓰기
+                await supabaseClient.from('driver_contacts').delete().neq('id', 0); 
+                const { error } = await supabaseClient.from('driver_contacts').insert(parsedData);
+                if (error) { console.error("기사 저장 실패", error); return; }
+            }
+
+            driverContacts = parsedData;
             document.getElementById('driverUploadData').value = '';
             alert("기사 연락처 데이터가 덮어씌워졌습니다."); renderDriverList();
         }
@@ -839,7 +911,6 @@
             const suggestList = document.getElementById('driverStoreSuggest');
             suggestList.innerHTML = '';
             
-            // 문제 10: 비로그인 사용자 기사 검색창에서 매장명(D행) 추천
             if(!isLoggedIn && search) {
                 const matches = new Set();
                 dispatchDataList.forEach(r => {
@@ -873,7 +944,6 @@
 
         function renderDriverList() {
             let list = driverContacts;
-            // 문제 11: 비로그인은 배차(H행)에 있는 기사만 표시
             if(!isLoggedIn) {
                 const dispatchDriverNames = new Set(dispatchDataList.map(r => r[7]));
                 list = list.filter(d => dispatchDriverNames.has(d.name));
@@ -896,7 +966,7 @@
         }
 
         function showDriverDetailModal(driverName) {
-            if(isLoggedIn) return; // 문제 12: 비로그인 사용자가 누를 때 동작
+            if(isLoggedIn) return; 
             let html = ''; const seen = new Set();
             dispatchDataList.forEach(r => {
                 if(r.length > 11 && r[7] === driverName) {
