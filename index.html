@@ -179,6 +179,9 @@
         body.pc-mode .main-content {
             flex: 6; max-width: 100%; height: 100vh; overflow-y: auto; padding: 40px 60px;
         }
+        
+        /* 문제 1: 지도 투명 바탕 및 UI 깔끔하게 처리 */
+        #map { width:100%; height:65vh; border-radius:12px; background: transparent !important; z-index: 1; }
     </style>
 </head>
 <body>
@@ -341,7 +344,7 @@
         <div id="mapView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">🗺️ 배차 내역 (지도)</h2>
             <div id="transportFilters" style="margin-bottom:15px; display:flex; flex-wrap:wrap; gap:10px; background:#fff; padding:10px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05);"></div>
-            <div id="map" style="width:100%; height:65vh; border-radius:12px; background:#e5e5e5; z-index: 1;"></div>
+            <div id="map"></div>
         </div>
     </div>
 
@@ -900,6 +903,7 @@
             renderReasonManageList();
         }
 
+        // 문제 4: 주문업로드에서 매장명을 선택 시 매장코드 자동 매칭 로직
         function handleStoreInput() {
             const val = document.getElementById('storeName').value.trim();
             if(!val) {
@@ -916,12 +920,14 @@
             }
             if(matchedCode) {
                 document.getElementById('storeCode').value = matchedCode;
-                findDispatchDriverAndCenter(matchedCode); // 문제 1 연계
+                findDispatchDriverAndCenter(matchedCode); // 매장코드로 기사/센터 매칭
             }
         }
 
+        // 문제 3: 홈화면 매장명은 주문업로드 매장명에서 추천리스트를 띄우도록 설정
         function filterStoreNames() {
-            const date = document.getElementById('writeDate').value.replace(/-/g,'');
+            // 문제 3 대응: 날짜 매칭을 보다 정확하게 (숫자만 남겨서 처리)
+            const date = document.getElementById('writeDate').value.replace(/\D/g, '');
             const inputVal = document.getElementById('storeName').value.trim();
             const listUl = document.getElementById('storeList');
             listUl.innerHTML = '';
@@ -930,9 +936,9 @@
             const matches = [], seen = new Set();
             orderDataList.forEach(row => {
                 if(row.length > 9) {
-                    const deliveryDate = (row[1]||"").replace(/-/g,'');
+                    const deliveryDate = (row[1]||"").replace(/\D/g, '');
                     const storeName = row[9] || "";
-                    if(deliveryDate.includes(date) && storeName.includes(inputVal) && !seen.has(storeName)) {
+                    if(deliveryDate === date && storeName.includes(inputVal) && !seen.has(storeName)) {
                         seen.add(storeName); matches.push(row);
                     }
                 }
@@ -952,20 +958,24 @@
             document.getElementById('storeName').value = name;
             document.getElementById('storeCode').value = code;
             document.getElementById('storeList').style.display = 'none';
-            findDispatchDriverAndCenter(code); // 매장코드로 기사 매칭
+            findDispatchDriverAndCenter(code); // 매장코드로 기사 및 센터(메인센터) 자동 매칭
             document.getElementById('productName').value = '';
             document.getElementById('productCode').value = '';
         }
 
-        // --- 문제 1: 매장코드로 기사 자동 매칭 ---
+        // 문제 4, 6: 배차업로드에서 '매장코드' 기준으로 배차기사 자동매칭 및 메인센터 자동출력
         function findDispatchDriverAndCenter(storeCodeMatch) {
             let driverName = "정보 없음", centerInfo = "", driverContact = "";
+            const cleanTarget = cleanNumber(storeCodeMatch);
+            
             for(let row of dispatchDataList) {
-                if(row.length > 7 && cleanNumber(row[1]) === storeCodeMatch) { // B행(매장코드) 기준 검색
-                    driverName = row[7] || "정보 없음"; // H행 기사
-                    centerInfo = row[16] || ""; // Q행 메인센터
+                if(row.length > 7 && cleanNumber(row[1]) === cleanTarget) { 
+                    driverName = row[7] || "정보 없음"; 
+                    centerInfo = row[16] || ""; // 문제 6 반영: 메인센터를 배차업로드 main_center에서 매칭 (Q행)
                     const foundDriver = driverContacts.find(d => d.name === driverName);
+                    
                     if(foundDriver) { driverContact = ` (${foundDriver.phone})`; }
+                    else if(row[15]) { driverContact = ` (${row[15]})`; } // 배차 리스트 자체 연락처 백업
                     break;
                 }
             }
@@ -976,7 +986,7 @@
         function filterProductNames() {
             const storeCode = document.getElementById('storeCode').value;
             const inputVal = document.getElementById('productName').value.trim();
-            const date = document.getElementById('writeDate').value.replace(/-/g,'');
+            const date = document.getElementById('writeDate').value.replace(/\D/g, '');
             const listUl = document.getElementById('productList');
             listUl.innerHTML = '';
             if(!inputVal) { listUl.style.display = 'none'; return; }
@@ -986,9 +996,10 @@
                 if(row.length > 11) {
                     const rowStoreCode = cleanNumber(row[8]);
                     const prodName = row[11] || "";
-                    const deliveryDate = (row[1]||"").replace(/-/g,'');
+                    const deliveryDate = (row[1]||"").replace(/\D/g, '');
                     let condition = false;
-                    if(!storeCode) { condition = deliveryDate.includes(date) && prodName.includes(inputVal); } 
+                    
+                    if(!storeCode) { condition = (deliveryDate === date) && prodName.includes(inputVal); } 
                     else { condition = (rowStoreCode === storeCode && prodName.includes(inputVal)); }
 
                     if(condition && !seen.has(prodName)) { seen.add(prodName); matches.push(row); }
@@ -1004,10 +1015,11 @@
                         document.getElementById('productCode').value = cleanNumber(m[10]);
                         document.getElementById('productUnit').value = m[16] || "";
 
-                        let rVal = m[17] || "";
+                        // 문제 5: 입고센터 표기 방법 (item_designation 기준)
+                        let rVal = m[17] || ""; 
                         let inbound = m[4] || "";
                         if(rVal === "범용위탁") inbound = "웰스토리";
-                        else if(rVal === "범용" || rVal === "전용" || rVal === "지정") inbound = "밀양";
+                        else if(rVal === "범용" || rVal === "전용" || rVal === "지정") inbound = "밀양센터"; // "밀양"에서 "밀양센터"로 수정
                         else if(rVal === "원앤원") inbound = "천안센터";
                         else if(rVal === "범용유통" || rVal === "위탁") inbound = "오산센터";
                         else if(rVal === "이천간선") inbound = "이천센터";
@@ -1256,7 +1268,7 @@
             `).join('');
         }
 
-        // --- 현장 연락처 (문제 5) ---
+        // --- 현장 연락처 ---
         async function saveFieldContact() {
             const name = document.getElementById('fldName').value, rank = document.getElementById('fldRank').value, tel = document.getElementById('fldTel').value;
             if(name && tel) {
@@ -1304,7 +1316,61 @@
             alert("기사 연락처 데이터가 성공적으로 덮어씌워졌습니다."); renderDriverList();
         }
 
-        // --- 문제 7: 기사/차량/매장/전화번호 통합 검색 및 완전일치 매칭 ---
+        // 문제 2: 비로그인 유저는 기사 리스트를 배차업로드 기준으로 필터링하여 제공
+        function filterDriversList(searchStr) {
+            let list = driverContacts;
+            
+            if(!isLoggedIn) {
+                // 비로그인: 배차업로드 데이터에서 기사 정보를 자체 추출 (중복 제거)
+                const dispatchDriverMap = new Map();
+                dispatchDataList.forEach(r => {
+                    if(r.length > 15 && r[7]) { // 기사명 존재
+                        dispatchDriverMap.set(r[7], {
+                            name: r[7],
+                            region: r[8] || r[3] || '',
+                            vehicle: r[6] || '',
+                            phone: r[15] || '' // 배차 데이터에 등록된 번호 사용
+                        });
+                    }
+                });
+                list = Array.from(dispatchDriverMap.values());
+            }
+
+            if(searchStr) {
+                if(!isLoggedIn) {
+                    // 비로그인: 생성된 추출 리스트에서만 검색
+                    list = list.filter(d => 
+                        d.name.includes(searchStr) || 
+                        d.phone.includes(searchStr) || 
+                        d.vehicle.includes(searchStr) || 
+                        d.region.includes(searchStr)
+                    );
+                } else {
+                    // 로그인: 통합 검색 지원
+                    const matchedDriverNames = new Set();
+                    dispatchDataList.forEach(r => { 
+                        if(r.length > 15) {
+                            const storeName = r[3] || "";
+                            const driverName = r[7] || "";
+                            const vehicleNo = r[6] || "";
+                            const phone = r[15] || "";
+
+                            if(storeName.includes(searchStr) || driverName.includes(searchStr) || vehicleNo.includes(searchStr) || phone.includes(searchStr)) {
+                                matchedDriverNames.add(driverName);
+                            }
+                        }
+                    });
+                    list = list.filter(d => 
+                        matchedDriverNames.has(d.name) || 
+                        d.name.includes(searchStr) || 
+                        d.phone.includes(searchStr) || 
+                        d.vehicle.includes(searchStr)
+                    );
+                }
+            }
+            renderDriverListToDOM(list);
+        }
+
         function handleDriverStoreSearch() {
             const search = document.getElementById('driverSearchInput').value.trim();
             const suggestList = document.getElementById('driverStoreSuggest');
@@ -1319,7 +1385,7 @@
                         const storeName = r[3] || "";
                         const driverName = r[7] || "";
                         const vehicleNo = r[6] || "";
-                        const phone = r[15] || ""; // 연락처
+                        const phone = r[15] || "";
 
                         if(storeName === search || driverName === search || vehicleNo === search || phone === search) {
                             exactMatchFound = true;
@@ -1346,32 +1412,6 @@
             } else { suggestList.style.display = 'none'; }
 
             filterDriversList(search);
-        }
-
-        function filterDriversList(searchStr) {
-            let list = driverContacts;
-            if(!isLoggedIn) {
-                const dispatchDriverNames = new Set(dispatchDataList.map(r => r[7]));
-                list = list.filter(d => dispatchDriverNames.has(d.name));
-            }
-
-            if(searchStr) {
-                const matchedDriverNames = new Set();
-                dispatchDataList.forEach(r => { 
-                    if(r.length > 15) {
-                        const storeName = r[3] || "";
-                        const driverName = r[7] || "";
-                        const vehicleNo = r[6] || "";
-                        const phone = r[15] || "";
-
-                        if(storeName.includes(searchStr) || driverName.includes(searchStr) || vehicleNo.includes(searchStr) || phone.includes(searchStr)) {
-                            matchedDriverNames.add(driverName);
-                        }
-                    }
-                });
-                list = list.filter(d => matchedDriverNames.has(d.name));
-            }
-            renderDriverListToDOM(list);
         }
 
         function renderDriverList() {
@@ -1410,7 +1450,7 @@
             document.getElementById('driverDetailModal').style.display = 'flex';
         }
 
-        // --- 문제 8: 배차 내역 (지도) 렌더링 로직 ---
+        // --- 문제 8, 문제 1: 배차 내역 (지도) 투명바탕/깔끔한 렌더링 로직 ---
         let map;
         let transportLayers = {};
         const MAP_COLORS = [
@@ -1421,9 +1461,10 @@
 
         function renderMap() {
             if(!map) {
-                map = L.map('map').setView([35.3, 128.0], 8); // 영남권 시작 좌표
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
+                // 투명한 스타일링이 적용된 지도를 로드합니다 (CartoDB Light)
+                map = L.map('map').setView([35.3, 128.0], 8);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '© OpenStreetMap contributors, © CARTO'
                 }).addTo(map);
             }
 
@@ -1440,23 +1481,21 @@
             dispatchDataList.forEach(r => {
                 if(r.length > 12) {
                     const driver = r[7];
-                    // 수정: coord_y_n_1 (r[9]) = X좌표(Longitude), coord_y_n_2 (r[10]) = Y좌표(Latitude)
                     const lng = parseFloat(r[9]);
                     const lat = parseFloat(r[10]);
-                    let transport = r[12]; // 운송사
-                    if (!transport) transport = '기타'; // 운송사 정보 없을 시 기타
+                    let transport = r[12];
+                    if (!transport) transport = '기타'; 
                     const store = r[3];
 
                     if(driver && !isNaN(lat) && !isNaN(lng)) {
                         if(!driverRoutes[driver]) driverRoutes[driver] = { transport, points: [], storeNames: [] };
                         driverRoutes[driver].points.push([lat, lng]);
                         driverRoutes[driver].storeNames.push(store);
-                        validTransports.add(transport); // 그룹 필터용(운송사) 추가
+                        validTransports.add(transport);
                     }
                 }
             });
 
-            // 추출된 운송사(Transport company)로 체크박스 필터 자동 생성 (기본: All On)
             validTransports.forEach(t => {
                 const lbl = document.createElement('label');
                 lbl.style.marginRight = '10px';
@@ -1484,7 +1523,6 @@
                 });
             }
 
-            // 지도 사이즈 보정
             setTimeout(() => { map.invalidateSize(); }, 300);
         }
 
