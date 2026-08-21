@@ -386,7 +386,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('writeDate').value = new Date().toISOString().split('T')[0];
             
-            // --- [수정] 앱 진입 시 Supabase DB에서 데이터 불러오기 ---
+            // 앱 구동 시 실시간 데이터 로드
             await fetchInitialData();
             
             updateMenuUI();
@@ -395,11 +395,12 @@
             setInterval(checkAutoDelete, 60000); 
         });
 
-        // --- [수정] Supabase에서 기존 데이터 연동 함수 추가 ---
+        // --- Supabase에서 데이터 불러오기 ---
         async function fetchInitialData() {
             try {
                 // 1. 업로드 내역 조회
-                const { data: histData } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
+                const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
+                if (histErr) console.error("업로드 내역 로드 에러:", histErr.message);
                 if (histData) {
                     historyDataList = histData.map(d => ({
                         id: d.id, status: d.status, reason: d.reason, author: d.author, date: d.date,
@@ -410,11 +411,13 @@
                 }
                 
                 // 2. 사무실 연락처 조회
-                const { data: offData } = await supabaseClient.from('office_contacts').select('*');
+                const { data: offData, error: offErr } = await supabaseClient.from('office_contacts').select('*');
+                if (offErr) console.error("사무실 연락처 로드 에러:", offErr.message);
                 if (offData) officeContacts = offData;
 
                 // 3. 기사 연락처 조회
-                const { data: drvData } = await supabaseClient.from('driver_contacts').select('*');
+                const { data: drvData, error: drvErr } = await supabaseClient.from('driver_contacts').select('*');
+                if (drvErr) console.error("기사 연락처 로드 에러:", drvErr.message);
                 if (drvData) driverContacts = drvData;
                 
             } catch(e) { console.error("데이터 로드 실패", e); }
@@ -533,7 +536,7 @@
             document.getElementById('orderUploadData').value = '';
             document.getElementById('dispatchUploadData').value = '';
             
-            alert("설정이 DB에 저장되었으며 연동 완료되었습니다.");
+            alert("설정이 적용되었습니다.");
             closeSettingsModal(); checkOrderMatches(); renderDriverList();
         }
 
@@ -544,7 +547,7 @@
                 cutoff.setDate(cutoff.getDate() - autoDeleteDays); 
                 const cutoffStr = cutoff.toISOString().split('T')[0];
                 
-                // --- [수정] Supabase에서 기한 지난 데이터 삭제 명령 추가 ---
+                // Supabase에서 기한 지난 데이터 삭제
                 await supabaseClient.from('upload_history').delete().lte('date', cutoffStr);
                 
                 historyDataList = historyDataList.filter(item => item.date > cutoffStr);
@@ -701,7 +704,7 @@
             if(e.target.id !== 'driverSearchInput') document.getElementById('driverStoreSuggest').style.display = 'none';
         });
 
-        // --- [수정] 폼 작성 완료 시 Supabase DB 삽입 로직 추가 ---
+        // --- 폼 작성 완료 및 Supabase DB 저장 로직 ---
         async function saveFormData() {
             if(!document.getElementById('storeName').value || !document.getElementById('productName').value) {
                 alert("매장명과 제품명을 입력해주세요."); return;
@@ -727,9 +730,10 @@
 
             const { error } = await supabaseClient.from('upload_history').insert([insertData]);
             
+            // 수정한 부분: 에러 발생 시 알림으로 명확하게 띄워줍니다.
             if (error) { 
                 console.error("데이터 저장 실패: ", error); 
-                alert("데이터 저장 실패"); 
+                alert("데이터 저장 실패!\n에러 원인: " + error.message); 
                 return; 
             }
 
@@ -827,16 +831,19 @@
             checkboxes.forEach(cb => cb.checked = !allChecked);
         }
 
-        // --- [수정] 여러 건 DB 삭제 연동 ---
+        // 여러 건 DB 삭제 연동
         async function deleteSelectedHistory() {
             const checkedIds = Array.from(document.querySelectorAll('.hist-chk:checked')).map(cb => parseInt(cb.value));
             if(checkedIds.length === 0) return alert("삭제할 항목을 선택하세요.");
             if(confirm("선택한 항목을 완전 삭제하시겠습니까?")) {
-                await supabaseClient.from('upload_history').delete().in('id', checkedIds);
+                const { error } = await supabaseClient.from('upload_history').delete().in('id', checkedIds);
+                if (error) { alert("삭제 실패: " + error.message); return; }
+                
                 historyDataList = historyDataList.filter(i => !checkedIds.includes(i.id));
                 updateHistoryDates(); renderHistoryList();
             }
         }
+        
         function downloadSelectedHistory() {
             const checkedIds = Array.from(document.querySelectorAll('.hist-chk:checked'));
             const dateStr = document.getElementById('historyDateSelect').value;
@@ -844,30 +851,37 @@
             else alert(`${dateStr} 전체 데이터를 다운로드합니다.`);
         }
 
-        // --- [수정] 상태 업데이트 DB 연동 ---
+        // 상태 업데이트 DB 연동
         async function requestDelete(id) {
             const item = historyDataList.find(i => i.id === id);
             if(item) { 
-                await supabaseClient.from('upload_history').update({ status: 'delete_requested' }).eq('id', id);
+                const { error } = await supabaseClient.from('upload_history').update({ status: 'delete_requested' }).eq('id', id);
+                if (error) { alert("상태 변경 실패: " + error.message); return; }
+                
                 item.status = 'delete_requested'; renderHistoryList(); 
             }
         }
         
-        // --- [수정] 단일 항목 완전 삭제 DB 연동 ---
+        // 단일 항목 완전 삭제 DB 연동
         async function confirmDelete(id) {
-            await supabaseClient.from('upload_history').delete().eq('id', id);
+            const { error } = await supabaseClient.from('upload_history').delete().eq('id', id);
+            if (error) { alert("삭제 실패: " + error.message); return; }
+            
             historyDataList = historyDataList.filter(i => i.id !== id);
             updateHistoryDates(); renderHistoryList();
         }
 
-        // --- [수정] 사무실 연락처 DB 삽입 추가 ---
+        // --- 사무실 연락처 DB 삽입 ---
         async function saveOfficeContact() {
             const name = document.getElementById('offName').value, rank = document.getElementById('offRank').value, tel = document.getElementById('offTel').value;
             if(name && tel) {
                 const insertData = { name, rank, tel };
                 const { error } = await supabaseClient.from('office_contacts').insert([insertData]);
                 
-                if (error) { console.error("연락처 저장 실패", error); return; }
+                if (error) { 
+                    alert("연락처 저장 실패!\n원인: " + error.message); 
+                    return; 
+                }
                 
                 officeContacts.push(insertData);
                 document.getElementById('offName').value=''; document.getElementById('offRank').value=''; document.getElementById('offTel').value='';
@@ -887,7 +901,7 @@
             `).join('');
         }
 
-        // --- [수정] 기사 연락처 덮어씌우기 시 DB 삽입/삭제 추가 ---
+        // --- 기사 연락처 덮어씌우기 시 DB 삽입/삭제 추가 ---
         async function saveDriverContacts() {
             const data = document.getElementById('driverUploadData').value;
             const parsedData = parseTSV(data).map(r => ({
@@ -895,15 +909,26 @@
             })).filter(d => d.name);
             
             if (parsedData.length > 0) {
-                // 기존 기사 연락처 DB 상의 데이터 모두 삭제 후 덮어쓰기
-                await supabaseClient.from('driver_contacts').delete().neq('id', 0); 
-                const { error } = await supabaseClient.from('driver_contacts').insert(parsedData);
-                if (error) { console.error("기사 저장 실패", error); return; }
+                // 수정한 부분: 기존 기사 연락처 DB 상의 데이터 삭제 시 에러 확인
+                const { error: delError } = await supabaseClient.from('driver_contacts').delete().neq('id', 0); 
+                if (delError) { 
+                    alert("기존 연락처 삭제 실패!\n원인: " + delError.message); 
+                    return; 
+                }
+                
+                const { error: insError } = await supabaseClient.from('driver_contacts').insert(parsedData);
+                if (insError) { 
+                    alert("기사 저장 실패!\n원인: " + insError.message); 
+                    return; 
+                }
+            } else {
+                alert("입력된 데이터가 없거나 형식이 잘못되었습니다.");
+                return;
             }
 
             driverContacts = parsedData;
             document.getElementById('driverUploadData').value = '';
-            alert("기사 연락처 데이터가 덮어씌워졌습니다."); renderDriverList();
+            alert("기사 연락처 데이터가 성공적으로 덮어씌워졌습니다."); renderDriverList();
         }
 
         function handleDriverStoreSearch() {
