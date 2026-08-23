@@ -155,7 +155,7 @@
             text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 85vh; overflow-y: auto;
         }
         .modal-title { font-size: 20px; font-weight: 800; color: var(--primary); margin: 0 0 15px 0; }
-        .modal-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; background: var(--primary); color: #FFF; cursor: margin-top: 10px; }
+        .modal-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; background: var(--primary); color: #FFF; cursor: pointer; margin-top: 10px; }
         .modal-btn-close { background: #F2F2F7; color: var(--text-main); }
         .textarea-box { width: 100%; height: 80px; padding: 10px; border-radius: 8px; border: 1px solid var(--border); box-sizing: border-box; resize: none; margin-bottom: 10px; font-size: 12px; }
 
@@ -210,7 +210,8 @@
         
         <!-- 문제 4: 예비목록 추가 -->
         <button id="menuReserve1" class="menu-list-btn menu-item-optional">예비목록1</button>
-        <button id="menuReserve2" class="menu-list-btn menu-item-optional">예비목록2</button>
+        <!-- 화면전환 버튼으로 변경 -->
+        <button id="menuReserve2" class="menu-list-btn menu-item-optional" onclick="toggleScreenMode()">🖥️/📱 화면전환</button>
 
         <button id="settingsBtn" class="settings-btn" onclick="openSettingsModal()">⚙️</button>
     </div>
@@ -449,9 +450,9 @@
                 <li draggable="true" data-id="menuDriver" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_driver"> 기사 연락처</label></li>
                 <li draggable="true" data-id="menuHistory" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_history"> 업로드 내역</label></li>
                 <li draggable="true" data-id="menuMap" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_map"> 배차 내역</label></li>
-                <!-- 문제 4: 예비목록 추가 -->
+                <!-- 문제 4: 예비목록 추가 (예비목록2는 화면전환으로 수정됨) -->
                 <li draggable="true" data-id="menuReserve1" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_reserve1"> 예비목록1</label></li>
-                <li draggable="true" data-id="menuReserve2" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_reserve2"> 예비목록2</label></li>
+                <li draggable="true" data-id="menuReserve2" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_reserve2"> 화면전환</label></li>
             </ul>
             <button class="modal-btn" onclick="saveListManage()">저장</button>
             <button class="modal-btn modal-btn-close" onclick="closeListManageModal()">취소</button>
@@ -472,6 +473,14 @@
         <div class="modal-box" style="max-width:250px; padding:40px 20px;">
             <h2 class="modal-title">저장완료</h2>
             <button class="modal-btn" style="margin-top:20px;" onclick="closeSaveSuccessModal()">확인</button>
+        </div>
+    </div>
+    
+    <!-- 화면 전환 팝업 -->
+    <div id="screenModeModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box" style="max-width:250px; padding:40px 20px;">
+            <h2 class="modal-title" id="screenModeMessage" style="font-size:18px;"></h2>
+            <button class="modal-btn" style="margin-top:20px;" onclick="document.getElementById('screenModeModal').style.display='none'">확인</button>
         </div>
     </div>
 
@@ -495,6 +504,7 @@
         let nonUserVisibility = { home: true, office: true, field: false, driver: true, history: true, map: false, reserve1: false, reserve2: false };
         let autoDeleteDays = 7;
         let savePopupTimer;
+        let screenModeTimer; // 화면 전환 팝업용 타이머
 
         const STORAGE_TOTAL = 1100; // 1.1GB 고정 기준 (MB)
         let showRemainingStorage = true;
@@ -622,7 +632,7 @@
             document.getElementById('menuHistory').style.display = (isLoggedIn || nonUserVisibility.history) ? 'block' : 'none';
             document.getElementById('menuMap').style.display = (isLoggedIn || nonUserVisibility.map) ? 'block' : 'none';
             
-            // 문제 4: 예비목록 UI 제어
+            // 문제 4: 예비목록 UI 제어 (예비목록2는 화면전환용)
             document.getElementById('menuReserve1').style.display = (isLoggedIn || nonUserVisibility.reserve1) ? 'block' : 'none';
             document.getElementById('menuReserve2').style.display = (isLoggedIn || nonUserVisibility.reserve2) ? 'block' : 'none';
 
@@ -660,6 +670,35 @@
             }
             if(!document.body.classList.contains('pc-mode')) closeMenu();
         }
+        
+        // 화면 전환 로직 (PC 화면 ↔ 모바일 화면)
+        function toggleScreenMode() {
+            if(!isLoggedIn) {
+                alert("로그인 후 이용할 수 있습니다.");
+                return;
+            }
+            const body = document.body;
+            const isPc = body.classList.contains('pc-mode');
+            const msgEl = document.getElementById('screenModeMessage');
+
+            if (isPc) {
+                body.classList.remove('pc-mode');
+                msgEl.innerText = '모바일 화면으로 전환되었습니다.';
+                closeMenu();
+            } else {
+                body.classList.add('pc-mode');
+                msgEl.innerText = 'PC 화면으로 전환되었습니다.';
+                isMenuOpen = true; 
+            }
+
+            document.getElementById('screenModeModal').style.display = 'flex';
+            
+            clearTimeout(screenModeTimer);
+            const delay = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
+            screenModeTimer = setTimeout(() => {
+                document.getElementById('screenModeModal').style.display = 'none';
+            }, delay * 1000);
+        }
 
         function handleAuthClick() {
             if (isLoggedIn) {
@@ -677,7 +716,7 @@
         function processLogin() {
             if (document.getElementById('loginPassword').value === ADMIN_PWD) {
                 isLoggedIn = true; closeLoginModal();
-                document.body.classList.add('pc-mode');
+                document.body.classList.add('pc-mode'); // 문제 2: 로그인 후 기본화면 PC화면 유지
                 document.getElementById('authBtn').innerHTML = "🔓 로그아웃";
                 document.getElementById('menuOverlay').classList.remove('active');
                 document.getElementById('settingsBtn').style.display = "block";
