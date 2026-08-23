@@ -208,10 +208,9 @@
         <button id="menuHistory" class="menu-list-btn" onclick="showView('historyView')">📂 업로드 내역</button>
         <button id="menuMap" class="menu-list-btn menu-item-optional" onclick="showView('mapView')">🗺️ 배차 내역</button>
         
-        <!-- 문제 4: 예비목록 추가 -->
+        <!-- 문제 4: 예비목록 추가, 예비목록2는 화면전환으로 수정 -->
         <button id="menuReserve1" class="menu-list-btn menu-item-optional">예비목록1</button>
-        <!-- 화면전환 버튼으로 변경 -->
-        <button id="menuReserve2" class="menu-list-btn menu-item-optional" onclick="toggleScreenMode()">🖥️/📱 화면전환</button>
+        <button id="menuReserve2" class="menu-list-btn menu-item-optional" onclick="toggleScreenMode()">🖥️ 화면전환</button>
 
         <button id="settingsBtn" class="settings-btn" onclick="openSettingsModal()">⚙️</button>
     </div>
@@ -450,7 +449,7 @@
                 <li draggable="true" data-id="menuDriver" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_driver"> 기사 연락처</label></li>
                 <li draggable="true" data-id="menuHistory" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_history"> 업로드 내역</label></li>
                 <li draggable="true" data-id="menuMap" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_map"> 배차 내역</label></li>
-                <!-- 문제 4: 예비목록 추가 (예비목록2는 화면전환으로 수정됨) -->
+                <!-- 문제 4: 예비목록 추가 -->
                 <li draggable="true" data-id="menuReserve1" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_reserve1"> 예비목록1</label></li>
                 <li draggable="true" data-id="menuReserve2" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_reserve2"> 화면전환</label></li>
             </ul>
@@ -475,12 +474,12 @@
             <button class="modal-btn" style="margin-top:20px;" onclick="closeSaveSuccessModal()">확인</button>
         </div>
     </div>
-    
-    <!-- 화면 전환 팝업 -->
-    <div id="screenModeModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
-        <div class="modal-box" style="max-width:250px; padding:40px 20px;">
-            <h2 class="modal-title" id="screenModeMessage" style="font-size:18px;"></h2>
-            <button class="modal-btn" style="margin-top:20px;" onclick="document.getElementById('screenModeModal').style.display='none'">확인</button>
+
+    <!-- 화면 전환 알림 팝업 (추가) -->
+    <div id="switchAlertModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box" style="max-width:300px; padding:30px 20px;">
+            <h2 class="modal-title" style="font-size:18px;" id="switchAlertMsg">화면으로 전환되었습니다.</h2>
+            <button class="modal-btn" style="margin-top:20px;" onclick="document.getElementById('switchAlertModal').style.display='none'">확인</button>
         </div>
     </div>
 
@@ -504,7 +503,6 @@
         let nonUserVisibility = { home: true, office: true, field: false, driver: true, history: true, map: false, reserve1: false, reserve2: false };
         let autoDeleteDays = 7;
         let savePopupTimer;
-        let screenModeTimer; // 화면 전환 팝업용 타이머
 
         const STORAGE_TOTAL = 1100; // 1.1GB 고정 기준 (MB)
         let showRemainingStorage = true;
@@ -624,6 +622,26 @@
         window.addEventListener('touchstart', resetInactivityTimer);
         window.addEventListener('keydown', resetInactivityTimer);
 
+        // --- 화면 전환 (PC <-> 모바일) 함수 추가 ---
+        function toggleScreenMode() {
+            if(!isLoggedIn) {
+                alert("로그인 후 이용 가능합니다.");
+                return;
+            }
+            const body = document.body;
+            const msgEl = document.getElementById('switchAlertMsg');
+            
+            if (body.classList.contains('pc-mode')) {
+                body.classList.remove('pc-mode');
+                msgEl.innerText = '모바일 화면으로 전환되었습니다.';
+                closeMenu();
+            } else {
+                body.classList.add('pc-mode');
+                msgEl.innerText = 'PC 화면으로 전환되었습니다.';
+            }
+            document.getElementById('switchAlertModal').style.display = 'flex';
+        }
+
         function updateMenuUI() {
             document.getElementById('menuHome').style.display = (isLoggedIn || nonUserVisibility.home) ? 'block' : 'none';
             document.getElementById('menuOffice').style.display = (isLoggedIn || nonUserVisibility.office) ? 'block' : 'none';
@@ -632,9 +650,9 @@
             document.getElementById('menuHistory').style.display = (isLoggedIn || nonUserVisibility.history) ? 'block' : 'none';
             document.getElementById('menuMap').style.display = (isLoggedIn || nonUserVisibility.map) ? 'block' : 'none';
             
-            // 문제 4: 예비목록 UI 제어 (예비목록2는 화면전환용)
+            // 문제 4: 예비목록 UI 제어, 예비목록2(화면전환)는 로그인 시 항상 보이도록
             document.getElementById('menuReserve1').style.display = (isLoggedIn || nonUserVisibility.reserve1) ? 'block' : 'none';
-            document.getElementById('menuReserve2').style.display = (isLoggedIn || nonUserVisibility.reserve2) ? 'block' : 'none';
+            document.getElementById('menuReserve2').style.display = isLoggedIn ? 'block' : (nonUserVisibility.reserve2 ? 'block' : 'none');
 
             // 순서 반영 (flex order 적용)
             menuOrder.forEach((id, idx) => {
@@ -670,35 +688,6 @@
             }
             if(!document.body.classList.contains('pc-mode')) closeMenu();
         }
-        
-        // 화면 전환 로직 (PC 화면 ↔ 모바일 화면)
-        function toggleScreenMode() {
-            if(!isLoggedIn) {
-                alert("로그인 후 이용할 수 있습니다.");
-                return;
-            }
-            const body = document.body;
-            const isPc = body.classList.contains('pc-mode');
-            const msgEl = document.getElementById('screenModeMessage');
-
-            if (isPc) {
-                body.classList.remove('pc-mode');
-                msgEl.innerText = '모바일 화면으로 전환되었습니다.';
-                closeMenu();
-            } else {
-                body.classList.add('pc-mode');
-                msgEl.innerText = 'PC 화면으로 전환되었습니다.';
-                isMenuOpen = true; 
-            }
-
-            document.getElementById('screenModeModal').style.display = 'flex';
-            
-            clearTimeout(screenModeTimer);
-            const delay = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
-            screenModeTimer = setTimeout(() => {
-                document.getElementById('screenModeModal').style.display = 'none';
-            }, delay * 1000);
-        }
 
         function handleAuthClick() {
             if (isLoggedIn) {
@@ -713,10 +702,11 @@
             }
         }
         function closeLoginModal() { document.getElementById('loginModal').style.display = 'none'; }
+        
         function processLogin() {
             if (document.getElementById('loginPassword').value === ADMIN_PWD) {
                 isLoggedIn = true; closeLoginModal();
-                document.body.classList.add('pc-mode'); // 문제 2: 로그인 후 기본화면 PC화면 유지
+                document.body.classList.add('pc-mode');
                 document.getElementById('authBtn').innerHTML = "🔓 로그아웃";
                 document.getElementById('menuOverlay').classList.remove('active');
                 document.getElementById('settingsBtn').style.display = "block";
@@ -725,7 +715,12 @@
                 if(document.getElementById('historyView').classList.contains('active')) showView('historyView');
                 renderDriverList(); 
                 isMenuOpen = true; 
-            } else { alert("❌ 비밀번호 오류"); }
+            } else { 
+                alert("❌ 비밀번호 오류"); 
+                // 문제 6: 비밀번호 오류 발생 시 기존에 입력한 비밀번호 모두 삭제
+                document.getElementById('loginPassword').value = "";
+                document.getElementById('loginPassword').focus();
+            }
         }
 
         function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
@@ -1556,7 +1551,7 @@
                     }
                 });
 
-                // 1차적으로 DB 기사 중 현재 배차된 기사 정보만 필터 (차량번호, 전화번호 최신성 보장)
+                // 문제 5 : 1차적으로 DB 기사 중 현재 배차된 기사 정보만 필터 (오늘 들어오는 기사만 노출)
                 let filteredList = driverContacts.filter(d => dispatchDriverNames.has(d.name));
                 
                 // 2차적으로 DB에는 없으나 배차리스트에는 있는 기사 정보를 병합
@@ -1684,7 +1679,7 @@
             document.getElementById('driverDetailModal').style.display = 'flex';
         }
 
-        // --- 문제 8, 문제 1, 2, 3: 배차 내역 (지도) 렌더링 로직 ---
+        // --- 문제 8, 문제 1, 2, 3, 4: 배차 내역 (지도) 렌더링 로직 ---
         let map;
         let regionLayers = {};
         let mapSearchData = []; // 문제 3 검색용 전역 데이터
@@ -1732,9 +1727,6 @@
                         driverRoutes[driver].points.push([lat, lng]);
                         driverRoutes[driver].storeNames.push(store);
                         validRegions.add(region);
-
-                        // 검색 데이터에 삽입
-                        mapSearchData.push({ driver, store, lat, lng });
                     }
                 }
             });
@@ -1775,16 +1767,28 @@
                 }
 
                 route.points.forEach((pt, idx) => {
-                    L.circleMarker(pt, { radius: 6, color: '#fff', weight: 1, fillColor: color, fillOpacity: 1 })
-                     .bindPopup(`<div style='font-size:14px;'><b>${route.storeNames[idx]}</b><br><span style='color:var(--primary); font-weight:bold;'>배송기사: ${driver}</span></div>`)
-                     .addTo(tLayer);
+                    const storeName = route.storeNames[idx];
+                    const marker = L.circleMarker(pt, { radius: 6, color: '#fff', weight: 1, fillColor: color, fillOpacity: 1, originalColor: color })
+                         .bindPopup(`<div style='font-size:14px;'><b>${storeName}</b><br><span style='color:var(--primary); font-weight:bold;'>배송기사: ${driver}</span></div>`)
+                         .addTo(tLayer);
+
+                    // 문제 4: 팝업 열릴 때 빨간색으로 변경하고, 닫힐 때 원래 색상으로 복구
+                    marker.on('popupopen', function() {
+                        this.setStyle({ fillColor: '#FF3B30', color: '#FF3B30' });
+                    });
+                    marker.on('popupclose', function() {
+                        this.setStyle({ fillColor: this.options.originalColor, color: '#fff' });
+                    });
+
+                    // 문제 3: 마커 객체(marker)를 검색 데이터에 함께 저장하여 검색 시 활용
+                    mapSearchData.push({ driver: driver, store: storeName, lat: pt[0], lng: pt[1], marker: marker });
                 });
             }
 
             setTimeout(() => { map.invalidateSize(); }, 300);
         }
 
-        // 문제 3: 배차 내역 검색 기능
+        // 문제 3: 배차 내역 검색 기능 및 검색 시 해당 마커 자동 클릭 연동
         function filterMapSearch() {
             const val = document.getElementById('mapSearchInput').value.trim();
             const list = document.getElementById('mapSearchList');
@@ -1799,6 +1803,9 @@
                     li.textContent = `${m.store} (${m.driver})`;
                     li.onclick = () => {
                         map.setView([m.lat, m.lng], 15); // 해당 포인트로 줌 이동
+                        if(m.marker) {
+                            m.marker.openPopup(); // 해당 포인트 자동 클릭(팝업 열기)
+                        }
                         document.getElementById('mapSearchInput').value = m.store;
                         list.style.display = 'none';
                     };
