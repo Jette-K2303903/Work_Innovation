@@ -10,7 +10,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-    <!-- 지도 구현을 위한 Leaflet 라이브러리 (문제 8) -->
+    <!-- 지도 구현을 위한 Leaflet 라이브러리 -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
@@ -20,7 +20,6 @@
             --text-main: #1C1C1E; --text-sub: #8E8E93; --border: #E5E5EA;
         }
 
-        /* 문제 5: 모든 화면에 드래그 방지 (입력창 제외) */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
             margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-main);
@@ -31,7 +30,6 @@
             -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text;
         }
 
-        /* 11시 방향 고정 메뉴 */
         .menu-toggle-btn {
             position: fixed; top: 20px; left: 20px; z-index: 1000;
             background: var(--primary); color: #FFF; border: none; padding: 10px 16px;
@@ -39,7 +37,6 @@
             box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3); transition: 0.2s;
         }
 
-        /* 사이드바 메뉴 */
         .sidebar {
             position: fixed; top: 0; left: -100%; width: 280px; height: 100%;
             background-color: var(--surface); box-shadow: 10px 0 30px rgba(0,0,0,0.1);
@@ -55,7 +52,6 @@
         }
         .sidebar-overlay.active { display: block; opacity: 1; }
 
-        /* 문제 6: 순서 변경을 위한 flex 속성 추가 */
         #sideMenu { display: flex; flex-direction: column; }
         .menu-list-btn {
             width: 100%; padding: 16px; border: none; border-radius: 12px;
@@ -67,7 +63,6 @@
         #authBtn { order: 0; background: var(--text-main); color: #FFF; margin-bottom: 20px; text-align: center; }
         #authBtn:hover { background: #3A3A3C; }
 
-        /* 톱니바퀴 설정 버튼 */
         .settings-btn {
             position: absolute; bottom: 20px; right: 20px; background: transparent; border: none; font-size: 24px;
             cursor: pointer; display: none; transition: transform 0.2s; color: var(--text-sub);
@@ -75,7 +70,6 @@
         .settings-btn:hover { transform: rotate(45deg); color: var(--text-main); }
         .menu-item-optional { display: none; } 
 
-        /* 메인 콘텐츠 구도 */
         .main-content {
             flex: 1; padding: 80px 20px 40px; box-sizing: border-box;
             max-width: 600px; margin: 0 auto; width: 100%; position: relative;
@@ -83,7 +77,6 @@
         .view-section { display: none; }
         .view-section.active { display: block; }
 
-        /* 사진 및 미리보기 */
         .media-actions { display: flex; gap: 15px; margin-bottom: 20px; }
         .action-btn {
             flex: 1; background: #E0EFFF; color: var(--primary); border: 2px dashed var(--primary);
@@ -93,7 +86,6 @@
         .preview-container { text-align: center; margin-bottom: 25px; display: none; }
         .preview-img { max-width: 100%; max-height: 250px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); object-fit: contain; }
 
-        /* 폼 입력 레이아웃 분할 */
         .form-card { background: var(--surface); padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
         .input-group { margin-bottom: 15px; display: flex; flex-direction: column; gap: 6px; position: relative; }
         .input-row { display: flex; gap: 10px; width: 100%; margin-bottom: 15px; }
@@ -105,19 +97,17 @@
         .input-box {
             width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border);
             background: #FAFAFC; font-size: 14px; color: var(--text-main); box-sizing: border-box;
-            height: 44px; /* 문제 4: 높이 통일 */
+            height: 44px;
         }
         .input-box:focus { outline: none; border-color: var(--primary); background: #FFF; }
         .input-box[readonly] { background: #E5E5EA; color: #8E8E93; cursor: not-allowed; }
 
-        /* 문제 4: 데이트 피커 크기 일치 */
         input[type="date"].input-box {
             -webkit-appearance: none; appearance: none;
-            padding: 11px 12px; /* 텍스트박스와 시각적 동일 패딩 적용 */
+            padding: 11px 12px;
         }
         select.input-box { -webkit-appearance: none; appearance: none; }
 
-        /* 자동완성 */
         .autocomplete-list {
             position: absolute; top: 100%; left: 0; right: 0; background: #FFF; border: 1px solid var(--border);
             border-radius: 8px; max-height: 150px; overflow-y: auto; z-index: 100;
@@ -126,7 +116,6 @@
         .autocomplete-list li { padding: 10px; border-bottom: 1px solid #F0F2F7; cursor: pointer; font-size: 14px; }
         .autocomplete-list li:hover { background: #F0F2F7; }
 
-        /* 업로드 내역 */
         .history-top-bar { display: none; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px; margin-bottom: 20px; }
         .history-list { display: flex; flex-direction: column; gap: 15px; }
         .history-item { display: flex; gap: 15px; padding: 15px; background: #FFF; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); align-items: center; }
@@ -139,13 +128,11 @@
         .btn-confirm { background: #FF3B30; color: #FFF; }
         .status-red { color: #FF3B30; font-weight: bold; }
 
-        /* 연락처 리스트 공통 */
         .contact-list { display: flex; flex-direction: column; gap: 10px; }
         .contact-card { background: #FFF; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
         .call-btn { background: #34C759; color: #FFF; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; font-size: 14px; flex-shrink: 0; }
         .search-bar-fixed { position: sticky; top: -20px; background: var(--bg-color); padding: 10px 0; z-index: 10; margin-bottom: 10px; display: flex; flex-direction: column; position: relative; }
 
-        /* 모달 공통 */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(5px); justify-content: center; align-items: center; z-index: 1001;
@@ -163,12 +150,10 @@
         .driver-name-click { cursor: pointer; color: var(--text-main); }
         .driver-name-click:hover { color: var(--primary); text-decoration: underline; }
 
-        /* 문제 6: 드래그 핸들 디자인 */
         .sortable-item { cursor: grab; padding: 8px 10px; background: #FAFAFC; border: 1px solid #E5E5EA; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
         .sortable-item:active { cursor: grabbing; }
         .drag-handle { color: #8E8E93; font-size: 18px; }
 
-        /* PC 화면 4:6 비율 레이아웃 */
         body.pc-mode { flex-direction: row; overflow: hidden; }
         body.pc-mode .menu-toggle-btn { display: none; }
         body.pc-mode .sidebar-overlay { display: none !important; }
@@ -180,10 +165,8 @@
             flex: 6; max-width: 100%; height: 100vh; overflow-y: auto; padding: 40px 60px;
         }
         
-        /* 문제 1: 지도 투명 바탕 및 UI 깔끔하게 처리 */
         #map { width:100%; height:65vh; border-radius:12px; background: transparent !important; z-index: 1; }
 
-        /* 문제 7: 버튼 IOS 눌림 효과 */
         button, .btn-small, .modal-btn, .menu-list-btn, .call-btn, .action-btn, .sortable-item {
             transition: transform 0.1s ease, opacity 0.1s ease, background-color 0.2s ease !important;
         }
@@ -208,7 +191,6 @@
         <button id="menuHistory" class="menu-list-btn" onclick="showView('historyView')">📂 업로드 내역</button>
         <button id="menuMap" class="menu-list-btn menu-item-optional" onclick="showView('mapView')">🗺️ 배차 내역</button>
         
-        <!-- 문제 4: 예비목록 추가, 예비목록2는 화면전환으로 수정 -->
         <button id="menuReserve1" class="menu-list-btn menu-item-optional">예비목록1</button>
         <button id="menuReserve2" class="menu-list-btn menu-item-optional" onclick="toggleScreenMode()">🖥️ 화면전환</button>
 
@@ -220,26 +202,24 @@
         <!-- 뷰 1: 홈 화면 -->
         <div id="formView" class="view-section active">
             <div class="media-actions">
-                <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;" onchange="previewImage(this)">
-                <input type="file" id="galleryInput" accept="image/*" style="display:none;" onchange="previewImage(this)">
+                <input type="file" id="cameraInput" accept="image/*" capture="environment" multiple style="display:none;" onchange="previewImage(this)">
+                <input type="file" id="galleryInput" accept="image/*" multiple style="display:none;" onchange="previewImage(this)">
                 <button class="action-btn" onclick="document.getElementById('cameraInput').click()">📸 카메라 촬영</button>
                 <button class="action-btn" onclick="document.getElementById('galleryInput').click()">🖼️ 갤러리 선택</button>
             </div>
             <div id="imagePreviewContainer" class="preview-container">
-                <img id="imagePreview" class="preview-img" src="" alt="미리보기">
+                <!-- 동적으로 다중 이미지가 추가될 영역 -->
             </div>
 
             <div class="form-card">
                 <div class="input-row">
                     <div class="flex-60">
                         <label>사유</label>
-                        <!-- 문제 9: 사유 추천 리스트 추가 -->
                         <input type="text" id="reasonText" class="input-box" placeholder="사유를 직접 기입하세요" oninput="filterReasons()" autocomplete="off">
                         <ul id="reasonListUl" class="autocomplete-list"></ul>
                     </div>
                     <div class="flex-40">
                         <label>작성자</label>
-                        <!-- 문제 8: 작성자 추천 리스트 추가 -->
                         <input type="text" id="authorName" class="input-box" placeholder="작성자" oninput="filterAuthorNames()" autocomplete="off">
                         <ul id="authorList" class="autocomplete-list"></ul>
                     </div>
@@ -326,7 +306,7 @@
             <div id="officeListContainer" class="contact-list"></div>
         </div>
 
-        <!-- 문제 5: 뷰 추가: 현장 연락처 (기존 목록 4 대체) -->
+        <!-- 뷰 4: 현장 연락처 -->
         <div id="fieldContactView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">👷 현장 연락처</h2>
             <div id="fieldEditForm" style="display:none; background:#FFF; padding:15px; border-radius:12px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
@@ -340,7 +320,7 @@
             <div id="fieldListContainer" class="contact-list"></div>
         </div>
 
-        <!-- 뷰 4: 기사 연락처 -->
+        <!-- 뷰 5: 기사 연락처 -->
         <div id="driverContactView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">📱 기사 연락처</h2>
             <div class="search-bar-fixed">
@@ -355,10 +335,9 @@
             <div id="driverListContainer" class="contact-list"></div>
         </div>
 
-        <!-- 문제 8: 뷰 추가: 배차 내역 지도 (기존 목록 5 대체) -->
+        <!-- 뷰 6: 배차 내역 (지도) -->
         <div id="mapView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">🗺️ 배차 내역 (지도)</h2>
-            <!-- 문제 3: 배차내역 검색 추가 및 레이아웃 조정 -->
             <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:15px; background:#fff; padding:10px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
                 <div id="transportFilters" style="display:flex; flex-wrap:wrap; gap:10px; flex:1;"></div>
                 <div style="position:relative; min-width:200px;">
@@ -384,28 +363,22 @@
     <div id="settingsModal" class="modal-overlay" onclick="if(event.target===this) closeSettingsModal()">
         <div class="modal-box" style="max-width:500px;">
             <h2 class="modal-title">시스템 설정</h2>
-
-            <!-- 문제 10: 개별 덮어씌우기 버튼으로 변경 -->
             <button class="modal-btn" style="background:#4A90E2;" onclick="document.getElementById('orderUploadModal').style.display='flex'">📤 주문업로드 데이터 덮어씌우기</button>
             <button class="modal-btn" style="background:#50E3C2; color:#1C1C1E;" onclick="document.getElementById('dispatchUploadModal').style.display='flex'">📥 배차업로드 데이터 덮어씌우기</button>
-
             <div style="text-align:left; font-size:14px; margin-top:20px; border-top:1px solid var(--border); padding-top:15px;">
                 <label style="display:block; margin-bottom:10px;">데이터 유지기간(일): <input type="number" id="autoDeleteDaysInput" class="input-box" style="width:60px; padding:6px;" value="7"></label>
                 <label style="display:block; margin-bottom:10px;">작성완료 자동닫힘(초): <input type="number" id="autoCloseSecondsInput" class="input-box" style="width:60px; padding:6px;" value="2"></label>
-
                 <div style="display:flex; gap:10px; margin-top:5px;">
                     <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="openListManageModal()">📋 비로그인 목록 관리</button>
-                    <!-- 문제 9: 사유 목록 관리 버튼 -->
                     <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="document.getElementById('reasonManageModal').style.display='flex'; renderReasonManageList();">📝 사유 목록 관리</button>
                 </div>
             </div>
-
             <button class="modal-btn" style="margin-top:25px;" onclick="saveSystemSettings()">설정 저장 (Supabase 적용)</button>
             <button class="modal-btn modal-btn-close" onclick="closeSettingsModal()">닫기</button>
         </div>
     </div>
 
-    <!-- 문제 10: 개별 업로드 팝업 -->
+    <!-- 개별 업로드 팝업 -->
     <div id="orderUploadModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box">
             <h2 class="modal-title" style="font-size:18px;">주문업로드 새로 덮어씌우기</h2>
@@ -414,7 +387,6 @@
             <button class="modal-btn modal-btn-close" onclick="document.getElementById('orderUploadModal').style.display='none'">닫기</button>
         </div>
     </div>
-
     <div id="dispatchUploadModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box">
             <h2 class="modal-title" style="font-size:18px;">배차업로드 새로 덮어씌우기</h2>
@@ -424,7 +396,7 @@
         </div>
     </div>
 
-    <!-- 문제 9: 사유 목록 관리 팝업 -->
+    <!-- 사유 목록 관리 팝업 -->
     <div id="reasonManageModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box">
             <h2 class="modal-title" style="font-size:18px;">사유 목록 관리</h2>
@@ -449,7 +421,6 @@
                 <li draggable="true" data-id="menuDriver" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_driver"> 기사 연락처</label></li>
                 <li draggable="true" data-id="menuHistory" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_history"> 업로드 내역</label></li>
                 <li draggable="true" data-id="menuMap" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_map"> 배차 내역</label></li>
-                <!-- 문제 4: 예비목록 추가 -->
                 <li draggable="true" data-id="menuReserve1" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_reserve1"> 예비목록1</label></li>
                 <li draggable="true" data-id="menuReserve2" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_reserve2"> 화면전환</label></li>
             </ul>
@@ -475,7 +446,7 @@
         </div>
     </div>
 
-    <!-- 화면 전환 알림 팝업 (추가) -->
+    <!-- 화면 전환 알림 팝업 -->
     <div id="switchAlertModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:300px; padding:30px 20px;">
             <h2 class="modal-title" style="font-size:18px;" id="switchAlertMsg">화면으로 전환되었습니다.</h2>
@@ -484,27 +455,26 @@
     </div>
 
     <script>
-        // --- Supabase 연동 설정 ---
         const SUPABASE_URL = 'https://whmltqxmramimlwrdkma.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobWx0cXhtcmFtaW1sd3Jka21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4MjczMzAsImV4cCI6MjEwMTQwMzMzMH0.W60TYb4NIRR7lXpbgQlj1h7yGGPcXRSh3Ui3IuFH-j0';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let isMenuOpen = false; let menuInactivityTimer; let isLoggedIn = false;
         const ADMIN_PWD = "alfdid13579!!";
-        let currentImgSrc = "";
+        
+        let currentImgSrcs = []; // 여러 장 이미지를 관리하는 배열로 변경
 
         let orderDataList = []; let dispatchDataList = [];
         let historyDataList = [];
         let officeContacts = []; let fieldContacts = []; let driverContacts = [];
 
-        // 문제 4: 예비목록 추가 반영
         let reasonsList = [];
         let menuOrder = ['menuHome', 'menuOffice', 'menuField', 'menuDriver', 'menuHistory', 'menuMap', 'menuReserve1', 'menuReserve2'];
         let nonUserVisibility = { home: true, office: true, field: false, driver: true, history: true, map: false, reserve1: false, reserve2: false };
         let autoDeleteDays = 7;
         let savePopupTimer;
 
-        const STORAGE_TOTAL = 1100; // 1.1GB 고정 기준 (MB)
+        const STORAGE_TOTAL = 1100;
         let showRemainingStorage = true;
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -518,10 +488,8 @@
             setupDragAndDrop();
         });
 
-        // --- Supabase에서 데이터 불러오기 ---
         async function fetchInitialData() {
             try {
-                // 앱 설정 로드
                 const { data: set_data } = await supabaseClient.from('app_settings').select('*').eq('id', 1).single();
                 if(set_data) {
                     if(set_data.auto_delete_days) {
@@ -543,7 +511,6 @@
                     }
                 }
 
-                // 주문내역 (orders) 조회
                 const { data: ordData, error: ordErr } = await supabaseClient.from('orders').select('*');
                 if(ordData) {
                     orderDataList = ordData.map(d => [
@@ -558,7 +525,6 @@
                     ]);
                 }
 
-                // 배차내역 (dispatch_list) 조회
                 const { data: dispData, error: dispErr } = await supabaseClient.from('dispatch_list').select('*');
                 if(dispData) {
                     dispatchDataList = dispData.map(d => [
@@ -569,7 +535,6 @@
                     ]);
                 }
 
-                // 업로드 내역 조회
                 const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
                 if (histErr) console.error("업로드 내역 로드 에러:", histErr.message);
                 if (histData) {
@@ -581,16 +546,13 @@
                     }));
                 }
 
-                // 사무실 연락처 조회
                 const { data: offData, error: offErr } = await supabaseClient.from('office_contacts').select('*');
                 if (offErr) console.error("사무실 연락처 로드 에러:", offErr.message);
                 if (offData) officeContacts = offData;
 
-                // 현장 연락처 조회
                 const { data: fldData, error: fldErr } = await supabaseClient.from('field_contacts').select('*');
                 if (!fldErr && fldData) fieldContacts = fldData;
 
-                // 기사 연락처 조회
                 const { data: drvData, error: drvErr } = await supabaseClient.from('driver_contacts').select('*');
                 if (drvErr) console.error("기사 연락처 로드 에러:", drvErr.message);
                 if (drvData) driverContacts = drvData;
@@ -599,7 +561,6 @@
             renderStorage();
         }
 
-        /* --- 메뉴 제어 및 UI 갱신 --- */
         function toggleMenu() { isMenuOpen ? closeMenu() : openMenu(); }
         function openMenu() {
             document.getElementById('sideMenu').classList.add('active');
@@ -622,7 +583,6 @@
         window.addEventListener('touchstart', resetInactivityTimer);
         window.addEventListener('keydown', resetInactivityTimer);
 
-        // --- 화면 전환 (PC <-> 모바일) 함수 추가 ---
         function toggleScreenMode() {
             if(!isLoggedIn) {
                 alert("로그인 후 이용 가능합니다.");
@@ -650,11 +610,9 @@
             document.getElementById('menuHistory').style.display = (isLoggedIn || nonUserVisibility.history) ? 'block' : 'none';
             document.getElementById('menuMap').style.display = (isLoggedIn || nonUserVisibility.map) ? 'block' : 'none';
             
-            // 문제 4: 예비목록 UI 제어, 예비목록2(화면전환)는 로그인 시 항상 보이도록
             document.getElementById('menuReserve1').style.display = (isLoggedIn || nonUserVisibility.reserve1) ? 'block' : 'none';
             document.getElementById('menuReserve2').style.display = isLoggedIn ? 'block' : (nonUserVisibility.reserve2 ? 'block' : 'none');
 
-            // 순서 반영 (flex order 적용)
             menuOrder.forEach((id, idx) => {
                 const el = document.getElementById(id);
                 if(el) el.style.order = idx + 1;
@@ -668,7 +626,6 @@
             document.getElementById('fieldEditForm').style.display = isLoggedIn ? 'block' : 'none';
             document.getElementById('driverEditForm').style.display = isLoggedIn ? 'block' : 'none';
             
-            // 편집 모드 리렌더링 (문제 5, 6 UI 반영용)
             renderOfficeList();
             renderFieldList();
             renderStorage();
@@ -717,7 +674,6 @@
                 isMenuOpen = true; 
             } else { 
                 alert("❌ 비밀번호 오류"); 
-                // 문제 6: 비밀번호 오류 발생 시 기존에 입력한 비밀번호 모두 삭제
                 document.getElementById('loginPassword').value = "";
                 document.getElementById('loginPassword').focus();
             }
@@ -726,7 +682,6 @@
         function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
         function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
 
-        // --- 드래그 앤 드롭 설정 (문제 6) ---
         function setupDragAndDrop() {
             let draggedItem = null;
             document.querySelectorAll('.sortable-item').forEach(item => {
@@ -763,11 +718,9 @@
             document.getElementById('lm_driver').checked = nonUserVisibility.driver;
             document.getElementById('lm_history').checked = nonUserVisibility.history;
             document.getElementById('lm_map').checked = nonUserVisibility.map;
-            // 문제 4: 예비목록 체크
             document.getElementById('lm_reserve1').checked = nonUserVisibility.reserve1;
             document.getElementById('lm_reserve2').checked = nonUserVisibility.reserve2;
 
-            // 기존 저장된 순서대로 li 재배치
             const ul = document.getElementById('menuSortList');
             menuOrder.forEach(id => {
                 const li = ul.querySelector(`[data-id="${id}"]`);
@@ -785,7 +738,6 @@
             nonUserVisibility.driver = document.getElementById('lm_driver').checked;
             nonUserVisibility.history = document.getElementById('lm_history').checked;
             nonUserVisibility.map = document.getElementById('lm_map').checked;
-            // 문제 4: 예비목록 저장
             nonUserVisibility.reserve1 = document.getElementById('lm_reserve1').checked;
             nonUserVisibility.reserve2 = document.getElementById('lm_reserve2').checked;
 
@@ -799,7 +751,6 @@
             } else alert('저장 실패: ' + error.message);
         }
 
-        // --- 데이터 개별 덮어씌우기 저장 기능 (문제 10) ---
         async function saveNewOrderData() {
             const rawOrder = document.getElementById('newOrderData').value;
             if(rawOrder.trim()) {
@@ -873,7 +824,6 @@
             closeSettingsModal();
         }
 
-        // --- 문제 11: 지정된 시점에 D-7 데이터 삭제 ---
         async function checkAutoDelete() {
             const now = new Date();
             if(now.getHours() === 20 && now.getMinutes() === 30) {
@@ -918,20 +868,81 @@
         }
 
         function previewImage(input) {
-            const container = document.getElementById('imagePreviewContainer');
-            const preview = document.getElementById('imagePreview');
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    currentImgSrc = e.target.result; preview.src = currentImgSrc; container.style.display = 'block';
+            if (input.files) {
+                let files = Array.from(input.files);
+                let remain = 5 - currentImgSrcs.length;
+                if (files.length > remain) {
+                    alert(`최대 5장까지만 첨부할 수 있습니다. (현재 ${currentImgSrcs.length}장)`);
+                    files = files.slice(0, remain);
                 }
-                reader.readAsDataURL(input.files[0]);
+                
+                if (files.length === 0) {
+                    input.value = "";
+                    return;
+                }
+
+                let loadedCount = 0;
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        currentImgSrcs.push(e.target.result);
+                        loadedCount++;
+                        if (loadedCount === files.length) {
+                            renderPreview();
+                        }
+                    }
+                    reader.readAsDataURL(file);
+                });
+            }
+            input.value = "";
+        }
+
+        function renderPreview() {
+            const container = document.getElementById('imagePreviewContainer');
+            container.innerHTML = '';
+            if(currentImgSrcs.length > 0) {
+                container.style.display = 'block';
+                currentImgSrcs.forEach((src, index) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.style.display = 'inline-block';
+                    wrapper.style.position = 'relative';
+                    wrapper.style.margin = '5px';
+                    
+                    const img = document.createElement('img');
+                    img.src = src;
+                    img.className = 'preview-img';
+                    img.style.maxWidth = '100px';
+                    img.style.maxHeight = '100px';
+                    
+                    const delBtn = document.createElement('button');
+                    delBtn.innerHTML = 'X';
+                    delBtn.style.position = 'absolute';
+                    delBtn.style.top = '-5px';
+                    delBtn.style.right = '-5px';
+                    delBtn.style.background = '#FF3B30';
+                    delBtn.style.color = 'white';
+                    delBtn.style.border = 'none';
+                    delBtn.style.borderRadius = '50%';
+                    delBtn.style.width = '24px';
+                    delBtn.style.height = '24px';
+                    delBtn.style.cursor = 'pointer';
+                    delBtn.style.fontWeight = 'bold';
+                    delBtn.onclick = () => {
+                        currentImgSrcs.splice(index, 1);
+                        renderPreview();
+                    };
+                    
+                    wrapper.appendChild(img);
+                    wrapper.appendChild(delBtn);
+                    container.appendChild(wrapper);
+                });
+            } else {
+                container.style.display = 'none';
             }
         }
 
         function cleanNumber(str) { return str ? str.replace(/,/g, '') : ""; }
 
-        // --- 사유 검색 및 자동 추천 (문제 9) ---
         function filterReasons() {
             const inputVal = document.getElementById('reasonText').value.trim();
             const listUl = document.getElementById('reasonListUl');
@@ -952,7 +963,6 @@
             } else { listUl.style.display = 'none'; }
         }
 
-        // --- 작성자 추천 기능 (문제 8) ---
         function filterAuthorNames() {
             const val = document.getElementById('authorName').value.trim();
             const listUl = document.getElementById('authorList');
@@ -999,7 +1009,6 @@
             renderReasonManageList();
         }
 
-        // 문제 4: 주문업로드에서 매장명을 선택 시 매장코드 자동 매칭 및 연계 로직
         function handleStoreInput() {
             const val = document.getElementById('storeName').value.trim();
             if(!val) {
@@ -1008,7 +1017,7 @@
                 document.getElementById('driverName').value = '정보 없음';
                 document.getElementById('productName').value = '';
                 document.getElementById('productCode').value = '';
-                document.getElementById('inboundCenter').value = ''; // 문제 2: 연계 초기화
+                document.getElementById('inboundCenter').value = ''; 
                 return;
             }
             filterStoreNames();
@@ -1024,11 +1033,10 @@
             }
             if(matchedCode) {
                 document.getElementById('storeCode').value = matchedCode;
-                findDispatchDriverAndCenter(matchedCode); // 문제 4, 6 연계
+                findDispatchDriverAndCenter(matchedCode); 
             }
         }
 
-        // 문제 1: dispatch_list - workplace_name 기준으로 홈화면 - '매장명'에 입력하면, 비슷한 이름 추천하여 사용자가 선택 가능하게 할 것.
         function filterStoreNames() {
             const inputVal = document.getElementById('storeName').value.trim();
             const listUl = document.getElementById('storeList');
@@ -1038,7 +1046,7 @@
             const matches = [], seen = new Set();
             dispatchDataList.forEach(row => {
                 if(row.length > 3) {
-                    const storeName = row[3] || ""; // dispatch_list - workplace_name 기준
+                    const storeName = row[3] || ""; 
                     if(storeName.includes(inputVal) && !seen.has(storeName)) {
                         seen.add(storeName); matches.push(row);
                     }
@@ -1059,13 +1067,12 @@
             document.getElementById('storeName').value = name;
             document.getElementById('storeCode').value = code;
             document.getElementById('storeList').style.display = 'none';
-            findDispatchDriverAndCenter(code); // 매장코드로 기사 및 메인센터 자동 매칭
+            findDispatchDriverAndCenter(code); 
             document.getElementById('productName').value = '';
             document.getElementById('productCode').value = '';
-            document.getElementById('inboundCenter').value = ''; // 연계 초기화
+            document.getElementById('inboundCenter').value = ''; 
         }
 
-        // 문제 4, 6: 배차업로드에서 '매장코드' 기준으로 배차기사(driver_name) 및 메인센터(main_center) 자동매칭
         function findDispatchDriverAndCenter(storeCodeMatch) {
             let driverName = "정보 없음", centerInfo = "", driverContact = "";
             const cleanTarget = cleanNumber(storeCodeMatch);
@@ -1073,11 +1080,11 @@
             for(let row of dispatchDataList) {
                 if(row.length > 7 && cleanNumber(row[1]) === cleanTarget) { 
                     driverName = row[7] || "정보 없음"; 
-                    centerInfo = row[16] || ""; // 문제 6 반영: 메인센터를 배차업로드 main_center에서 매칭 (Q행)
+                    centerInfo = row[16] || ""; 
                     
                     const foundDriver = driverContacts.find(d => d.name === driverName);
                     if(foundDriver) { driverContact = ` (${foundDriver.phone})`; }
-                    else if(row[15]) { driverContact = ` (${row[15]})`; } // 배차 리스트 자체 연락처 백업
+                    else if(row[15]) { driverContact = ` (${row[15]})`; } 
                     break;
                 }
             }
@@ -1085,7 +1092,6 @@
             document.getElementById('mainCenter').value = centerInfo;
         }
 
-        // 문제 1, 2, 7, 8, 9: 제품명 추천 필터 + (요청) 단위 초기화
         function filterProductNames() {
             const storeCode = document.getElementById('storeCode').value;
             const storeNameVal = document.getElementById('storeName').value.trim();
@@ -1093,12 +1099,11 @@
             const listUl = document.getElementById('productList');
             listUl.innerHTML = '';
             
-            // 문제 1: 제품명 입력란이 지워질 때 연관된 데이터 초기화 (단위 자동초기화 포함)
             if(!inputVal) { 
                 listUl.style.display = 'none'; 
                 document.getElementById('productCode').value = '';
                 document.getElementById('inboundCenter').value = '';
-                document.getElementById('productUnit').value = ''; // 단위 자동 초기화 추가
+                document.getElementById('productUnit').value = ''; 
                 return; 
             }
 
@@ -1106,7 +1111,7 @@
             
             orderDataList.forEach(row => {
                 if(row.length > 11) {
-                    const prodName = row[11] || ""; // 문제 7: orders - product_name
+                    const prodName = row[11] || ""; 
                     let condition = false;
 
                     if(storeCode || storeNameVal) {
@@ -1114,13 +1119,11 @@
                         const rowAccountName = row[9] || "";
                         const rowClientName = row[7] || "";
 
-                        // 배차코드(storeCode)가 일치하거나 매장명(storeNameVal)이 거래처명/고객사명에 포함된 경우 모두 추출하도록 보완
                         const isStoreMatch = (storeCode && rowAccountCode === cleanNumber(storeCode)) || 
                                              (storeNameVal && (rowAccountName.includes(storeNameVal) || rowClientName.includes(storeNameVal)));
                         
                         condition = isStoreMatch && prodName.includes(inputVal);
                     } else {
-                        // 문제 9: 매장명 미입력 시 모든 제품명에서 추천
                         condition = prodName.includes(inputVal);
                     }
 
@@ -1137,10 +1140,9 @@
                     const li = document.createElement('li'); li.textContent = m[11];
                     li.onclick = () => {
                         document.getElementById('productName').value = m[11];
-                        document.getElementById('productCode').value = cleanNumber(m[10]); // 문제 7: 자동 매칭
+                        document.getElementById('productCode').value = cleanNumber(m[10]); 
                         document.getElementById('productUnit').value = m[16] || "";
 
-                        // 문제 5: 입고센터 표기 방법 (item_designation 기준)
                         let rVal = (m[17] || "").trim(); 
                         let inbound = m[4] || "";
                         if(rVal === "범용위탁") inbound = "웰스토리";
@@ -1168,14 +1170,13 @@
             if(e.target.id !== 'productName') document.getElementById('productList').style.display = 'none';
             if(e.target.id !== 'driverSearchInput') document.getElementById('driverStoreSuggest').style.display = 'none';
             if(e.target.id !== 'reasonText') document.getElementById('reasonListUl').style.display = 'none';
-            if(e.target.id !== 'authorName') document.getElementById('authorList').style.display = 'none'; // 문제 8 리스트 숨김
-            if(e.target.id !== 'mapSearchInput') { // 문제 3 리스트 숨김
+            if(e.target.id !== 'authorName') document.getElementById('authorList').style.display = 'none'; 
+            if(e.target.id !== 'mapSearchInput') { 
                 const msl = document.getElementById('mapSearchList');
                 if(msl) msl.style.display = 'none';
             }
         });
 
-        // --- 폼 작성 완료 ---
         async function saveFormData() {
             if(!document.getElementById('storeName').value || !document.getElementById('productName').value) {
                 alert("매장명과 제품명을 입력해주세요."); return;
@@ -1196,7 +1197,7 @@
                 inbound_center: document.getElementById('inboundCenter').value,
                 qty: document.getElementById('productQty').value ? Number(document.getElementById('productQty').value) : null,
                 unit: document.getElementById('productUnit').value,
-                img_url: currentImgSrc
+                img_url: JSON.stringify(currentImgSrcs)
             };
 
             const { error } = await supabaseClient.from('upload_history').insert([insertData]);
@@ -1210,7 +1211,9 @@
             });
 
             document.querySelectorAll('#formView .input-box').forEach(el => { if(el.id !== 'writeDate') el.value = ''; });
-            document.getElementById('imagePreviewContainer').style.display = 'none'; currentImgSrc = "";
+            document.getElementById('imagePreviewContainer').style.display = 'none';
+            document.getElementById('imagePreviewContainer').innerHTML = '';
+            currentImgSrcs = [];
             renderStorage(); 
 
             document.getElementById('saveSuccessModal').style.display = 'flex';
@@ -1223,7 +1226,6 @@
             clearTimeout(savePopupTimer);
         }
 
-        /* --- 업로드 내역 뷰 --- */
         function updateHistoryDates() {
             const select = document.getElementById('historyDateSelect');
             const uniqueDates = [...new Set(historyDataList.map(h => h.date))].sort((a,b) => b.localeCompare(a));
@@ -1262,6 +1264,16 @@
                 const div = document.createElement('div'); div.className = 'history-item';
                 let actionHtml = '';
 
+                let thumbSrc = 'https://via.placeholder.com/60?text=No';
+                if (item.img) {
+                    try {
+                        const parsedImg = JSON.parse(item.img);
+                        if(Array.isArray(parsedImg) && parsedImg.length > 0) thumbSrc = parsedImg[0];
+                    } catch(e) {
+                        if(item.img && item.img.startsWith('data:image')) thumbSrc = item.img;
+                    }
+                }
+
                 if(item.status === 'delete_requested') {
                     actionHtml = `
                         <span class="status-red">[삭제요청]</span>
@@ -1275,7 +1287,7 @@
                     <div class="history-checkbox-wrap" style="display:${isLoggedIn?'block':'none'}">
                         <input type="checkbox" class="hist-chk" value="${item.id}" style="width:18px; height:18px;">
                     </div>
-                    <img src="${item.img || 'https://via.placeholder.com/60?text=No'}" class="history-thumb">
+                    <img src="${thumbSrc}" class="history-thumb">
                     <div class="history-info">
                         <p><strong>[${item.store}]</strong> ${item.product} (수량: ${item.qty}${item.unit})</p>
                         <p style="color:#8E8E93; font-size:12px;">${item.date} | 기사: ${item.driver}</p>
@@ -1337,11 +1349,28 @@
                         item.qty, item.reason, `${item.store} 상세`, '', '', '', ''
                     ]);
 
-                    if (item.img && item.img.startsWith('data:image')) {
-                        const imgId = workbook.addImage({ base64: item.img, extension: 'png' });
+                    let imgArr = [];
+                    if (item.img) {
+                        try {
+                            const parsedImg = JSON.parse(item.img);
+                            if(Array.isArray(parsedImg)) imgArr = parsedImg;
+                        } catch(e) {
+                            if (item.img.startsWith('data:image')) imgArr = [item.img];
+                        }
+                    }
+
+                    if (imgArr.length > 0) {
                         let imgSheet = workbook.getWorksheet(safeSheetName);
                         if (!imgSheet) imgSheet = workbook.addWorksheet(safeSheetName);
-                        imgSheet.addImage(imgId, 'A1:H20');
+                        
+                        imgArr.forEach((imgData, idx) => {
+                            if(imgData.startsWith('data:image')) {
+                                const imgId = workbook.addImage({ base64: imgData, extension: 'png' });
+                                const startRow = (idx * 20) + 1;
+                                const endRow = startRow + 19;
+                                imgSheet.addImage(imgId, `A${startRow}:H${endRow}`);
+                            }
+                        });
 
                         row.getCell(16).value = {
                             text: `${item.store} (사유 : ${item.reason})\n\n\n${item.reason}`,
@@ -1373,7 +1402,6 @@
             updateHistoryDates(); renderHistoryList(); renderStorage();
         }
 
-        // --- 사무실 연락처 (문제 5: 수정/삭제 추가) ---
         let editingOfficeIndex = -1;
 
         async function saveOfficeContact() {
@@ -1441,7 +1469,6 @@
             `).join('');
         }
 
-        // --- 현장 연락처 (문제 6: 수정/삭제 추가) ---
         let editingFieldIndex = -1;
 
         async function saveFieldContact() {
@@ -1509,7 +1536,6 @@
             `).join('');
         }
 
-        // --- 기사 연락처 ---
         async function saveDriverContacts() {
             const data = document.getElementById('driverUploadData').value;
             const parsedData = parseTSV(data).map(r => ({
@@ -1536,14 +1562,13 @@
             let list = driverContacts;
             
             if(!isLoggedIn) {
-                // 비로그인: 배차업로드 데이터에서 기사 정보를 자체 추출
                 const dispatchDriverNames = new Set();
                 const dispatchDriverMap = new Map();
                 
                 dispatchDataList.forEach(r => {
-                    if(r.length > 15 && r[7]) { // 기사명 존재
+                    if(r.length > 15 && r[7]) { 
                         dispatchDriverNames.add(r[7]);
-                        if(r[15]) { // 배차 데이터에 연락처가 있는 경우
+                        if(r[15]) { 
                             dispatchDriverMap.set(r[7], {
                                 name: r[7], region: r[8] || r[3] || '', vehicle: r[6] || '', phone: r[15]
                             });
@@ -1551,10 +1576,8 @@
                     }
                 });
 
-                // 문제 5 : 1차적으로 DB 기사 중 현재 배차된 기사 정보만 필터 (오늘 들어오는 기사만 노출)
                 let filteredList = driverContacts.filter(d => dispatchDriverNames.has(d.name));
                 
-                // 2차적으로 DB에는 없으나 배차리스트에는 있는 기사 정보를 병합
                 const dbNames = new Set(filteredList.map(d => d.name));
                 dispatchDriverNames.forEach(name => {
                     if(!dbNames.has(name) && dispatchDriverMap.has(name)) {
@@ -1575,7 +1598,6 @@
                         d.region.includes(searchStr)
                     );
                 } else {
-                    // 로그인: 통합 검색 지원
                     const matchedDriverNames = new Set();
                     dispatchDataList.forEach(r => { 
                         if(r.length > 15) {
@@ -1679,23 +1701,20 @@
             document.getElementById('driverDetailModal').style.display = 'flex';
         }
 
-        // --- 문제 8, 문제 1, 2, 3, 4: 배차 내역 (지도) 렌더링 로직 ---
         let map;
         let regionLayers = {};
-        let mapSearchData = []; // 문제 3 검색용 전역 데이터
+        let mapSearchData = []; 
         const MAP_COLORS = [
             '#e6194B', '#3cb44b', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990',
             '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9', '#333333',
             '#000000', '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#204A8E'
         ];
 
-        // 문제 2: 기준점 밀양센터 좌표
         const MILYANG_LAT = 35.472383;
         const MILYANG_LNG = 128.746071;
 
         function renderMap() {
             if(!map) {
-                // 투명한 스타일링이 적용되고 육안 시인성이 가장 좋은 OpenStreetMap 적용
                 map = L.map('map').setView([35.3, 128.0], 8);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap contributors'
@@ -1711,14 +1730,14 @@
 
             const driverRoutes = {}; 
             const validRegions = new Set();
-            mapSearchData = []; // 문제 3 초기화
+            mapSearchData = []; 
 
             dispatchDataList.forEach(r => {
                 if(r.length > 12) {
                     const driver = r[7];
                     const lng = parseFloat(r[9]);
                     const lat = parseFloat(r[10]);
-                    let region = r[8]; // region_type 기준
+                    let region = r[8]; 
                     if (!region) region = '기타'; 
                     const store = r[3];
 
@@ -1747,7 +1766,6 @@
                 const color = MAP_COLORS[colorIdx % MAP_COLORS.length];
                 colorIdx++;
 
-                // 문제 2: 거리 기반 (유클리드 거리) 으로 포인트들 재정렬 (밀양센터 기준 제일 가까운 곳부터)
                 const sortedPointsInfo = route.points.map((pt, idx) => {
                     return {
                         lat: pt[0],
@@ -1772,7 +1790,6 @@
                          .bindPopup(`<div style='font-size:14px;'><b>${storeName}</b><br><span style='color:var(--primary); font-weight:bold;'>배송기사: ${driver}</span></div>`)
                          .addTo(tLayer);
 
-                    // 문제 4: 팝업 열릴 때 빨간색으로 변경하고, 닫힐 때 원래 색상으로 복구
                     marker.on('popupopen', function() {
                         this.setStyle({ fillColor: '#FF3B30', color: '#FF3B30' });
                     });
@@ -1780,7 +1797,6 @@
                         this.setStyle({ fillColor: this.options.originalColor, color: '#fff' });
                     });
 
-                    // 문제 3: 마커 객체(marker)를 검색 데이터에 함께 저장하여 검색 시 활용
                     mapSearchData.push({ driver: driver, store: storeName, lat: pt[0], lng: pt[1], marker: marker });
                 });
             }
@@ -1788,7 +1804,6 @@
             setTimeout(() => { map.invalidateSize(); }, 300);
         }
 
-        // 문제 3: 배차 내역 검색 기능 및 검색 시 해당 마커 자동 클릭 연동
         function filterMapSearch() {
             const val = document.getElementById('mapSearchInput').value.trim();
             const list = document.getElementById('mapSearchList');
@@ -1802,9 +1817,9 @@
                     const li = document.createElement('li');
                     li.textContent = `${m.store} (${m.driver})`;
                     li.onclick = () => {
-                        map.setView([m.lat, m.lng], 15); // 해당 포인트로 줌 이동
+                        map.setView([m.lat, m.lng], 15); 
                         if(m.marker) {
-                            m.marker.openPopup(); // 해당 포인트 자동 클릭(팝업 열기)
+                            m.marker.openPopup(); 
                         }
                         document.getElementById('mapSearchInput').value = m.store;
                         list.style.display = 'none';
