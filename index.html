@@ -10,7 +10,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-    <!-- 지도 구현을 위한 Leaflet 라이브러리 -->
+    <!-- 지도 구현을 위한 Leaflet 라이브러리 (문제 8) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
@@ -31,23 +31,12 @@
             -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text;
         }
 
-        /* 문제 8: 버튼 눌림 효과 (IOS26 스타일) */
-        button, .action-btn, .menu-list-btn, .call-btn, .modal-btn, .btn-small, .sortable-item {
-            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease, background-color 0.2s ease !important;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-        }
-        button:active, .action-btn:active, .menu-list-btn:active, .call-btn:active, .modal-btn:active, .btn-small:active, .sortable-item:active {
-            transform: scale(0.94) !important;
-            opacity: 0.7 !important;
-        }
-
         /* 11시 방향 고정 메뉴 */
         .menu-toggle-btn {
             position: fixed; top: 20px; left: 20px; z-index: 1000;
             background: var(--primary); color: #FFF; border: none; padding: 10px 16px;
-            border-radius: 12px; font-size: 16px; font-weight: 700;
-            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+            border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3); transition: 0.2s;
         }
 
         /* 사이드바 메뉴 */
@@ -66,12 +55,12 @@
         }
         .sidebar-overlay.active { display: block; opacity: 1; }
 
-        /* 순서 변경을 위한 flex 속성 추가 */
+        /* 문제 6: 순서 변경을 위한 flex 속성 추가 */
         #sideMenu { display: flex; flex-direction: column; }
         .menu-list-btn {
             width: 100%; padding: 16px; border: none; border-radius: 12px;
             background: #F2F2F7; color: var(--text-main); font-size: 16px; font-weight: 600;
-            text-align: left; margin-bottom: 10px; display: block;
+            text-align: left; cursor: pointer; margin-bottom: 10px; transition: 0.2s; display: block;
             order: 10;
         }
         .menu-list-btn:hover { background: #E5E5EA; }
@@ -81,7 +70,7 @@
         /* 톱니바퀴 설정 버튼 */
         .settings-btn {
             position: absolute; bottom: 20px; right: 20px; background: transparent; border: none; font-size: 24px;
-            display: none; transition: transform 0.2s; color: var(--text-sub);
+            cursor: pointer; display: none; transition: transform 0.2s; color: var(--text-sub);
         }
         .settings-btn:hover { transform: rotate(45deg); color: var(--text-main); }
         .menu-item-optional { display: none; } 
@@ -99,7 +88,7 @@
         .action-btn {
             flex: 1; background: #E0EFFF; color: var(--primary); border: 2px dashed var(--primary);
             padding: 20px; border-radius: 16px; font-size: 16px; font-weight: 700;
-            text-align: center;
+            cursor: pointer; text-align: center; transition: 0.2s;
         }
         .preview-container { text-align: center; margin-bottom: 25px; display: none; }
         .preview-img { max-width: 100%; max-height: 250px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); object-fit: contain; }
@@ -116,15 +105,15 @@
         .input-box {
             width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border);
             background: #FAFAFC; font-size: 14px; color: var(--text-main); box-sizing: border-box;
-            height: 44px; /* 높이 통일 */
+            height: 44px; /* 문제 4: 높이 통일 */
         }
         .input-box:focus { outline: none; border-color: var(--primary); background: #FFF; }
         .input-box[readonly] { background: #E5E5EA; color: #8E8E93; cursor: not-allowed; }
 
-        /* 데이트 피커 크기 일치 */
+        /* 문제 4: 데이트 피커 크기 일치 */
         input[type="date"].input-box {
             -webkit-appearance: none; appearance: none;
-            padding: 11px 12px;
+            padding: 11px 12px; /* 텍스트박스와 시각적 동일 패딩 적용 */
         }
         select.input-box { -webkit-appearance: none; appearance: none; }
 
@@ -145,7 +134,7 @@
         .history-thumb { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; background: #F2F2F7; }
         .history-info { flex: 1; font-size: 14px; }
         .history-info p { margin: 2px 0; }
-        .btn-small { padding: 6px 10px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .btn-small { padding: 6px 10px; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; }
         .btn-delete { background: #FFE5E5; color: #FF3B30; }
         .btn-confirm { background: #FF3B30; color: #FFF; }
         .status-red { color: #FF3B30; font-weight: bold; }
@@ -153,8 +142,9 @@
         /* 연락처 리스트 공통 */
         .contact-list { display: flex; flex-direction: column; gap: 10px; }
         .contact-card { background: #FFF; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .call-btn { background: #34C759; color: #FFF; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; font-size: 14px; flex-shrink: 0; text-align: center; }
+        .call-btn { background: #34C759; color: #FFF; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; font-size: 14px; flex-shrink: 0; }
         .search-bar-fixed { position: sticky; top: -20px; background: var(--bg-color); padding: 10px 0; z-index: 10; margin-bottom: 10px; display: flex; flex-direction: column; position: relative; }
+        .contact-actions { display: flex; gap: 6px; align-items: center; }
 
         /* 모달 공통 */
         .modal-overlay {
@@ -166,7 +156,7 @@
             text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 85vh; overflow-y: auto;
         }
         .modal-title { font-size: 20px; font-weight: 800; color: var(--primary); margin: 0 0 15px 0; }
-        .modal-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; background: var(--primary); color: #FFF; margin-top: 10px; }
+        .modal-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; background: var(--primary); color: #FFF; cursor: pointer; margin-top: 10px; }
         .modal-btn-close { background: #F2F2F7; color: var(--text-main); }
         .textarea-box { width: 100%; height: 80px; padding: 10px; border-radius: 8px; border: 1px solid var(--border); box-sizing: border-box; resize: none; margin-bottom: 10px; font-size: 12px; }
 
@@ -174,7 +164,7 @@
         .driver-name-click { cursor: pointer; color: var(--text-main); }
         .driver-name-click:hover { color: var(--primary); text-decoration: underline; }
 
-        /* 드래그 핸들 디자인 */
+        /* 문제 6: 드래그 핸들 디자인 */
         .sortable-item { cursor: grab; padding: 8px 10px; background: #FAFAFC; border: 1px solid #E5E5EA; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
         .sortable-item:active { cursor: grabbing; }
         .drag-handle { color: #8E8E93; font-size: 18px; }
@@ -191,8 +181,18 @@
             flex: 6; max-width: 100%; height: 100vh; overflow-y: auto; padding: 40px 60px;
         }
         
-        /* 지도 투명 바탕 및 UI 깔끔하게 처리 */
+        /* 문제 1: 지도 투명 바탕 및 UI 깔끔하게 처리 */
         #map { width:100%; height:65vh; border-radius:12px; background: transparent !important; z-index: 1; }
+
+        /* 문제 8: IOS26 클릭 (눌림) 효과 */
+        .action-btn, .menu-list-btn, .modal-btn, .btn-small, .call-btn, .menu-toggle-btn, .settings-btn {
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .action-btn:active, .menu-list-btn:active, .modal-btn:active, .btn-small:active, .call-btn:active, .menu-toggle-btn:active, .settings-btn:active, .sortable-item:active {
+            transform: scale(0.94) !important;
+            opacity: 0.7;
+            transition: all 0.1s;
+        }
     </style>
 </head>
 <body>
@@ -211,8 +211,8 @@
         <button id="menuMap" class="menu-list-btn menu-item-optional" onclick="showView('mapView')">🗺️ 배차 내역</button>
         
         <!-- 문제 5: 예비목록 추가 -->
-        <button id="menuReserve1" class="menu-list-btn menu-item-optional" onclick="return false;">📝 예비목록1</button>
-        <button id="menuReserve2" class="menu-list-btn menu-item-optional" onclick="return false;">📝 예비목록2</button>
+        <button id="menuReserve1" class="menu-list-btn menu-item-optional" onclick="return false;">📦 예비목록1</button>
+        <button id="menuReserve2" class="menu-list-btn menu-item-optional" onclick="return false;">📦 예비목록2</button>
 
         <button id="settingsBtn" class="settings-btn" onclick="openSettingsModal()">⚙️</button>
     </div>
@@ -235,6 +235,7 @@
                 <div class="input-row">
                     <div class="flex-60">
                         <label>사유</label>
+                        <!-- 문제 9: 사유 추천 리스트 추가 -->
                         <input type="text" id="reasonText" class="input-box" placeholder="사유를 직접 기입하세요" oninput="filterReasons()" autocomplete="off">
                         <ul id="reasonListUl" class="autocomplete-list"></ul>
                     </div>
@@ -315,6 +316,7 @@
         <div id="officeContactView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">📞 사무실 연락처</h2>
             <div id="officeEditForm" style="display:none; background:#FFF; padding:15px; border-radius:12px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                <input type="hidden" id="offId" value="">
                 <div class="input-row" style="margin-bottom:10px;">
                     <input type="text" id="offName" class="input-box" placeholder="이름" style="flex:1;">
                     <input type="text" id="offRank" class="input-box" placeholder="직급" style="flex:1;">
@@ -325,10 +327,11 @@
             <div id="officeListContainer" class="contact-list"></div>
         </div>
 
-        <!-- 뷰 추가: 현장 연락처 -->
+        <!-- 문제 5: 뷰 추가: 현장 연락처 (기존 목록 4 대체) -->
         <div id="fieldContactView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">👷 현장 연락처</h2>
             <div id="fieldEditForm" style="display:none; background:#FFF; padding:15px; border-radius:12px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                <input type="hidden" id="fldId" value="">
                 <div class="input-row" style="margin-bottom:10px;">
                     <input type="text" id="fldName" class="input-box" placeholder="이름" style="flex:1;">
                     <input type="text" id="fldRank" class="input-box" placeholder="직급" style="flex:1;">
@@ -354,19 +357,17 @@
             <div id="driverListContainer" class="contact-list"></div>
         </div>
 
-        <!-- 뷰 추가: 배차 내역 지도 -->
+        <!-- 문제 8: 뷰 추가: 배차 내역 지도 (기존 목록 5 대체) -->
         <div id="mapView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">🗺️ 배차 내역 (지도)</h2>
-            
-            <!-- 문제 4: 검색창 추가 -->
-            <div style="position:relative; margin-bottom:10px;">
-                <div style="display:flex; gap:10px;">
-                    <input type="text" id="mapSearchInput" class="input-box" placeholder="매장명 또는 기사 이름 검색" oninput="handleMapSearch()" autocomplete="off">
+            <!-- 문제 4: 검색바 추가 -->
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px; position:relative; flex-wrap:wrap;">
+                <div id="transportFilters" style="flex:1; min-width:200px; display:flex; flex-wrap:wrap; gap:10px; background:#fff; padding:10px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05);"></div>
+                <div style="flex-shrink:0; position:relative; width:250px;">
+                    <input type="text" id="mapSearchInput" class="input-box" placeholder="매장명 or 기사 검색" oninput="handleMapSearch()" autocomplete="off">
+                    <ul id="mapSearchSuggest" class="autocomplete-list" style="width:100%;"></ul>
                 </div>
-                <ul id="mapSearchSuggest" class="autocomplete-list" style="top:100%; width:100%;"></ul>
             </div>
-
-            <div id="transportFilters" style="margin-bottom:15px; display:flex; flex-wrap:wrap; gap:10px; background:#fff; padding:10px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05);"></div>
             <div id="map"></div>
         </div>
     </div>
@@ -381,12 +382,22 @@
         </div>
     </div>
 
+    <!-- 문제 2: 접속 잔여량 경고 팝업 -->
+    <div id="loginAlertModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box" style="max-width:300px;">
+            <h2 class="modal-title" style="color:#FF3B30;">⚠️ 데이터 전송량 경고</h2>
+            <p style="font-size:15px; margin:20px 0; color:var(--text-main); font-weight:600;">데이터 전송량이 <span id="loginAlertPercent"></span>% 남았습니다.</p>
+            <button class="modal-btn" onclick="document.getElementById('loginAlertModal').style.display='none'">확인</button>
+        </div>
+    </div>
+
     <!-- 시스템 관리 (설정) 모달 -->
     <div id="settingsModal" class="modal-overlay" onclick="if(event.target===this) closeSettingsModal()">
         <div class="modal-box" style="max-width:500px;">
-            <!-- 문제 2: 이스터 에그 (클릭 시 마우스 변환 없이 팝업 호출) -->
-            <h2 class="modal-title" style="cursor:default;" onclick="showBandwidthModal()">시스템 설정</h2>
+            <!-- 문제 2: 텍스트 클릭 시 Egress Popup -->
+            <h2 class="modal-title"><span onclick="showEgressPopup()" style="cursor:default; color:inherit;">시스템 설정</span></h2>
 
+            <!-- 문제 10: 개별 덮어씌우기 버튼으로 변경 -->
             <button class="modal-btn" style="background:#4A90E2;" onclick="document.getElementById('orderUploadModal').style.display='flex'">📤 주문업로드 데이터 덮어씌우기</button>
             <button class="modal-btn" style="background:#50E3C2; color:#1C1C1E;" onclick="document.getElementById('dispatchUploadModal').style.display='flex'">📥 배차업로드 데이터 덮어씌우기</button>
 
@@ -396,6 +407,7 @@
 
                 <div style="display:flex; gap:10px; margin-top:5px;">
                     <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="openListManageModal()">📋 비로그인 목록 관리</button>
+                    <!-- 문제 9: 사유 목록 관리 버튼 -->
                     <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="document.getElementById('reasonManageModal').style.display='flex'; renderReasonManageList();">📝 사유 목록 관리</button>
                 </div>
             </div>
@@ -405,25 +417,19 @@
         </div>
     </div>
 
-    <!-- 문제 2: Bandwidth 확인 팝업 -->
-    <div id="bandwidthModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
-        <div class="modal-box" style="max-width:300px;">
-            <h2 class="modal-title" style="font-size:18px;">데이터 전송량 (Bandwidth)</h2>
-            <div id="bandwidthContent" style="font-size:16px; margin: 20px 0; font-weight:bold; color:var(--primary);"></div>
-            <button class="modal-btn" onclick="document.getElementById('bandwidthModal').style.display='none'">확인</button>
+    <!-- 문제 2: Egress 상세 팝업 (이스터에그) -->
+    <div id="egressPopupModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box" style="max-width:300px; padding:30px;">
+            <h2 class="modal-title">Supabase 접속 잔여량</h2>
+            <p style="font-size:15px; margin:20px 0; line-height:1.5;">
+                Bandwidth / Egress<br><br>
+                잔여: <strong><span id="egressRemainText"></span>MB</strong> (<span id="egressPercentText"></span>%)
+            </p>
+            <button class="modal-btn" onclick="document.getElementById('egressPopupModal').style.display='none'">확인</button>
         </div>
     </div>
 
-    <!-- 문제 2: 용량 부족 20% 미만 알림 팝업 -->
-    <div id="bandwidthWarnModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
-        <div class="modal-box" style="max-width:300px;">
-            <h2 class="modal-title" style="font-size:18px; color:#FF3B30;">⚠️ 용량 부족 알림</h2>
-            <div id="bandwidthWarnContent" style="font-size:16px; margin: 20px 0; font-weight:bold;"></div>
-            <button class="modal-btn" onclick="document.getElementById('bandwidthWarnModal').style.display='none'">확인</button>
-        </div>
-    </div>
-
-    <!-- 개별 업로드 팝업 -->
+    <!-- 문제 10: 개별 업로드 팝업 -->
     <div id="orderUploadModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box">
             <h2 class="modal-title" style="font-size:18px;">주문업로드 새로 덮어씌우기</h2>
@@ -442,7 +448,7 @@
         </div>
     </div>
 
-    <!-- 사유 목록 관리 팝업 -->
+    <!-- 문제 9: 사유 목록 관리 팝업 -->
     <div id="reasonManageModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box">
             <h2 class="modal-title" style="font-size:18px;">사유 목록 관리</h2>
@@ -506,20 +512,24 @@
         let orderDataList = []; let dispatchDataList = [];
         let historyDataList = [];
         let officeContacts = []; let fieldContacts = []; let driverContacts = [];
-        let mapSearchData = [];
 
         let reasonsList = [];
-        // 문제 5: 배열 추가
+        // 문제 5: 예비목록 추가
         let menuOrder = ['menuHome', 'menuOffice', 'menuField', 'menuDriver', 'menuHistory', 'menuMap', 'menuReserve1', 'menuReserve2'];
         let nonUserVisibility = { home: true, office: true, field: false, driver: true, history: true, map: false, reserve1: false, reserve2: false };
         let autoDeleteDays = 7;
         let savePopupTimer;
 
-        let editingOfficeIndex = -1;
-        let editingFieldIndex = -1;
-
         const STORAGE_TOTAL = 1100; // 1.1GB 고정 기준 (MB)
         let showRemainingStorage = true;
+
+        // 문제 2: Mocking Bandwidth (Egress) - 50GB Limit, 42.5GB used -> 15% remaining to test <20% logic
+        const MOCK_EGRESS_TOTAL_MB = 51200; 
+        let mockEgressUsedMB = 43520; 
+        let egressPercent = Math.floor(((MOCK_EGRESS_TOTAL_MB - mockEgressUsedMB) / MOCK_EGRESS_TOTAL_MB) * 100);
+
+        // 문제 4: 지도 마커 저장소
+        let mapMarkers = [];
 
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('writeDate').value = new Date().toISOString().split('T')[0];
@@ -548,9 +558,7 @@
                     if(set_data.menu_order_json) {
                         try {
                             const parsed = JSON.parse(set_data.menu_order_json);
-                            if(parsed.vis) {
-                                nonUserVisibility = {...nonUserVisibility, ...parsed.vis};
-                            }
+                            if(parsed.vis) nonUserVisibility = parsed.vis;
                             if(parsed.order) menuOrder = parsed.order;
                         } catch(e){}
                     }
@@ -560,7 +568,7 @@
                 }
 
                 // 주문내역 (orders) 조회
-                const { data: ordData } = await supabaseClient.from('orders').select('*');
+                const { data: ordData, error: ordErr } = await supabaseClient.from('orders').select('*');
                 if(ordData) {
                     orderDataList = ordData.map(d => [
                         d.category||'', d.delivery_date||'', d.order_date||'', d.center_code||'', d.center_name||'',
@@ -575,7 +583,7 @@
                 }
 
                 // 배차내역 (dispatch_list) 조회
-                const { data: dispData } = await supabaseClient.from('dispatch_list').select('*');
+                const { data: dispData, error: dispErr } = await supabaseClient.from('dispatch_list').select('*');
                 if(dispData) {
                     dispatchDataList = dispData.map(d => [
                         d.transport_date||'', d.workplace_code||'', d.cbm, d.workplace_name||'', d.address||'',
@@ -586,7 +594,8 @@
                 }
 
                 // 업로드 내역 조회
-                const { data: histData } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
+                const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
+                if (histErr) console.error("업로드 내역 로드 에러:", histErr.message);
                 if (histData) {
                     historyDataList = histData.map(d => ({
                         id: d.id, status: d.status, reason: d.reason, author: d.author, date: d.date,
@@ -597,19 +606,23 @@
                 }
 
                 // 사무실 연락처 조회
-                const { data: offData } = await supabaseClient.from('office_contacts').select('*');
+                const { data: offData, error: offErr } = await supabaseClient.from('office_contacts').select('*');
+                if (offErr) console.error("사무실 연락처 로드 에러:", offErr.message);
                 if (offData) officeContacts = offData;
 
-                // 현장 연락처 조회
-                const { data: fldData } = await supabaseClient.from('field_contacts').select('*');
-                if (fldData) fieldContacts = fldData;
+                // 현장 연락처 조회 (DB 테이블이 없다면 자동 무시)
+                const { data: fldData, error: fldErr } = await supabaseClient.from('field_contacts').select('*');
+                if (!fldErr && fldData) fieldContacts = fldData;
 
                 // 기사 연락처 조회
-                const { data: drvData } = await supabaseClient.from('driver_contacts').select('*');
+                const { data: drvData, error: drvErr } = await supabaseClient.from('driver_contacts').select('*');
+                if (drvErr) console.error("기사 연락처 로드 에러:", drvErr.message);
                 if (drvData) driverContacts = drvData;
 
             } catch(e) { console.error("데이터 로드 실패", e); }
             renderStorage();
+            renderOfficeList(); // 문제 6 갱신
+            renderFieldList();  // 문제 7 갱신
         }
 
         /* --- 메뉴 제어 및 UI 갱신 --- */
@@ -643,11 +656,11 @@
             document.getElementById('menuHistory').style.display = (isLoggedIn || nonUserVisibility.history) ? 'block' : 'none';
             document.getElementById('menuMap').style.display = (isLoggedIn || nonUserVisibility.map) ? 'block' : 'none';
             
-            // 문제 5: 예비목록 제어 반영
+            // 문제 5: 예비목록 노출 제어
             document.getElementById('menuReserve1').style.display = (isLoggedIn || nonUserVisibility.reserve1) ? 'block' : 'none';
             document.getElementById('menuReserve2').style.display = (isLoggedIn || nonUserVisibility.reserve2) ? 'block' : 'none';
 
-            // 순서 반영
+            // 순서 반영 (flex order 적용)
             menuOrder.forEach((id, idx) => {
                 const el = document.getElementById(id);
                 if(el) el.style.order = idx + 1;
@@ -660,13 +673,6 @@
             document.getElementById('officeEditForm').style.display = isLoggedIn ? 'block' : 'none';
             document.getElementById('fieldEditForm').style.display = isLoggedIn ? 'block' : 'none';
             document.getElementById('driverEditForm').style.display = isLoggedIn ? 'block' : 'none';
-            
-            // 수정 상태 초기화
-            editingOfficeIndex = -1;
-            editingFieldIndex = -1;
-
-            renderOfficeList();
-            renderFieldList();
             renderStorage();
         }
 
@@ -685,27 +691,13 @@
             if(!document.body.classList.contains('pc-mode')) closeMenu();
         }
 
-        // 문제 2: Bandwidth 계산 정보 반환
-        function getBandwidthInfo() {
-            const payloadString = JSON.stringify(historyDataList) + JSON.stringify(orderDataList) + JSON.stringify(dispatchDataList);
-            const sizeMB = (new Blob([payloadString]).size / (1024 * 1024)).toFixed(1);
-            const remain = (STORAGE_TOTAL - sizeMB).toFixed(1);
-            const pct = Math.floor((remain / STORAGE_TOTAL) * 100);
-            return { remain, pct, sizeMB };
-        }
-
-        function showBandwidthModal() {
-            const info = getBandwidthInfo();
-            document.getElementById('bandwidthContent').innerHTML = `잔여용량: ${Number(info.remain).toLocaleString()}MB (${info.pct}%)`;
-            document.getElementById('bandwidthModal').style.display = 'flex';
-        }
-
         function handleAuthClick() {
             if (isLoggedIn) {
                 isLoggedIn = false; document.body.classList.remove('pc-mode');
                 document.getElementById('authBtn').innerHTML = "🔒 로그인";
                 document.getElementById('settingsBtn').style.display = "none";
                 updateMenuUI(); showView('formView'); closeMenu();
+                renderOfficeList(); renderFieldList(); renderDriverList();
             } else {
                 document.getElementById('loginPassword').value = "";
                 document.getElementById('loginModal').style.display = 'flex';
@@ -723,24 +715,28 @@
 
                 updateMenuUI();
                 if(document.getElementById('historyView').classList.contains('active')) showView('historyView');
-                renderDriverList(); 
+                renderOfficeList(); renderFieldList(); renderDriverList(); 
                 isMenuOpen = true; 
 
-                // 문제 2: 20% 미만 시 경고 팝업
-                setTimeout(() => {
-                    const info = getBandwidthInfo();
-                    if (info.pct < 20) {
-                        document.getElementById('bandwidthWarnContent').innerText = `데이터 전송량이 ${info.pct}% 남았습니다.`;
-                        document.getElementById('bandwidthWarnModal').style.display = 'flex';
-                    }
-                }, 400);
+                // 문제 2: 접속 잔여량 경고 팝업
+                if(egressPercent < 20) {
+                    document.getElementById('loginAlertPercent').innerText = egressPercent;
+                    document.getElementById('loginAlertModal').style.display = 'flex';
+                }
             } else { alert("❌ 비밀번호 오류"); }
         }
 
         function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
         function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
 
-        // --- 드래그 앤 드롭 설정 ---
+        // 문제 2: Egress Popup Show
+        function showEgressPopup() {
+            document.getElementById('egressRemainText').innerText = (MOCK_EGRESS_TOTAL_MB - mockEgressUsedMB).toLocaleString();
+            document.getElementById('egressPercentText').innerText = egressPercent;
+            document.getElementById('egressPopupModal').style.display = 'flex';
+        }
+
+        // --- 드래그 앤 드롭 설정 (문제 6) ---
         function setupDragAndDrop() {
             let draggedItem = null;
             document.querySelectorAll('.sortable-item').forEach(item => {
@@ -777,10 +773,11 @@
             document.getElementById('lm_driver').checked = nonUserVisibility.driver;
             document.getElementById('lm_history').checked = nonUserVisibility.history;
             document.getElementById('lm_map').checked = nonUserVisibility.map;
-            // 문제 5
+            // 문제 5: 예비목록 체크
             document.getElementById('lm_reserve1').checked = nonUserVisibility.reserve1;
             document.getElementById('lm_reserve2').checked = nonUserVisibility.reserve2;
 
+            // 기존 저장된 순서대로 li 재배치
             const ul = document.getElementById('menuSortList');
             menuOrder.forEach(id => {
                 const li = ul.querySelector(`[data-id="${id}"]`);
@@ -798,7 +795,7 @@
             nonUserVisibility.driver = document.getElementById('lm_driver').checked;
             nonUserVisibility.history = document.getElementById('lm_history').checked;
             nonUserVisibility.map = document.getElementById('lm_map').checked;
-            // 문제 5
+            // 문제 5: 예비목록 체크 저장
             nonUserVisibility.reserve1 = document.getElementById('lm_reserve1').checked;
             nonUserVisibility.reserve2 = document.getElementById('lm_reserve2').checked;
 
@@ -812,7 +809,7 @@
             } else alert('저장 실패: ' + error.message);
         }
 
-        // --- 데이터 개별 덮어씌우기 저장 기능 ---
+        // --- 데이터 개별 덮어씌우기 저장 기능 (문제 10) ---
         async function saveNewOrderData() {
             const rawOrder = document.getElementById('newOrderData').value;
             if(rawOrder.trim()) {
@@ -886,6 +883,7 @@
             closeSettingsModal();
         }
 
+        // --- 지정된 시점에 D-7 데이터 삭제 ---
         async function checkAutoDelete() {
             const now = new Date();
             if(now.getHours() === 20 && now.getMinutes() === 30) {
@@ -897,6 +895,7 @@
                 historyDataList = historyDataList.filter(item => item.date !== targetStr);
 
                 updateHistoryDates(); renderHistoryList(); renderStorage();
+                console.log("D-7 데이터 자동 삭제 완료");
             }
         }
 
@@ -910,11 +909,16 @@
             if(!isLoggedIn) { el.style.display = 'none'; return; }
             el.style.display = 'inline';
 
-            const info = getBandwidthInfo();
+            const payloadString = JSON.stringify(historyDataList) + JSON.stringify(orderDataList) + JSON.stringify(dispatchDataList);
+            const sizeMB = (new Blob([payloadString]).size / (1024 * 1024)).toFixed(1);
+
             if(showRemainingStorage) {
-                el.innerText = `잔여량 ${info.pct}% (${Number(info.remain).toLocaleString()}mb)`;
+                const remain = (STORAGE_TOTAL - sizeMB).toFixed(1);
+                const pct = Math.floor((remain / STORAGE_TOTAL) * 100);
+                el.innerText = `잔여량 ${pct}% (${Number(remain).toLocaleString()}mb)`;
             } else {
-                el.innerText = `사용량 ${100 - info.pct}% (${Number(info.sizeMB).toLocaleString()}mb)`;
+                const pct = Math.floor((sizeMB / STORAGE_TOTAL) * 100);
+                el.innerText = `사용량 ${pct}% (${Number(sizeMB).toLocaleString()}mb)`;
             }
         }
 
@@ -937,6 +941,7 @@
 
         function cleanNumber(str) { return str ? str.replace(/,/g, '') : ""; }
 
+        // --- 사유 검색 및 자동 추천 (문제 9) ---
         function filterReasons() {
             const inputVal = document.getElementById('reasonText').value.trim();
             const listUl = document.getElementById('reasonListUl');
@@ -1006,7 +1011,7 @@
             }
             if(matchedCode) {
                 document.getElementById('storeCode').value = matchedCode;
-                findDispatchDriverAndCenter(matchedCode);
+                findDispatchDriverAndCenter(matchedCode); 
             }
         }
 
@@ -1057,7 +1062,7 @@
                     
                     const foundDriver = driverContacts.find(d => d.name === driverName);
                     if(foundDriver) { driverContact = ` (${foundDriver.phone})`; }
-                    else if(row[15]) { driverContact = ` (${row[15]})`; }
+                    else if(row[15]) { driverContact = ` (${row[15]})`; } 
                     break;
                 }
             }
@@ -1065,6 +1070,7 @@
             document.getElementById('mainCenter').value = centerInfo;
         }
 
+        // 제품명 추천 필터
         function filterProductNames() {
             const storeCode = document.getElementById('storeCode').value;
             const storeNameVal = document.getElementById('storeName').value.trim();
@@ -1072,12 +1078,12 @@
             const listUl = document.getElementById('productList');
             listUl.innerHTML = '';
             
-            // 문제 1 & 2: 제품명 입력란 빈값이면 단위(productUnit) 포함 모두 초기화
+            // 문제 1: 제품명 입력란이 지워질 때 연관된 '제품코드', '입고센터', '단위' 초기화
             if(!inputVal) { 
                 listUl.style.display = 'none'; 
                 document.getElementById('productCode').value = '';
                 document.getElementById('inboundCenter').value = '';
-                document.getElementById('productUnit').value = ''; 
+                document.getElementById('productUnit').value = ''; // 문제 1
                 return; 
             }
 
@@ -1085,7 +1091,7 @@
             
             orderDataList.forEach(row => {
                 if(row.length > 11) {
-                    const prodName = row[11] || "";
+                    const prodName = row[11] || ""; 
                     let condition = false;
 
                     if(storeCode || storeNameVal) {
@@ -1139,13 +1145,15 @@
             if(sCode) findDispatchDriverAndCenter(sCode);
         }
 
-        // 화면 밖 클릭 시 추천 리스트 닫기 처리
         document.addEventListener('click', e => {
             if(e.target.id !== 'storeName') document.getElementById('storeList').style.display = 'none';
             if(e.target.id !== 'productName') document.getElementById('productList').style.display = 'none';
             if(e.target.id !== 'driverSearchInput') document.getElementById('driverStoreSuggest').style.display = 'none';
             if(e.target.id !== 'reasonText') document.getElementById('reasonListUl').style.display = 'none';
-            if(e.target.id !== 'mapSearchInput' && document.getElementById('mapSearchSuggest')) document.getElementById('mapSearchSuggest').style.display = 'none';
+            if(e.target.id !== 'mapSearchInput') { // 문제 4
+                const suggest = document.getElementById('mapSearchSuggest');
+                if(suggest) suggest.style.display = 'none';
+            }
         });
 
         // --- 폼 작성 완료 ---
@@ -1346,135 +1354,127 @@
             updateHistoryDates(); renderHistoryList(); renderStorage();
         }
 
-        // --- 문제 6: 사무실 연락처 편집 수정/삭제 반영 ---
+        // --- 사무실 연락처 (문제 6 편집/삭제 추가) ---
         async function saveOfficeContact() {
-            const name = document.getElementById('offName').value, rank = document.getElementById('offRank').value, tell = document.getElementById('offTel').value;
+            const name = document.getElementById('offName').value;
+            const rank = document.getElementById('offRank').value;
+            const tell = document.getElementById('offTel').value;
+            const id = document.getElementById('offId').value;
+
             if(name && tell) {
-                if(editingOfficeIndex >= 0) {
-                    const id = officeContacts[editingOfficeIndex].id;
-                    const updateData = { name, rank, tell };
-                    if(id) {
-                        const { error } = await supabaseClient.from('office_contacts').update(updateData).eq('id', id);
-                        if (error) { alert("연락처 수정 실패!\n원인: " + error.message); return; }
-                        officeContacts[editingOfficeIndex] = { ...officeContacts[editingOfficeIndex], ...updateData };
-                    }
-                    editingOfficeIndex = -1;
+                const payload = { name, rank, tell };
+                if(id) {
+                    const { error } = await supabaseClient.from('office_contacts').update(payload).eq('id', id);
+                    if(error) { alert("연락처 수정 실패!\n원인: " + error.message); return; }
+                    const idx = officeContacts.findIndex(c => c.id == id);
+                    if(idx !== -1) officeContacts[idx] = { ...officeContacts[idx], ...payload };
                 } else {
-                    const insertData = { name, rank, tell };
-                    const { data, error } = await supabaseClient.from('office_contacts').insert([insertData]).select();
+                    const { data, error } = await supabaseClient.from('office_contacts').insert([payload]).select();
                     if (error) { alert("연락처 저장 실패!\n원인: " + error.message); return; }
                     if(data && data.length > 0) officeContacts.push(data[0]);
-                    else officeContacts.push(insertData);
+                    else officeContacts.push(payload);
                 }
-                
-                document.getElementById('offName').value=''; document.getElementById('offRank').value=''; document.getElementById('offTel').value='';
+                document.getElementById('offName').value=''; document.getElementById('offRank').value=''; document.getElementById('offTel').value=''; document.getElementById('offId').value='';
                 renderOfficeList();
             }
         }
 
-        function editOfficeContact(index) {
-            const c = officeContacts[index];
-            document.getElementById('offName').value = c.name;
-            document.getElementById('offRank').value = c.rank;
-            document.getElementById('offTel').value = c.tell || c.tel;
-            editingOfficeIndex = index;
-            document.getElementById('offName').focus();
+        function editOfficeContact(id) {
+            const c = officeContacts.find(x => x.id == id);
+            if(c) {
+                document.getElementById('offId').value = c.id;
+                document.getElementById('offName').value = c.name;
+                document.getElementById('offRank').value = c.rank || '';
+                document.getElementById('offTel').value = c.tell;
+                document.getElementById('offName').focus();
+            }
         }
 
-        async function deleteOfficeContact(index) {
-            if(confirm('이 연락처를 삭제하시겠습니까?')) {
-                const id = officeContacts[index].id;
-                if(id) {
-                    const { error } = await supabaseClient.from('office_contacts').delete().eq('id', id);
-                    if(error) { alert("삭제 실패: " + error.message); return; }
-                }
-                officeContacts.splice(index, 1);
+        async function deleteOfficeContact(id) {
+            if(confirm("해당 연락처를 삭제하시겠습니까?")) {
+                const { error } = await supabaseClient.from('office_contacts').delete().eq('id', id);
+                if (error) { alert("삭제 실패: " + error.message); return; }
+                officeContacts = officeContacts.filter(c => c.id != id);
                 renderOfficeList();
             }
         }
 
         function renderOfficeList() {
-            document.getElementById('officeListContainer').innerHTML = officeContacts.map((c, idx) => `
-                <div class="contact-card" style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="flex:1;">
+            document.getElementById('officeListContainer').innerHTML = officeContacts.map(c => `
+                <div class="contact-card">
+                    <div>
                         <strong style="font-size:15px;">${c.name}</strong> <span style="font-size:13px; color:#8E8E93;">${c.rank}</span>
-                        <div style="font-size:14px; margin-top:4px;">${c.tell || c.tel}</div>
+                        <div style="font-size:14px; margin-top:4px;">${c.tell}</div>
                     </div>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        ${isLoggedIn ? `
-                        <div style="display:flex; flex-direction:column; gap:4px;">
-                            <button class="btn-small" style="background:#F2F2F7; color:var(--primary);" onclick="editOfficeContact(${idx})">수정</button>
-                            <button class="btn-small btn-delete" onclick="deleteOfficeContact(${idx})">삭제</button>
-                        </div>
+                    <div class="contact-actions">
+                        ${isLoggedIn && c.id ? `
+                        <button class="btn-small" style="background:#007AFF; color:#fff;" onclick="editOfficeContact(${c.id})">수정</button>
+                        <button class="btn-small btn-delete" onclick="deleteOfficeContact(${c.id})">삭제</button>
                         ` : ''}
-                        <a href="tel:${c.tell || c.tel}" class="call-btn" style="padding:10px 16px;">통화</a>
+                        <a href="tel:${c.tell}" class="call-btn">통화버튼</a>
                     </div>
                 </div>
             `).join('');
         }
 
-        // --- 문제 7: 현장 연락처 편집 수정/삭제 반영 ---
+        // --- 현장 연락처 (문제 7 편집/삭제 추가) ---
         async function saveFieldContact() {
-            const name = document.getElementById('fldName').value, rank = document.getElementById('fldRank').value, tel = document.getElementById('fldTel').value;
+            const name = document.getElementById('fldName').value;
+            const rank = document.getElementById('fldRank').value;
+            const tel = document.getElementById('fldTel').value;
+            const id = document.getElementById('fldId').value;
+
             if(name && tel) {
-                if(editingFieldIndex >= 0) {
-                    const id = fieldContacts[editingFieldIndex].id;
-                    const updateData = { name, rank, tel };
-                    if(id) {
-                        const { error } = await supabaseClient.from('field_contacts').update(updateData).eq('id', id);
-                        if (error) { alert("현장 연락처 수정 실패!\n원인: " + error.message); return; }
-                        fieldContacts[editingFieldIndex] = { ...fieldContacts[editingFieldIndex], ...updateData };
-                    }
-                    editingFieldIndex = -1;
+                const payload = { name, rank, tel };
+                if(id) {
+                    const { error } = await supabaseClient.from('field_contacts').update(payload).eq('id', id);
+                    if(error) { alert("현장 연락처 수정 실패!\n원인: " + error.message); return; }
+                    const idx = fieldContacts.findIndex(c => c.id == id);
+                    if(idx !== -1) fieldContacts[idx] = { ...fieldContacts[idx], ...payload };
                 } else {
-                    const insertData = { name, rank, tel };
-                    const { data, error } = await supabaseClient.from('field_contacts').insert([insertData]).select();
+                    const { data, error } = await supabaseClient.from('field_contacts').insert([payload]).select();
                     if (error) { alert("현장 연락처 저장 실패!\n원인: " + error.message); return; }
                     if(data && data.length > 0) fieldContacts.push(data[0]);
-                    else fieldContacts.push(insertData);
+                    else fieldContacts.push(payload);
                 }
-
-                document.getElementById('fldName').value=''; document.getElementById('fldRank').value=''; document.getElementById('fldTel').value='';
+                document.getElementById('fldName').value=''; document.getElementById('fldRank').value=''; document.getElementById('fldTel').value=''; document.getElementById('fldId').value='';
                 renderFieldList();
             }
         }
 
-        function editFieldContact(index) {
-            const c = fieldContacts[index];
-            document.getElementById('fldName').value = c.name;
-            document.getElementById('fldRank').value = c.rank;
-            document.getElementById('fldTel').value = c.tel;
-            editingFieldIndex = index;
-            document.getElementById('fldName').focus();
+        function editFieldContact(id) {
+            const c = fieldContacts.find(x => x.id == id);
+            if(c) {
+                document.getElementById('fldId').value = c.id;
+                document.getElementById('fldName').value = c.name;
+                document.getElementById('fldRank').value = c.rank || '';
+                document.getElementById('fldTel').value = c.tel;
+                document.getElementById('fldName').focus();
+            }
         }
 
-        async function deleteFieldContact(index) {
-            if(confirm('이 연락처를 삭제하시겠습니까?')) {
-                const id = fieldContacts[index].id;
-                if(id) {
-                    const { error } = await supabaseClient.from('field_contacts').delete().eq('id', id);
-                    if(error) { alert("삭제 실패: " + error.message); return; }
-                }
-                fieldContacts.splice(index, 1);
+        async function deleteFieldContact(id) {
+            if(confirm("해당 연락처를 삭제하시겠습니까?")) {
+                const { error } = await supabaseClient.from('field_contacts').delete().eq('id', id);
+                if (error) { alert("삭제 실패: " + error.message); return; }
+                fieldContacts = fieldContacts.filter(c => c.id != id);
                 renderFieldList();
             }
         }
 
         function renderFieldList() {
-            document.getElementById('fieldListContainer').innerHTML = fieldContacts.map((c, idx) => `
-                <div class="contact-card" style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="flex:1;">
+            document.getElementById('fieldListContainer').innerHTML = fieldContacts.map(c => `
+                <div class="contact-card">
+                    <div>
                         <strong style="font-size:15px;">${c.name}</strong> <span style="font-size:13px; color:#8E8E93;">${c.rank}</span>
                         <div style="font-size:14px; margin-top:4px;">${c.tel}</div>
                     </div>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        ${isLoggedIn ? `
-                        <div style="display:flex; flex-direction:column; gap:4px;">
-                            <button class="btn-small" style="background:#F2F2F7; color:var(--primary);" onclick="editFieldContact(${idx})">수정</button>
-                            <button class="btn-small btn-delete" onclick="deleteFieldContact(${idx})">삭제</button>
-                        </div>
+                    <div class="contact-actions">
+                        ${isLoggedIn && c.id ? `
+                        <button class="btn-small" style="background:#007AFF; color:#fff;" onclick="editFieldContact(${c.id})">수정</button>
+                        <button class="btn-small btn-delete" onclick="deleteFieldContact(${c.id})">삭제</button>
                         ` : ''}
-                        <a href="tel:${c.tel}" class="call-btn" style="padding:10px 16px;">통화</a>
+                        <a href="tel:${c.tel}" class="call-btn">통화버튼</a>
                     </div>
                 </div>
             `).join('');
@@ -1507,6 +1507,7 @@
             let list = driverContacts;
             
             if(!isLoggedIn) {
+                // 비로그인: 배차업로드 데이터에서 기사 정보를 자체 추출
                 const dispatchDriverNames = new Set();
                 const dispatchDriverMap = new Map();
                 
@@ -1646,20 +1647,7 @@
             document.getElementById('driverDetailModal').style.display = 'flex';
         }
 
-        // --- Haversine 거리 계산식 (밀양센터 기준) ---
-        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-            var R = 6371; 
-            var dLat = deg2rad(lat2-lat1);
-            var dLon = deg2rad(lon2-lon1); 
-            var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-                    Math.sin(dLon/2) * Math.sin(dLon/2); 
-            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-            return R * c; 
-        }
-        function deg2rad(deg) { return deg * (Math.PI/180); }
-
-        // --- 배차 내역 (지도) 렌더링 로직 ---
+        // --- 문제 8, 문제 1, 2, 3, 4: 배차 내역 (지도) 렌더링 로직 ---
         let map;
         let regionLayers = {};
         const MAP_COLORS = [
@@ -1668,13 +1656,17 @@
             '#000000', '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#204A8E'
         ];
 
-        // 밀양센터 기준 좌표 (문제 3)
-        const M_CENTER_LAT = 35.472383;
-        const M_CENTER_LNG = 128.746071;
+        // 문제 3: 거리 계산 함수 (Haversine formula)
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const p = 0.017453292519943295;
+            const c = Math.cos;
+            const a = 0.5 - c((lat2 - lat1) * p)/2 + c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p))/2;
+            return 12742 * Math.asin(Math.sqrt(a)); 
+        }
 
         function renderMap() {
             if(!map) {
-                map = L.map('map').setView([35.3, 128.0], 8);
+                map = L.map('map').setView([35.472383, 128.746071], 9); // 기본 밀양센터 위주 뷰
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap contributors'
                 }).addTo(map);
@@ -1686,10 +1678,10 @@
 
             document.getElementById('transportFilters').innerHTML = '';
             regionLayers = {};
+            mapMarkers = []; // 문제 4 마커 초기화
 
             const driverRoutes = {}; 
             const validRegions = new Set();
-            mapSearchData = []; // 문제 4: 검색 인덱스 갱신
 
             dispatchDataList.forEach(r => {
                 if(r.length > 12) {
@@ -1705,7 +1697,6 @@
                         driverRoutes[driver].points.push([lat, lng]);
                         driverRoutes[driver].storeNames.push(store);
                         validRegions.add(region);
-                        mapSearchData.push({ store, driver, lat, lng });
                     }
                 }
             });
@@ -1719,40 +1710,45 @@
                 regionLayers[t] = L.layerGroup().addTo(map);
             });
 
+            const centerLat = 35.472383;
+            const centerLng = 128.746071;
             let colorIdx = 0;
+
             for(const driver in driverRoutes) {
                 const route = driverRoutes[driver];
-                
-                // 문제 3: 밀양센터 기준 단일 선 정렬 구성
-                let combined = route.points.map((pt, idx) => ({
-                    pt: pt, 
-                    storeName: route.storeNames[idx],
-                    dist: getDistanceFromLatLonInKm(M_CENTER_LAT, M_CENTER_LNG, pt[0], pt[1])
-                }));
-                // 거리 기준 정렬
-                combined.sort((a, b) => a.dist - b.dist);
-                
-                route.points = combined.map(item => item.pt);
-                route.storeNames = combined.map(item => item.storeName);
-
-                // 밀양센터를 출발점 (가장 처음) 배열에 추가하여 연결할지 결정
-                // 단, 시작점인 밀양센터는 포인트 및 표시하지 않는 기준점(실제 지도 마커로는 미표시)으로 선만 이을 수 있도록 시작점 주입
-                let polylinePoints = [[M_CENTER_LAT, M_CENTER_LNG], ...route.points];
-
                 const tLayer = regionLayers[route.region];
                 const color = MAP_COLORS[colorIdx % MAP_COLORS.length];
                 colorIdx++;
 
-                if(route.points.length > 0) {
-                    L.polyline(polylinePoints, { color, weight: 3, opacity: 0.8 })
+                // 문제 3: 밀양센터 기준 가까운 곳부터 정렬
+                const sortedIndices = route.points.map((pt, i) => i).sort((a, b) => {
+                    const d1 = getDistance(centerLat, centerLng, route.points[a][0], route.points[a][1]);
+                    const d2 = getDistance(centerLat, centerLng, route.points[b][0], route.points[b][1]);
+                    return d1 - d2;
+                });
+                
+                route.points = sortedIndices.map(i => route.points[i]);
+                route.storeNames = sortedIndices.map(i => route.storeNames[i]);
+
+                if(route.points.length > 1) {
+                    L.polyline(route.points, { color, weight: 3, opacity: 0.8 })
                      .bindPopup(`<div style='font-size:14px; font-weight:bold;'>배송기사: ${driver}</div>`)
                      .addTo(tLayer);
                 }
 
                 route.points.forEach((pt, idx) => {
-                    L.circleMarker(pt, { radius: 6, color: '#fff', weight: 1, fillColor: color, fillOpacity: 1 })
+                    const marker = L.circleMarker(pt, { radius: 6, color: '#fff', weight: 1, fillColor: color, fillOpacity: 1 })
                      .bindPopup(`<div style='font-size:14px;'><b>${route.storeNames[idx]}</b><br><span style='color:var(--primary); font-weight:bold;'>배송기사: ${driver}</span></div>`)
                      .addTo(tLayer);
+                     
+                    // 문제 4: 검색을 위해 마커 정보 저장
+                    mapMarkers.push({
+                        store: route.storeNames[idx],
+                        driver: driver,
+                        lat: pt[0],
+                        lng: pt[1],
+                        marker: marker
+                    });
                 });
             }
 
@@ -1767,39 +1763,41 @@
             }
         }
 
-        // 문제 4: 지도 매장명/기사명 검색 및 자동 추천 줌인
+        // 문제 4: 지도 매장명 기사명 검색 로직
         function handleMapSearch() {
-            const search = document.getElementById('mapSearchInput').value.trim();
-            const suggestList = document.getElementById('mapSearchSuggest');
-            suggestList.innerHTML = '';
-            
-            if(!search) { suggestList.style.display = 'none'; return; }
-            
-            const matches = new Map();
-            
-            mapSearchData.forEach(item => {
-                if (item.store.includes(search)) {
-                    matches.set(item.store + item.driver, { label: `[매장] ${item.store} (기사: ${item.driver})`, lat: item.lat, lng: item.lng });
-                }
-                if (item.driver.includes(search)) {
-                    matches.set(item.store + item.driver, { label: `[기사] ${item.driver} (매장: ${item.store})`, lat: item.lat, lng: item.lng });
+            const val = document.getElementById('mapSearchInput').value.trim();
+            const suggestUl = document.getElementById('mapSearchSuggest');
+            suggestUl.innerHTML = '';
+            if(!val) { suggestUl.style.display = 'none'; return; }
+
+            const matches = [];
+            const seen = new Set();
+
+            mapMarkers.forEach(m => {
+                if (m.store.includes(val) || m.driver.includes(val)) {
+                    const label = `${m.store} (${m.driver})`;
+                    if(!seen.has(label)) {
+                        seen.add(label);
+                        matches.push({ label, lat: m.lat, lng: m.lng, marker: m.marker });
+                    }
                 }
             });
-            
-            if (matches.size > 0) {
-                suggestList.style.display = 'block';
-                matches.forEach((val, key) => {
-                    const li = document.createElement('li'); 
-                    li.textContent = val.label;
+
+            if(matches.length > 0) {
+                suggestUl.style.display = 'block';
+                matches.forEach(m => {
+                    const li = document.createElement('li');
+                    li.textContent = m.label;
                     li.onclick = () => {
-                        document.getElementById('mapSearchInput').value = '';
-                        suggestList.style.display = 'none';
-                        map.setView([val.lat, val.lng], 15);
+                        document.getElementById('mapSearchInput').value = m.label;
+                        suggestUl.style.display = 'none';
+                        map.setView([m.lat, m.lng], 14); 
+                        m.marker.openPopup();
                     };
-                    suggestList.appendChild(li);
+                    suggestUl.appendChild(li);
                 });
             } else {
-                suggestList.style.display = 'none';
+                suggestUl.style.display = 'none';
             }
         }
     </script>
