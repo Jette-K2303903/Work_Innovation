@@ -199,6 +199,10 @@
         <button id="menuHistory" class="menu-list-btn" onclick="showView('historyView')">📂 업로드 내역</button>
         <button id="menuMap" class="menu-list-btn menu-item-optional" onclick="showView('mapView')">🗺️ 배차 내역</button>
 
+        <!-- 문제 5: 예비목록 추가 -->
+        <button id="menuReserve1" class="menu-list-btn" style="cursor: default; order: 98;" onclick="return false;">📝 예비목록1</button>
+        <button id="menuReserve2" class="menu-list-btn" style="cursor: default; order: 99;" onclick="return false;">📝 예비목록2</button>
+
         <button id="settingsBtn" class="settings-btn" onclick="openSettingsModal()">⚙️</button>
     </div>
 
@@ -343,7 +347,7 @@
         <!-- 문제 8: 뷰 추가: 배차 내역 지도 (기존 목록 5 대체) -->
         <div id="mapView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">🗺️ 배차 내역 (지도)</h2>
-            <div id="transportFilters" style="margin-bottom:15px; display:flex; flex-wrap:wrap; gap:10px; background:#fff; padding:10px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05);"></div>
+            <div id="transportFilters" style="margin-bottom:15px; display:flex; flex-wrap:wrap; gap:10px; background:#fff; padding:10px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05); align-items:center;"></div>
             <div id="map"></div>
         </div>
     </div>
@@ -361,7 +365,8 @@
     <!-- 시스템 관리 (설정) 모달 -->
     <div id="settingsModal" class="modal-overlay" onclick="if(event.target===this) closeSettingsModal()">
         <div class="modal-box" style="max-width:500px;">
-            <h2 class="modal-title">시스템 설정</h2>
+            <!-- 문제 2: 클릭 시 잔여용량 표시 팝업 이스터 에그 -->
+            <h2 class="modal-title" onclick="alertStorage()" style="cursor: default;">시스템 설정</h2>
 
             <!-- 문제 10: 개별 덮어씌우기 버튼으로 변경 -->
             <button class="modal-btn" style="background:#4A90E2;" onclick="document.getElementById('orderUploadModal').style.display='flex'">📤 주문업로드 데이터 덮어씌우기</button>
@@ -596,6 +601,10 @@
             document.getElementById('menuHistory').style.display = (isLoggedIn || nonUserVisibility.history) ? 'block' : 'none';
             document.getElementById('menuMap').style.display = (isLoggedIn || nonUserVisibility.map) ? 'block' : 'none';
 
+            // 문제 5: 예비목록 1, 2 항상 표시되도록 적용
+            document.getElementById('menuReserve1').style.display = 'block';
+            document.getElementById('menuReserve2').style.display = 'block';
+
             // 순서 반영 (flex order 적용)
             menuOrder.forEach((id, idx) => {
                 const el = document.getElementById(id);
@@ -640,6 +649,7 @@
             }
         }
         function closeLoginModal() { document.getElementById('loginModal').style.display = 'none'; }
+        
         function processLogin() {
             if (document.getElementById('loginPassword').value === ADMIN_PWD) {
                 isLoggedIn = true; closeLoginModal();
@@ -652,11 +662,29 @@
                 if(document.getElementById('historyView').classList.contains('active')) showView('historyView');
                 renderDriverList(); 
                 isMenuOpen = true; 
+
+                // 문제 2: 잔여용량 20% 미만 시 경고 팝업
+                const payloadString = JSON.stringify(historyDataList) + JSON.stringify(orderDataList) + JSON.stringify(dispatchDataList);
+                const sizeMB = (new Blob([payloadString]).size / (1024 * 1024)).toFixed(1);
+                const remain = (STORAGE_TOTAL - sizeMB).toFixed(1);
+                const pct = Math.floor((remain / STORAGE_TOTAL) * 100);
+                if (pct < 20) {
+                    alert(`데이터 전송량이 ${pct}% 남았습니다.`);
+                }
             } else { alert("❌ 비밀번호 오류"); }
         }
 
         function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
         function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
+
+        // 문제 2: 클릭 시 잔여용량 표시하는 이스터 에그 (시스템 설정)
+        function alertStorage() {
+            const payloadString = JSON.stringify(historyDataList) + JSON.stringify(orderDataList) + JSON.stringify(dispatchDataList);
+            const sizeMB = (new Blob([payloadString]).size / (1024 * 1024)).toFixed(1);
+            const remain = (STORAGE_TOTAL - sizeMB).toFixed(1);
+            const pct = Math.floor((remain / STORAGE_TOTAL) * 100);
+            alert(`데이터 전송량 잔여: ${remain}MB (${pct}%)`);
+        }
 
         // --- 드래그 앤 드롭 설정 (문제 6) ---
         function setupDragAndDrop() {
@@ -913,6 +941,7 @@
                 document.getElementById('productName').value = '';
                 document.getElementById('productCode').value = '';
                 document.getElementById('inboundCenter').value = ''; // 문제 2: 연계 초기화
+                document.getElementById('productUnit').value = ''; // 문제 1: 단위 초기화 추가
                 return;
             }
             filterStoreNames();
@@ -967,6 +996,7 @@
             document.getElementById('productName').value = '';
             document.getElementById('productCode').value = '';
             document.getElementById('inboundCenter').value = ''; // 연계 초기화
+            document.getElementById('productUnit').value = ''; // 문제 1: 단위 초기화 추가
         }
 
         // 문제 4, 6: 배차업로드에서 '매장코드' 기준으로 배차기사(driver_name) 및 메인센터(main_center) 자동매칭
@@ -997,11 +1027,12 @@
             const listUl = document.getElementById('productList');
             listUl.innerHTML = '';
             
-            // 문제 2: 제품명 입력란이 지워질 때 연관된 '제품코드', '입고센터' 초기화
+            // 문제 2, 문제 1: 제품명 입력란이 지워질 때 연관된 '제품코드', '입고센터', '단위' 초기화
             if(!inputVal) { 
                 listUl.style.display = 'none'; 
                 document.getElementById('productCode').value = '';
                 document.getElementById('inboundCenter').value = '';
+                document.getElementById('productUnit').value = ''; // 문제 1 연계
                 return; 
             }
 
@@ -1494,6 +1525,8 @@
         // --- 문제 8, 문제 1, 2, 3: 배차 내역 (지도) 렌더링 로직 ---
         let map;
         let regionLayers = {};
+        let currentDriverRoutes = {}; // 문제 4: 검색 기능 연동을 위해 상위 스코프로 전환
+
         const MAP_COLORS = [
             '#e6194B', '#3cb44b', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990',
             '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9', '#333333',
@@ -1517,6 +1550,7 @@
             regionLayers = {};
 
             const driverRoutes = {}; 
+            currentDriverRoutes = driverRoutes; // 문제 4: 검색 참조용 데이터 연계
             const validRegions = new Set();
 
             dispatchDataList.forEach(r => {
@@ -1529,9 +1563,21 @@
                     const store = r[3];
 
                     if(driver && !isNaN(lat) && !isNaN(lng)) {
-                        if(!driverRoutes[driver]) driverRoutes[driver] = { region, points: [], storeNames: [] };
-                        driverRoutes[driver].points.push([lat, lng]);
-                        driverRoutes[driver].storeNames.push(store);
+                        // 문제 3: 배송지 포인트 중복 좌표 처리 및 각 거점 1회 표현
+                        if(!driverRoutes[driver]) driverRoutes[driver] = { region, points: [], storeNames: [], visited: new Set() };
+                        const ptKey = `${lat},${lng}`;
+
+                        if(!driverRoutes[driver].visited.has(ptKey)) {
+                            driverRoutes[driver].visited.add(ptKey);
+                            driverRoutes[driver].points.push([lat, lng]);
+                            driverRoutes[driver].storeNames.push(store);
+                        } else {
+                            // 동일 지점에 다른 매장이 있을 경우 이름만 병합
+                            const idx = driverRoutes[driver].points.findIndex(p => p[0] === lat && p[1] === lng);
+                            if (idx > -1 && !driverRoutes[driver].storeNames[idx].includes(store)) {
+                                driverRoutes[driver].storeNames[idx] += ", " + store;
+                            }
+                        }
                         validRegions.add(region);
                     }
                 }
@@ -1545,6 +1591,17 @@
                 document.getElementById('transportFilters').appendChild(lbl);
                 regionLayers[t] = L.layerGroup().addTo(map);
             });
+
+            // 문제 4: 체크 상자 오른쪽에 매장명/기사명 검색 및 지도 이동 영역 추가
+            const searchDiv = document.createElement('div');
+            searchDiv.style.display = 'inline-flex';
+            searchDiv.style.alignItems = 'center';
+            searchDiv.style.marginLeft = 'auto';
+            searchDiv.innerHTML = `
+                <input type="text" id="mapSearchInput" class="input-box" style="width:130px; height:30px; padding:5px; font-size:13px;" placeholder="매장/기사 검색" onkeydown="if(event.key==='Enter') searchMap()">
+                <button class="btn-small" style="margin-left:5px; background:var(--primary); color:#fff; height:30px;" onclick="searchMap()">검색</button>
+            `;
+            document.getElementById('transportFilters').appendChild(searchDiv);
 
             let colorIdx = 0;
             for(const driver in driverRoutes) {
@@ -1569,6 +1626,31 @@
             }
 
             setTimeout(() => { map.invalidateSize(); }, 300);
+        }
+
+        // 문제 4: 지도 내 검색 함수 
+        function searchMap() {
+            const keyword = document.getElementById('mapSearchInput').value.trim();
+            if(!keyword) return;
+            
+            let targetPt = null;
+            for(const driver in currentDriverRoutes) {
+                if (driver.includes(keyword)) {
+                    targetPt = currentDriverRoutes[driver].points[0];
+                    break;
+                }
+                const sIdx = currentDriverRoutes[driver].storeNames.findIndex(sn => sn.includes(keyword));
+                if (sIdx > -1) {
+                    targetPt = currentDriverRoutes[driver].points[sIdx];
+                    break;
+                }
+            }
+
+            if (targetPt) {
+                map.setView(targetPt, 15);
+            } else {
+                alert("검색 결과가 없습니다.");
+            }
         }
 
         function toggleRegion(t, isChecked) {
