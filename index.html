@@ -91,6 +91,7 @@
         .input-row { display: flex; gap: 10px; width: 100%; margin-bottom: 15px; }
         .flex-70 { flex: 7; display: flex; flex-direction: column; gap: 6px; position: relative; }
         .flex-60 { flex: 6; display: flex; flex-direction: column; gap: 6px; position: relative; }
+        .flex-50 { flex: 5; display: flex; flex-direction: column; gap: 6px; position: relative; }
         .flex-40 { flex: 4; display: flex; flex-direction: column; gap: 6px; position: relative; }
         .flex-30 { flex: 3; display: flex; flex-direction: column; gap: 6px; position: relative; }
         .input-group label, .input-row label { font-size: 13px; font-weight: 600; color: var(--text-sub); }
@@ -118,10 +119,10 @@
 
         .history-top-bar { display: none; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px; margin-bottom: 20px; }
         .history-list { display: flex; flex-direction: column; gap: 15px; }
-        .history-item { display: flex; gap: 15px; padding: 15px; background: #FFF; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); align-items: center; }
+        .history-item { display: flex; gap: 15px; padding: 15px; background: #FFF; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); align-items: center; flex-wrap: wrap; }
         .history-checkbox-wrap { display: none; } 
         .history-thumb { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; background: #F2F2F7; }
-        .history-info { flex: 1; font-size: 14px; }
+        .history-info { flex: 1; font-size: 14px; min-width: 150px; }
         .history-info p { margin: 2px 0; }
         .btn-small { padding: 6px 10px; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; }
         .btn-delete { background: #FFE5E5; color: #FF3B30; }
@@ -202,8 +203,8 @@
         <!-- 뷰 1: 홈 화면 -->
         <div id="formView" class="view-section active">
             <div class="media-actions">
-                <input type="file" id="cameraInput" accept="image/*" capture="environment" multiple style="display:none;" onchange="previewImage(this)">
-                <input type="file" id="galleryInput" accept="image/*" multiple style="display:none;" onchange="previewImage(this)">
+                <input type="file" id="cameraInput" accept="image/*" capture="environment" multiple style="display:none;" onchange="previewImage(this, 'camera')">
+                <input type="file" id="galleryInput" accept="image/*" multiple style="display:none;" onchange="previewImage(this, 'gallery')">
                 <button class="action-btn" onclick="document.getElementById('cameraInput').click()">📸 카메라 촬영</button>
                 <button class="action-btn" onclick="document.getElementById('galleryInput').click()">🖼️ 갤러리 선택</button>
             </div>
@@ -359,6 +360,18 @@
         </div>
     </div>
 
+    <!-- 카메라 연속 촬영 모달 -->
+    <div id="cameraConfirmModal" class="modal-overlay">
+        <div class="modal-box" style="max-width:300px; padding:30px 20px;">
+            <h2 class="modal-title" style="font-size:18px;" id="cameraConfirmMsg">사진이 추가되었습니다.</h2>
+            <p style="font-size:14px; color:#666; margin-bottom:20px;">추가로 촬영하시겠습니까?</p>
+            <div style="display:flex; gap:10px;">
+                <button class="modal-btn" style="margin-top:0; flex:1;" onclick="continueCamera()">추가 촬영</button>
+                <button class="modal-btn modal-btn-close" style="margin-top:0; flex:1;" onclick="document.getElementById('cameraConfirmModal').style.display='none'">촬영 완료</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 시스템 관리 (설정) 모달 -->
     <div id="settingsModal" class="modal-overlay" onclick="if(event.target===this) closeSettingsModal()">
         <div class="modal-box" style="max-width:500px;">
@@ -435,6 +448,48 @@
             <h2 class="modal-title" style="font-size:18px;">기사 배차 상세</h2>
             <div id="driverDetailContent" style="text-align:left; font-size:14px; max-height:300px; overflow-y:auto; margin-bottom:15px;"></div>
             <button class="modal-btn" onclick="document.getElementById('driverDetailModal').style.display='none'">확인</button>
+        </div>
+    </div>
+    
+    <!-- 업로드 내역 수정 팝업 -->
+    <div id="editUploadModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box" style="text-align:left;">
+            <h2 class="modal-title" style="font-size:18px; text-align:center;">업로드 내역 수정</h2>
+            <div class="input-group">
+                <label>사유</label>
+                <input type="text" id="editReasonText" class="input-box">
+            </div>
+            <div class="input-row">
+                <div class="flex-50">
+                    <label>작성자</label>
+                    <input type="text" id="editAuthorName" class="input-box">
+                </div>
+                <div class="flex-50">
+                    <label>작성일자</label>
+                    <input type="date" id="editWriteDate" class="input-box">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>매장명</label>
+                <input type="text" id="editStoreName" class="input-box">
+            </div>
+            <div class="input-group">
+                <label>제품명</label>
+                <input type="text" id="editProductName" class="input-box">
+            </div>
+            <div class="input-row">
+                <div class="flex-70">
+                    <label>제품수량</label>
+                    <input type="number" id="editProductQty" class="input-box">
+                </div>
+            </div>
+            <div class="input-group">
+                <label style="color:var(--primary);">수정사유 (필수)</label>
+                <input type="text" id="editHistoryReason" class="input-box" placeholder="무엇을 수정했는지 기입하세요">
+            </div>
+            <input type="hidden" id="editTargetId">
+            <button class="modal-btn" onclick="submitEditUpload()">수정 완료</button>
+            <button class="modal-btn modal-btn-close" onclick="document.getElementById('editUploadModal').style.display='none'">취소</button>
         </div>
     </div>
 
@@ -867,7 +922,7 @@
             return text.split('\n').filter(line => line.trim() !== '').map(line => line.split('\t'));
         }
 
-        function previewImage(input) {
+        function previewImage(input, source = 'gallery') {
             if (input.files) {
                 let files = Array.from(input.files);
                 let remain = 5 - currentImgSrcs.length;
@@ -889,12 +944,27 @@
                         loadedCount++;
                         if (loadedCount === files.length) {
                             renderPreview();
+                            
+                            // 카메라 소스인 경우 연속 촬영 팝업 노출
+                            if (source === 'camera') {
+                                if (currentImgSrcs.length < 5) {
+                                    document.getElementById('cameraConfirmMsg').innerText = `사진이 추가되었습니다. (${currentImgSrcs.length}/5)`;
+                                    document.getElementById('cameraConfirmModal').style.display = 'flex';
+                                } else {
+                                    alert("최대 5장 촬영이 완료되었습니다.");
+                                }
+                            }
                         }
                     }
                     reader.readAsDataURL(file);
                 });
             }
             input.value = "";
+        }
+        
+        function continueCamera() {
+            document.getElementById('cameraConfirmModal').style.display = 'none';
+            document.getElementById('cameraInput').click();
         }
 
         function renderPreview() {
@@ -1200,9 +1270,12 @@
                 img_url: JSON.stringify(currentImgSrcs)
             };
 
-            const { error } = await supabaseClient.from('upload_history').insert([insertData]);
-            if (error) { alert("데이터 저장 실패!\n원인: " + error.message); return; }
+            // 비동기 전송으로 딜레이 제거
+            supabaseClient.from('upload_history').insert([insertData]).then(({ error }) => {
+                if (error) console.error("데이터 저장 실패: " + error.message); 
+            });
 
+            // UI 딜레이 없이 즉시 반영
             historyDataList.unshift({
                 id: insertData.id, status: insertData.status, reason: insertData.reason, author: insertData.author,
                 date: insertData.date, driver: insertData.driver, store: insertData.store, sCode: insertData.store_code,
@@ -1274,13 +1347,31 @@
                     }
                 }
 
+                // 수정 사유 데이터 파싱 분리 로직 (||| 구분자)
+                const parts = item.reason ? item.reason.split('|||') : [''];
+                const mainReason = parts[0];
+                const editReasons = parts.slice(1);
+
+                let editReasonsHtml = '';
+                if(isLoggedIn && editReasons.length > 0) {
+                    editReasonsHtml = '<div style="margin-top:8px; font-size:12px; color:#4A90E2; background:#E0EFFF; padding:8px; border-radius:8px;">';
+                    editReasonsHtml += '<strong>[수정 내역]</strong><br>';
+                    editReasons.forEach((er, eIdx) => {
+                        editReasonsHtml += `수정${eIdx+1}: ${er}<br>`;
+                    });
+                    editReasonsHtml += '</div>';
+                }
+
                 if(item.status === 'delete_requested') {
                     actionHtml = `
                         <span class="status-red">[삭제요청]</span>
                         <button class="btn-small btn-confirm" onclick="confirmDelete(${item.id})">삭제 확정</button>
                     `;
                 } else {
-                    actionHtml = `<button class="btn-small btn-delete" onclick="requestDelete(${item.id})">삭제</button>`;
+                    actionHtml = `
+                        <button class="btn-small" style="background:#E0EFFF; color:var(--primary); margin-bottom:5px;" onclick="openEditUpload(${item.id})">수정</button>
+                        <button class="btn-small btn-delete" onclick="requestDelete(${item.id})">삭제</button>
+                    `;
                 }
 
                 div.innerHTML = `
@@ -1291,14 +1382,80 @@
                     <div class="history-info">
                         <p><strong>[${item.store}]</strong> ${item.product} (수량: ${item.qty}${item.unit})</p>
                         <p style="color:#8E8E93; font-size:12px;">${item.date} | 기사: ${item.driver}</p>
-                        <p style="font-size:12px; color:#FF3B30;">사유: ${item.reason} (${item.author})</p>
+                        <p style="font-size:12px; color:#FF3B30;">사유: ${mainReason} (${item.author})</p>
+                        ${editReasonsHtml}
                     </div>
-                    <div style="display:flex; flex-direction:column; gap:5px; text-align:right;">
+                    <div style="display:flex; flex-direction:column; justify-content:center; gap:5px; text-align:right;">
                         ${actionHtml}
                     </div>
                 `;
                 container.appendChild(div);
             });
+        }
+
+        // 업로드 내역 수정 팝업 열기
+        function openEditUpload(id) {
+            const item = historyDataList.find(i => i.id === id);
+            if(!item) return;
+
+            const parts = item.reason ? item.reason.split('|||') : [''];
+            document.getElementById('editReasonText').value = parts[0];
+            document.getElementById('editAuthorName').value = item.author || '';
+            document.getElementById('editWriteDate').value = item.date || '';
+            document.getElementById('editStoreName').value = item.store || '';
+            document.getElementById('editProductName').value = item.product || '';
+            document.getElementById('editProductQty').value = item.qty || '';
+            document.getElementById('editHistoryReason').value = '';
+            document.getElementById('editTargetId').value = id;
+
+            document.getElementById('editUploadModal').style.display = 'flex';
+        }
+
+        // 업로드 내역 수정 확정
+        async function submitEditUpload() {
+            const id = parseInt(document.getElementById('editTargetId').value);
+            const item = historyDataList.find(i => i.id === id);
+            if(!item) return;
+
+            const historyReason = document.getElementById('editHistoryReason').value.trim();
+            if(!historyReason) { alert("수정사유를 입력해주세요."); return; }
+
+            const newMainReason = document.getElementById('editReasonText').value;
+            const newAuthor = document.getElementById('editAuthorName').value;
+            const newDate = document.getElementById('editWriteDate').value;
+            const newStore = document.getElementById('editStoreName').value;
+            const newProduct = document.getElementById('editProductName').value;
+            const newQty = document.getElementById('editProductQty').value;
+
+            // 과거 수정 사유 누적 합산
+            const parts = item.reason ? item.reason.split('|||') : [''];
+            const pastEdits = parts.slice(1);
+            pastEdits.push(historyReason);
+
+            const updatedReasonString = [newMainReason, ...pastEdits].join('|||');
+
+            const updateData = {
+                reason: updatedReasonString,
+                author: newAuthor,
+                date: newDate,
+                store: newStore,
+                product: newProduct,
+                qty: newQty ? Number(newQty) : null
+            };
+
+            const { error } = await supabaseClient.from('upload_history').update(updateData).eq('id', id);
+            if(error) { alert("수정 실패: " + error.message); return; }
+
+            item.reason = updatedReasonString;
+            item.author = newAuthor;
+            item.date = newDate;
+            item.store = newStore;
+            item.product = newProduct;
+            item.qty = updateData.qty;
+
+            document.getElementById('editUploadModal').style.display = 'none';
+            renderHistoryList();
+            alert("내역이 정상적으로 수정되었습니다.");
         }
 
         function selectAllHistory() {
@@ -1343,10 +1500,14 @@
                     let orderInfo = orderDataList.find(r => r.length > 11 && cleanNumber(r[10]) === item.pCode && cleanNumber(r[8]) === item.sCode) || [];
                     let safeSheetName = (item.store || '거래처').substring(0, 31).replace(/[\\/?*\[\]]/g, '');
 
+                    // 수정 사유 분리 처리 후 원본 사유만 다운로드 반영
+                    const parts = item.reason ? item.reason.split('|||') : [''];
+                    const mainReason = parts[0];
+
                     const row = sheet.addRow([
                         '', item.date, item.mCenter, item.sCode, (orderInfo[7]||item.store), (orderInfo[8]||''), (orderInfo[9]||item.store),
                         item.pCode, item.product, (orderInfo[15]||''), item.unit, (orderInfo[17]||''), (orderInfo[18]||''),
-                        item.qty, item.reason, `${item.store} 상세`, '', '', '', ''
+                        item.qty, mainReason, `${item.store} 상세`, '', '', '', ''
                     ]);
 
                     let imgArr = [];
@@ -1373,7 +1534,7 @@
                         });
 
                         row.getCell(16).value = {
-                            text: `${item.store} (사유 : ${item.reason})\n\n\n${item.reason}`,
+                            text: `${item.store} (사유 : ${mainReason})\n\n\n${mainReason}`,
                             hyperlink: `#'${safeSheetName}'!A1`
                         };
                     }
@@ -1558,6 +1719,7 @@
             alert("기사 연락처 데이터가 성공적으로 덮어씌워졌습니다."); renderDriverList();
         }
 
+        // 연락처 매칭 통합 필터링 함수
         function filterDriversList(searchStr) {
             let list = driverContacts;
             
@@ -1590,34 +1752,29 @@
             }
 
             if(searchStr) {
-                if(!isLoggedIn) {
-                    list = list.filter(d => 
-                        d.name.includes(searchStr) || 
-                        d.phone.includes(searchStr) || 
-                        d.vehicle.includes(searchStr) || 
-                        d.region.includes(searchStr)
-                    );
-                } else {
-                    const matchedDriverNames = new Set();
-                    dispatchDataList.forEach(r => { 
-                        if(r.length > 15) {
-                            const storeName = r[3] || "";
-                            const driverName = r[7] || "";
-                            const vehicleNo = r[6] || "";
-                            const phone = r[15] || "";
+                const matchedDriverNames = new Set();
+                
+                // 검색어 매칭 추출 : dispatch_list 매장명 매칭 및 driver 연락처 변환용
+                dispatchDataList.forEach(r => { 
+                    if(r.length > 15) {
+                        const storeName = r[3] || "";
+                        const driverName = r[7] || "";
+                        const vehicleNo = r[6] || "";
+                        const phone = r[15] || "";
 
-                            if(storeName.includes(searchStr) || driverName.includes(searchStr) || vehicleNo.includes(searchStr) || phone.includes(searchStr)) {
-                                matchedDriverNames.add(driverName);
-                            }
+                        if(storeName.includes(searchStr) || driverName.includes(searchStr) || vehicleNo.includes(searchStr) || phone.includes(searchStr)) {
+                            matchedDriverNames.add(driverName);
                         }
-                    });
-                    list = list.filter(d => 
-                        matchedDriverNames.has(d.name) || 
-                        d.name.includes(searchStr) || 
-                        d.phone.includes(searchStr) || 
-                        d.vehicle.includes(searchStr)
-                    );
-                }
+                    }
+                });
+
+                list = list.filter(d => 
+                    matchedDriverNames.has(d.name) || 
+                    d.name.includes(searchStr) || 
+                    d.phone.includes(searchStr) || 
+                    d.vehicle.includes(searchStr) ||
+                    d.region.includes(searchStr)
+                );
             }
             renderDriverListToDOM(list);
         }
