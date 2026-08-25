@@ -767,7 +767,6 @@
             } else alert('저장 실패: ' + error.message);
         }
 
-        // 수정사항 1번 적용: 양 끝 보이지 않는 공백 제거(trim)
         function parseTSV(text) {
             if(!text.trim()) return [];
             return text.split('\n').filter(line => line.trim() !== '').map(line => line.split('\t').map(cell => cell.trim()));
@@ -884,7 +883,6 @@
             }
         }
 
-        // 수정사항 5번 적용: 최대 5장 촬영 UX
         function previewImage(input) {
             if (input.files) {
                 let files = Array.from(input.files);
@@ -907,7 +905,6 @@
                         loadedCount++;
                         if (loadedCount === files.length) {
                             renderPreview();
-                            // 카메라로 찍은 경우이고 5장이 안 찼다면 연속 촬영 안내
                             if (input.id === 'cameraInput' && currentImgSrcs.length < 5) {
                                 document.getElementById('cameraPhotoCount').innerText = currentImgSrcs.length;
                                 document.getElementById('cameraPromptModal').style.display = 'flex';
@@ -1096,8 +1093,6 @@
             document.getElementById('inboundCenter').value = ''; 
         }
 
-        // 문제 2 적용: 1순위 방법만 유지 (dispatch_list 연락처 스페어 참조 삭제)
-        // 문제 1 적용: 백그라운드 탐색 시 DOM 오염을 막기 위해 skipDOMUpdate 추가
         function findDispatchDriverAndCenter(storeCodeMatch, skipDOMUpdate = false) {
             let driverName = "정보 없음", centerInfo = "", driverContact = "";
             const cleanTarget = cleanNumber(storeCodeMatch);
@@ -1180,7 +1175,6 @@
 
                         document.getElementById('inboundCenter').value = inbound;
 
-                        // 수정사항 6번 적용: 작성일자(delivery date) 동기화
                         let dDate = m[1] ? m[1].trim() : "";
                         if (dDate) {
                             if (dDate.length === 8 && !dDate.includes('-')) {
@@ -1215,13 +1209,13 @@
             }
         });
 
-        // 수정사항 3번 관련: 수정 폼 불러오기
+        // 수정사항 적용: 수정 폼 불러오기
         function loadEditData(id) {
             const item = historyDataList.find(i => i.id === id);
             if(!item) return;
 
             currentEditId = id;
-            document.getElementById('reasonText').value = item.reason.split('\n[수정사유')[0];
+            document.getElementById('reasonText').value = item.reason.split(/\n수정 내역|\n\[수정사유/)[0];
             document.getElementById('authorName').value = item.author;
             document.getElementById('writeDate').value = item.date;
             document.getElementById('storeName').value = item.store;
@@ -1252,7 +1246,6 @@
             showView('formView');
         }
 
-        // 수정사항 2, 3, 4번 적용: 수정 사유 누적, 딜레이 없는 즉시 업데이트
         async function saveFormData() {
             if(!document.getElementById('storeName').value || !document.getElementById('productName').value) {
                 alert("매장명과 제품명을 입력해주세요."); return;
@@ -1268,15 +1261,15 @@
                 let existingItem = historyDataList.find(i => i.id === currentEditId);
                 if(!existingItem) return;
 
-                let editCount = (existingItem.reason.match(/\[수정사유/g) || []).length + 1;
+                let editCount = (existingItem.reason.match(/\n수정 내역|\n\[수정사유/g) || []).length + 1;
                 let baseReason = document.getElementById('reasonText').value;
                 let previousEdits = "";
-                let splitIdx = existingItem.reason.indexOf('\n[수정사유');
+                let splitIdx = existingItem.reason.search(/\n수정 내역|\n\[수정사유/);
                 if(splitIdx !== -1) {
                     previousEdits = existingItem.reason.substring(splitIdx);
                 }
                 
-                let newFullReason = baseReason + previousEdits + `\n[수정사유${editCount}] ` + editReason;
+                let newFullReason = baseReason + previousEdits + `\n수정 내역 ${editCount} : ` + editReason;
 
                 let updatedData = {
                     reason: newFullReason,
@@ -1294,7 +1287,7 @@
                     img_url: JSON.stringify(currentImgSrcs)
                 };
 
-                // UI 리스트 즉시 반영 (딜레이 없음)
+                // UI 리스트 즉시 반영
                 Object.assign(existingItem, {
                     ...updatedData,
                     sCode: updatedData.store_code,
@@ -1342,7 +1335,7 @@
                     img_url: JSON.stringify(currentImgSrcs)
                 };
 
-                // UI 리스트 즉시 반영 (딜레이 없음)
+                // UI 리스트 즉시 반영
                 historyDataList.unshift({
                     id: insertData.id, status: insertData.status, reason: insertData.reason, author: insertData.author,
                     date: insertData.date, driver: insertData.driver, store: insertData.store, sCode: insertData.store_code,
@@ -1392,6 +1385,27 @@
             } else { select.selectedIndex = 0; }
         }
 
+        // 공통 사유 표시 규칙 적용 함수
+        function getDisplayReason(reason) {
+            if (!reason) return "";
+            let displayReason = reason;
+            
+            // 기존 데이터 호환성 유지: [수정사유1] -> 수정 내역 1 : 
+            displayReason = displayReason.replace(/\n\[수정사유(\d+)\] /g, '\n수정 내역 $1 : ');
+
+            if (!isLoggedIn) {
+                // 비로그인: 원본 사유와 가장 최신 수정 내역 1개만 '수정 내역 : 사유' 형태로 표시
+                let reasonParts = displayReason.split(/\n수정 내역 \d* *: /);
+                if (reasonParts.length > 1) {
+                    let originalReason = reasonParts[0];
+                    let latestEdit = reasonParts[reasonParts.length - 1];
+                    displayReason = originalReason + '\n수정 내역 : ' + latestEdit;
+                }
+            }
+            
+            return displayReason;
+        }
+
         function renderHistoryList() {
             const container = document.getElementById('historyListContainer');
             container.innerHTML = '';
@@ -1434,6 +1448,8 @@
                     `;
                 }
 
+                let dispReason = getDisplayReason(item.reason);
+
                 div.innerHTML = `
                     <div class="history-checkbox-wrap" style="display:${isLoggedIn?'block':'none'}">
                         <input type="checkbox" class="hist-chk" value="${item.id}" style="width:18px; height:18px;">
@@ -1442,7 +1458,7 @@
                     <div class="history-info">
                         <p><strong>[${item.store}]</strong> ${item.product} (수량: ${item.qty}${item.unit})</p>
                         <p style="color:#8E8E93; font-size:12px;">${item.date} | 기사: ${item.driver}</p>
-                        <p style="font-size:12px; color:#FF3B30;">사유: ${item.reason.replace(/\n/g, '<br>')} (${item.author})</p>
+                        <p style="font-size:12px; color:#FF3B30;">사유: ${dispReason.replace(/\n/g, '<br>')} (${item.author})</p>
                     </div>
                     <div style="display:flex; flex-direction:column; justify-content:center; text-align:right;">
                         ${actionHtml}
@@ -1494,10 +1510,12 @@
                     let orderInfo = orderDataList.find(r => r.length > 11 && cleanNumber(r[10]) === item.pCode && cleanNumber(r[8]) === item.sCode) || [];
                     let safeSheetName = (item.store || '거래처').substring(0, 31).replace(/[\\/?*\[\]]/g, '');
 
+                    let dispReason = getDisplayReason(item.reason);
+
                     const row = sheet.addRow([
                         '', item.date, item.mCenter, item.sCode, (orderInfo[7]||item.store), (orderInfo[8]||''), (orderInfo[9]||item.store),
                         item.pCode, item.product, (orderInfo[15]||''), item.unit, (orderInfo[17]||''), (orderInfo[18]||''),
-                        item.qty, item.reason, `${item.store} 상세`, '', '', '', ''
+                        item.qty, dispReason, `${item.store} 상세`, '', '', '', ''
                     ]);
 
                     let imgArr = [];
@@ -1524,7 +1542,7 @@
                         });
 
                         row.getCell(16).value = {
-                            text: `${item.store} (사유 : ${item.reason})\n\n\n${item.reason}`,
+                            text: `${item.store} (사유 : ${dispReason})\n\n\n${dispReason}`,
                             hyperlink: `#'${safeSheetName}'!A1`
                         };
                     }
@@ -1709,7 +1727,6 @@
             alert("기사 연락처 데이터가 성공적으로 덮어씌워졌습니다."); renderDriverList();
         }
 
-        // 문제 1 적용: 검색어에 따른 처리 로직 수정
         function filterDriversList(searchStr) {
             let list = driverContacts;
 
@@ -1740,14 +1757,12 @@
             if(searchStr) {
                 const matchedDriverNames = new Set();
 
-                // 1. 매장명 검색 (orderDataList 탐색 -> account_code -> findDispatchDriverAndCenter 호출)
                 orderDataList.forEach(r => {
                     if(r.length > 9) {
-                        const storeName = r[9] || r[7] || ""; // account_name 또는 client_name
+                        const storeName = r[9] || r[7] || ""; 
                         if(storeName.includes(searchStr)) {
                             const accountCode = cleanNumber(r[8]);
                             if(accountCode) {
-                                // skipDOMUpdate=true 파라미터를 통해 배경 데이터만 탐색
                                 const dName = findDispatchDriverAndCenter(accountCode, true);
                                 if(dName && dName !== "정보 없음") {
                                     matchedDriverNames.add(dName);
@@ -1788,7 +1803,6 @@
             renderDriverListToDOM(list);
         }
 
-        // 문제 1 적용: 추천리스트 동작 내 매장명(orderDataList) 적용
         function handleDriverStoreSearch() {
             const search = document.getElementById('driverSearchInput').value.trim();
             const suggestList = document.getElementById('driverStoreSuggest');
@@ -1798,7 +1812,6 @@
                 const matches = new Set();
                 let exactMatchFound = false;
 
-                // 1. 이름, 차량번호(전화번호 포함) 추천 (현행 방법 유지)
                 dispatchDataList.forEach(r => {
                     if(r.length > 15) {
                         const driverName = r[7] || "";
@@ -1815,7 +1828,6 @@
                     }
                 });
 
-                // 2. 매장명 추천 (orderDataList 탐색 - 신규 적용)
                 orderDataList.forEach(r => {
                     if(r.length > 9) {
                         const storeName = r[9] || r[7] || "";
