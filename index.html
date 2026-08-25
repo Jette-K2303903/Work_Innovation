@@ -1590,27 +1590,29 @@
             }
 
             if(searchStr) {
+                const matchedDriverNames = new Set();
+                dispatchDataList.forEach(r => { 
+                    if(r.length > 15) {
+                        const storeName = r[3] || "";
+                        const driverName = r[7] || "";
+                        const vehicleNo = r[6] || "";
+                        const phone = r[15] || "";
+
+                        if(storeName.includes(searchStr) || driverName.includes(searchStr) || vehicleNo.includes(searchStr) || phone.includes(searchStr)) {
+                            matchedDriverNames.add(driverName);
+                        }
+                    }
+                });
+
                 if(!isLoggedIn) {
                     list = list.filter(d => 
+                        matchedDriverNames.has(d.name) ||
                         d.name.includes(searchStr) || 
                         d.phone.includes(searchStr) || 
                         d.vehicle.includes(searchStr) || 
                         d.region.includes(searchStr)
                     );
                 } else {
-                    const matchedDriverNames = new Set();
-                    dispatchDataList.forEach(r => { 
-                        if(r.length > 15) {
-                            const storeName = r[3] || "";
-                            const driverName = r[7] || "";
-                            const vehicleNo = r[6] || "";
-                            const phone = r[15] || "";
-
-                            if(storeName.includes(searchStr) || driverName.includes(searchStr) || vehicleNo.includes(searchStr) || phone.includes(searchStr)) {
-                                matchedDriverNames.add(driverName);
-                            }
-                        }
-                    });
                     list = list.filter(d => 
                         matchedDriverNames.has(d.name) || 
                         d.name.includes(searchStr) || 
