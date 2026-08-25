@@ -164,7 +164,7 @@
         body.pc-mode .main-content {
             flex: 6; max-width: 100%; height: 100vh; overflow-y: auto; padding: 40px 60px;
         }
-        
+
         #map { width:100%; height:65vh; border-radius:12px; background: transparent !important; z-index: 1; }
 
         button, .btn-small, .modal-btn, .menu-list-btn, .call-btn, .action-btn, .sortable-item {
@@ -190,7 +190,7 @@
         <button id="menuDriver" class="menu-list-btn" onclick="showView('driverContactView')">📱 기사 연락처</button>
         <button id="menuHistory" class="menu-list-btn" onclick="showView('historyView')">📂 업로드 내역</button>
         <button id="menuMap" class="menu-list-btn menu-item-optional" onclick="showView('mapView')">🗺️ 배차 내역</button>
-        
+
         <button id="menuReserve1" class="menu-list-btn menu-item-optional">예비목록1</button>
         <button id="menuReserve2" class="menu-list-btn menu-item-optional" onclick="toggleScreenMode()">🖥️ 화면전환</button>
 
@@ -274,6 +274,11 @@
                         <input type="text" id="productUnit" class="input-box" readonly placeholder="단위">
                     </div>
                 </div>
+                <!-- 수정 시 노출되는 수정 사유 칸 -->
+                <div class="input-group" id="editReasonGroup" style="display:none;">
+                    <label style="color:#FF3B30;">수정 사유</label>
+                    <input type="text" id="editReasonText" class="input-box" placeholder="수정 사유를 입력하세요 (예: 수량 변경 등)">
+                </div>
                 <button class="modal-btn" style="margin-top: 10px;" onclick="saveFormData()">작성 완료</button>
             </div>
         </div>
@@ -349,6 +354,7 @@
         </div>
     </div>
 
+    <!-- 시스템 모달 영역 -->
     <!-- 로그인 모달 -->
     <div id="loginModal" class="modal-overlay" onclick="if(event.target===this) closeLoginModal()">
         <div class="modal-box">
@@ -356,6 +362,15 @@
             <input type="password" id="loginPassword" class="input-box" placeholder="비밀번호" style="text-align:center; margin-bottom:10px;" onkeydown="if(event.key === 'Enter') processLogin()">
             <button class="modal-btn" onclick="processLogin()">로그인</button>
             <button class="modal-btn modal-btn-close" onclick="closeLoginModal()">취소</button>
+        </div>
+    </div>
+
+    <!-- 카메라 연속 촬영 팝업 모달 -->
+    <div id="cameraPromptModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box" style="max-width:300px; padding:30px 20px;">
+            <h2 class="modal-title" style="font-size:18px;">사진 촬영 (<span id="cameraPhotoCount"></span>/5)</h2>
+            <button class="modal-btn" onclick="document.getElementById('cameraPromptModal').style.display='none'; document.getElementById('cameraInput').click();">📸 추가 촬영</button>
+            <button class="modal-btn modal-btn-close" onclick="document.getElementById('cameraPromptModal').style.display='none'">✅ 촬영 완료</button>
         </div>
     </div>
 
@@ -461,8 +476,9 @@
 
         let isMenuOpen = false; let menuInactivityTimer; let isLoggedIn = false;
         const ADMIN_PWD = "alfdid13579!!";
-        
-        let currentImgSrcs = []; // 여러 장 이미지를 관리하는 배열로 변경
+
+        let currentImgSrcs = []; // 여러 장 이미지를 관리하는 배열
+        let currentEditId = null; // 수정 모드일 때 사용할 변수 추가
 
         let orderDataList = []; let dispatchDataList = [];
         let historyDataList = [];
@@ -590,7 +606,7 @@
             }
             const body = document.body;
             const msgEl = document.getElementById('switchAlertMsg');
-            
+
             if (body.classList.contains('pc-mode')) {
                 body.classList.remove('pc-mode');
                 msgEl.innerText = '모바일 화면으로 전환되었습니다.';
@@ -609,7 +625,7 @@
             document.getElementById('menuDriver').style.display = (isLoggedIn || nonUserVisibility.driver) ? 'block' : 'none';
             document.getElementById('menuHistory').style.display = (isLoggedIn || nonUserVisibility.history) ? 'block' : 'none';
             document.getElementById('menuMap').style.display = (isLoggedIn || nonUserVisibility.map) ? 'block' : 'none';
-            
+
             document.getElementById('menuReserve1').style.display = (isLoggedIn || nonUserVisibility.reserve1) ? 'block' : 'none';
             document.getElementById('menuReserve2').style.display = isLoggedIn ? 'block' : (nonUserVisibility.reserve2 ? 'block' : 'none');
 
@@ -625,7 +641,7 @@
             document.getElementById('officeEditForm').style.display = isLoggedIn ? 'block' : 'none';
             document.getElementById('fieldEditForm').style.display = isLoggedIn ? 'block' : 'none';
             document.getElementById('driverEditForm').style.display = isLoggedIn ? 'block' : 'none';
-            
+
             renderOfficeList();
             renderFieldList();
             renderStorage();
@@ -659,7 +675,7 @@
             }
         }
         function closeLoginModal() { document.getElementById('loginModal').style.display = 'none'; }
-        
+
         function processLogin() {
             if (document.getElementById('loginPassword').value === ADMIN_PWD) {
                 isLoggedIn = true; closeLoginModal();
@@ -749,6 +765,12 @@
             if(!error) {
                 updateMenuUI(); closeListManageModal(); alert('목록 설정이 확정되었습니다.');
             } else alert('저장 실패: ' + error.message);
+        }
+
+        // 수정사항 1번 적용: 양 끝 보이지 않는 공백 제거(trim)
+        function parseTSV(text) {
+            if(!text.trim()) return [];
+            return text.split('\n').filter(line => line.trim() !== '').map(line => line.split('\t').map(cell => cell.trim()));
         }
 
         async function saveNewOrderData() {
@@ -862,11 +884,7 @@
             }
         }
 
-        function parseTSV(text) {
-            if(!text.trim()) return [];
-            return text.split('\n').filter(line => line.trim() !== '').map(line => line.split('\t'));
-        }
-
+        // 수정사항 5번 적용: 최대 5장 촬영 UX
         function previewImage(input) {
             if (input.files) {
                 let files = Array.from(input.files);
@@ -875,7 +893,7 @@
                     alert(`최대 5장까지만 첨부할 수 있습니다. (현재 ${currentImgSrcs.length}장)`);
                     files = files.slice(0, remain);
                 }
-                
+
                 if (files.length === 0) {
                     input.value = "";
                     return;
@@ -889,6 +907,11 @@
                         loadedCount++;
                         if (loadedCount === files.length) {
                             renderPreview();
+                            // 카메라로 찍은 경우이고 5장이 안 찼다면 연속 촬영 안내
+                            if (input.id === 'cameraInput' && currentImgSrcs.length < 5) {
+                                document.getElementById('cameraPhotoCount').innerText = currentImgSrcs.length;
+                                document.getElementById('cameraPromptModal').style.display = 'flex';
+                            }
                         }
                     }
                     reader.readAsDataURL(file);
@@ -907,13 +930,13 @@
                     wrapper.style.display = 'inline-block';
                     wrapper.style.position = 'relative';
                     wrapper.style.margin = '5px';
-                    
+
                     const img = document.createElement('img');
                     img.src = src;
                     img.className = 'preview-img';
                     img.style.maxWidth = '100px';
                     img.style.maxHeight = '100px';
-                    
+
                     const delBtn = document.createElement('button');
                     delBtn.innerHTML = 'X';
                     delBtn.style.position = 'absolute';
@@ -931,7 +954,7 @@
                         currentImgSrcs.splice(index, 1);
                         renderPreview();
                     };
-                    
+
                     wrapper.appendChild(img);
                     wrapper.appendChild(delBtn);
                     container.appendChild(wrapper);
@@ -968,7 +991,7 @@
             const listUl = document.getElementById('authorList');
             listUl.innerHTML = '';
             if(!val) { listUl.style.display = 'none'; return; }
-            
+
             const matches = fieldContacts.filter(c => c.name.includes(val));
             if(matches.length > 0) {
                 listUl.style.display = 'block';
@@ -1076,12 +1099,12 @@
         function findDispatchDriverAndCenter(storeCodeMatch) {
             let driverName = "정보 없음", centerInfo = "", driverContact = "";
             const cleanTarget = cleanNumber(storeCodeMatch);
-            
+
             for(let row of dispatchDataList) {
                 if(row.length > 7 && cleanNumber(row[1]) === cleanTarget) { 
                     driverName = row[7] || "정보 없음"; 
                     centerInfo = row[16] || ""; 
-                    
+
                     const foundDriver = driverContacts.find(d => d.name === driverName);
                     if(foundDriver) { driverContact = ` (${foundDriver.phone})`; }
                     else if(row[15]) { driverContact = ` (${row[15]})`; } 
@@ -1098,7 +1121,7 @@
             const inputVal = document.getElementById('productName').value.trim();
             const listUl = document.getElementById('productList');
             listUl.innerHTML = '';
-            
+
             if(!inputVal) { 
                 listUl.style.display = 'none'; 
                 document.getElementById('productCode').value = '';
@@ -1108,7 +1131,7 @@
             }
 
             const matches = [], seen = new Set();
-            
+
             orderDataList.forEach(row => {
                 if(row.length > 11) {
                     const prodName = row[11] || ""; 
@@ -1121,7 +1144,7 @@
 
                         const isStoreMatch = (storeCode && rowAccountCode === cleanNumber(storeCode)) || 
                                              (storeNameVal && (rowAccountName.includes(storeNameVal) || rowClientName.includes(storeNameVal)));
-                        
+
                         condition = isStoreMatch && prodName.includes(inputVal);
                     } else {
                         condition = prodName.includes(inputVal);
@@ -1152,6 +1175,17 @@
                         else if(rVal === "이천간선") inbound = "이천센터";
 
                         document.getElementById('inboundCenter').value = inbound;
+
+                        // 수정사항 6번 적용: 작성일자(delivery date) 동기화
+                        let dDate = m[1] ? m[1].trim() : "";
+                        if (dDate) {
+                            if (dDate.length === 8 && !dDate.includes('-')) {
+                                dDate = dDate.substring(0,4) + '-' + dDate.substring(4,6) + '-' + dDate.substring(6,8);
+                            }
+                            dDate = dDate.replace(/\//g, '-').replace(/\./g, '-');
+                            document.getElementById('writeDate').value = dDate;
+                        }
+
                         listUl.style.display = 'none';
                     };
                     listUl.appendChild(li);
@@ -1177,49 +1211,157 @@
             }
         });
 
+        // 수정사항 3번 관련: 수정 폼 불러오기
+        function loadEditData(id) {
+            const item = historyDataList.find(i => i.id === id);
+            if(!item) return;
+
+            currentEditId = id;
+            document.getElementById('reasonText').value = item.reason.split('\n[수정사유')[0];
+            document.getElementById('authorName').value = item.author;
+            document.getElementById('writeDate').value = item.date;
+            document.getElementById('storeName').value = item.store;
+            document.getElementById('storeCode').value = item.sCode;
+            document.getElementById('mainCenter').value = item.mCenter;
+            document.getElementById('productName').value = item.product;
+            document.getElementById('productCode').value = item.pCode;
+            document.getElementById('inboundCenter').value = item.iCenter;
+            document.getElementById('productQty').value = item.qty || '';
+            document.getElementById('productUnit').value = item.unit || '';
+            document.getElementById('driverName').value = item.driver;
+
+            currentImgSrcs = [];
+            if(item.img) {
+                try {
+                    let parsed = JSON.parse(item.img);
+                    if(Array.isArray(parsed)) currentImgSrcs = parsed;
+                } catch(e) {
+                    if(item.img.startsWith('data:image')) currentImgSrcs = [item.img];
+                }
+            }
+            renderPreview();
+
+            document.getElementById('editReasonGroup').style.display = 'flex';
+            document.getElementById('editReasonText').value = '';
+            document.querySelector('#formView .modal-btn').innerText = "수정 완료";
+
+            showView('formView');
+        }
+
+        // 수정사항 2, 3, 4번 적용: 수정 사유 누적, 딜레이 없는 즉시 업데이트
         async function saveFormData() {
             if(!document.getElementById('storeName').value || !document.getElementById('productName').value) {
                 alert("매장명과 제품명을 입력해주세요."); return;
             }
 
-            const insertData = {
-                id: Date.now(),
-                status: 'active',
-                reason: document.getElementById('reasonText').value,
-                author: document.getElementById('authorName').value,
-                date: document.getElementById('writeDate').value,
-                driver: document.getElementById('driverName').value,
-                store: document.getElementById('storeName').value,
-                store_code: document.getElementById('storeCode').value,
-                main_center: document.getElementById('mainCenter').value,
-                product: document.getElementById('productName').value,
-                product_code: document.getElementById('productCode').value,
-                inbound_center: document.getElementById('inboundCenter').value,
-                qty: document.getElementById('productQty').value ? Number(document.getElementById('productQty').value) : null,
-                unit: document.getElementById('productUnit').value,
-                img_url: JSON.stringify(currentImgSrcs)
-            };
+            if (currentEditId) {
+                // 수정 모드
+                const editReason = document.getElementById('editReasonText').value.trim();
+                if(!editReason) {
+                    alert("수정 사유를 입력해주세요."); return;
+                }
 
-            const { error } = await supabaseClient.from('upload_history').insert([insertData]);
-            if (error) { alert("데이터 저장 실패!\n원인: " + error.message); return; }
+                let existingItem = historyDataList.find(i => i.id === currentEditId);
+                if(!existingItem) return;
 
-            historyDataList.unshift({
-                id: insertData.id, status: insertData.status, reason: insertData.reason, author: insertData.author,
-                date: insertData.date, driver: insertData.driver, store: insertData.store, sCode: insertData.store_code,
-                mCenter: insertData.main_center, product: insertData.product, pCode: insertData.product_code,
-                iCenter: insertData.inbound_center, qty: insertData.qty, unit: insertData.unit, img: insertData.img_url
-            });
+                let editCount = (existingItem.reason.match(/\[수정사유/g) || []).length + 1;
+                let baseReason = document.getElementById('reasonText').value;
+                let previousEdits = "";
+                let splitIdx = existingItem.reason.indexOf('\n[수정사유');
+                if(splitIdx !== -1) {
+                    previousEdits = existingItem.reason.substring(splitIdx);
+                }
+                
+                let newFullReason = baseReason + previousEdits + `\n[수정사유${editCount}] ` + editReason;
 
-            document.querySelectorAll('#formView .input-box').forEach(el => { if(el.id !== 'writeDate') el.value = ''; });
-            document.getElementById('imagePreviewContainer').style.display = 'none';
-            document.getElementById('imagePreviewContainer').innerHTML = '';
-            currentImgSrcs = [];
-            renderStorage(); 
+                let updatedData = {
+                    reason: newFullReason,
+                    author: document.getElementById('authorName').value,
+                    date: document.getElementById('writeDate').value,
+                    driver: document.getElementById('driverName').value,
+                    store: document.getElementById('storeName').value,
+                    store_code: document.getElementById('storeCode').value,
+                    main_center: document.getElementById('mainCenter').value,
+                    product: document.getElementById('productName').value,
+                    product_code: document.getElementById('productCode').value,
+                    inbound_center: document.getElementById('inboundCenter').value,
+                    qty: document.getElementById('productQty').value ? Number(document.getElementById('productQty').value) : null,
+                    unit: document.getElementById('productUnit').value,
+                    img_url: JSON.stringify(currentImgSrcs)
+                };
 
-            document.getElementById('saveSuccessModal').style.display = 'flex';
-            clearTimeout(savePopupTimer);
-            const delay = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
-            savePopupTimer = setTimeout(closeSaveSuccessModal, delay * 1000);
+                // UI 리스트 즉시 반영 (딜레이 없음)
+                Object.assign(existingItem, {
+                    ...updatedData,
+                    sCode: updatedData.store_code,
+                    mCenter: updatedData.main_center,
+                    pCode: updatedData.product_code,
+                    iCenter: updatedData.inbound_center,
+                    img: updatedData.img_url
+                });
+
+                document.querySelectorAll('#formView .input-box').forEach(el => { if(el.id !== 'writeDate') el.value = ''; });
+                document.getElementById('imagePreviewContainer').style.display = 'none';
+                document.getElementById('imagePreviewContainer').innerHTML = '';
+                currentImgSrcs = [];
+                currentEditId = null;
+                document.getElementById('editReasonGroup').style.display = 'none';
+                document.querySelector('#formView .modal-btn').innerText = "작성 완료";
+                renderStorage();
+
+                document.getElementById('saveSuccessModal').style.display = 'flex';
+                clearTimeout(savePopupTimer);
+                const delay = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
+                savePopupTimer = setTimeout(closeSaveSuccessModal, delay * 1000);
+
+                // 백그라운드 DB 동기화
+                supabaseClient.from('upload_history').update(updatedData).eq('id', existingItem.id).then(({error}) => {
+                    if (error) console.error("DB 수정 저장 실패", error);
+                });
+            } else {
+                // 신규 업로드 모드
+                const insertData = {
+                    id: Date.now(),
+                    status: 'active',
+                    reason: document.getElementById('reasonText').value,
+                    author: document.getElementById('authorName').value,
+                    date: document.getElementById('writeDate').value,
+                    driver: document.getElementById('driverName').value,
+                    store: document.getElementById('storeName').value,
+                    store_code: document.getElementById('storeCode').value,
+                    main_center: document.getElementById('mainCenter').value,
+                    product: document.getElementById('productName').value,
+                    product_code: document.getElementById('productCode').value,
+                    inbound_center: document.getElementById('inboundCenter').value,
+                    qty: document.getElementById('productQty').value ? Number(document.getElementById('productQty').value) : null,
+                    unit: document.getElementById('productUnit').value,
+                    img_url: JSON.stringify(currentImgSrcs)
+                };
+
+                // UI 리스트 즉시 반영 (딜레이 없음)
+                historyDataList.unshift({
+                    id: insertData.id, status: insertData.status, reason: insertData.reason, author: insertData.author,
+                    date: insertData.date, driver: insertData.driver, store: insertData.store, sCode: insertData.store_code,
+                    mCenter: insertData.main_center, product: insertData.product, pCode: insertData.product_code,
+                    iCenter: insertData.inbound_center, qty: insertData.qty, unit: insertData.unit, img: insertData.img_url
+                });
+
+                document.querySelectorAll('#formView .input-box').forEach(el => { if(el.id !== 'writeDate') el.value = ''; });
+                document.getElementById('imagePreviewContainer').style.display = 'none';
+                document.getElementById('imagePreviewContainer').innerHTML = '';
+                currentImgSrcs = [];
+                renderStorage(); 
+
+                document.getElementById('saveSuccessModal').style.display = 'flex';
+                clearTimeout(savePopupTimer);
+                const delay = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
+                savePopupTimer = setTimeout(closeSaveSuccessModal, delay * 1000);
+
+                // 백그라운드 DB 동기화
+                supabaseClient.from('upload_history').insert([insertData]).then(({error}) => {
+                    if (error) console.error("DB 신규 저장 실패", error);
+                });
+            }
         }
         function closeSaveSuccessModal() {
             document.getElementById('saveSuccessModal').style.display = 'none';
@@ -1276,11 +1418,16 @@
 
                 if(item.status === 'delete_requested') {
                     actionHtml = `
-                        <span class="status-red">[삭제요청]</span>
+                        <span class="status-red" style="margin-bottom:5px;">[삭제요청]</span>
                         <button class="btn-small btn-confirm" onclick="confirmDelete(${item.id})">삭제 확정</button>
                     `;
                 } else {
-                    actionHtml = `<button class="btn-small btn-delete" onclick="requestDelete(${item.id})">삭제</button>`;
+                    actionHtml = `
+                        <div style="display:flex; gap:5px; justify-content:flex-end;">
+                            <button class="btn-small" style="background:#4A90E2; color:#fff;" onclick="loadEditData(${item.id})">수정</button>
+                            <button class="btn-small btn-delete" onclick="requestDelete(${item.id})">삭제</button>
+                        </div>
+                    `;
                 }
 
                 div.innerHTML = `
@@ -1291,9 +1438,9 @@
                     <div class="history-info">
                         <p><strong>[${item.store}]</strong> ${item.product} (수량: ${item.qty}${item.unit})</p>
                         <p style="color:#8E8E93; font-size:12px;">${item.date} | 기사: ${item.driver}</p>
-                        <p style="font-size:12px; color:#FF3B30;">사유: ${item.reason} (${item.author})</p>
+                        <p style="font-size:12px; color:#FF3B30;">사유: ${item.reason.replace(/\n/g, '<br>')} (${item.author})</p>
                     </div>
-                    <div style="display:flex; flex-direction:column; gap:5px; text-align:right;">
+                    <div style="display:flex; flex-direction:column; justify-content:center; text-align:right;">
                         ${actionHtml}
                     </div>
                 `;
@@ -1362,7 +1509,7 @@
                     if (imgArr.length > 0) {
                         let imgSheet = workbook.getWorksheet(safeSheetName);
                         if (!imgSheet) imgSheet = workbook.addWorksheet(safeSheetName);
-                        
+
                         imgArr.forEach((imgData, idx) => {
                             if(imgData.startsWith('data:image')) {
                                 const imgId = workbook.addImage({ base64: imgData, extension: 'png' });
@@ -1425,7 +1572,7 @@
                     if (data && data.length > 0) dataObj.id = data[0].id;
                     officeContacts.push(dataObj);
                 }
-                
+
                 document.getElementById('offName').value=''; document.getElementById('offRank').value=''; document.getElementById('offTel').value='';
                 renderOfficeList();
             }
@@ -1492,7 +1639,7 @@
                     if (data && data.length > 0) dataObj.id = data[0].id;
                     fieldContacts.push(dataObj);
                 }
-                
+
                 document.getElementById('fldName').value=''; document.getElementById('fldRank').value=''; document.getElementById('fldTel').value='';
                 renderFieldList();
             }
@@ -1560,11 +1707,11 @@
 
         function filterDriversList(searchStr) {
             let list = driverContacts;
-            
+
             if(!isLoggedIn) {
                 const dispatchDriverNames = new Set();
                 const dispatchDriverMap = new Map();
-                
+
                 dispatchDataList.forEach(r => {
                     if(r.length > 15 && r[7]) { 
                         dispatchDriverNames.add(r[7]);
@@ -1577,7 +1724,7 @@
                 });
 
                 let filteredList = driverContacts.filter(d => dispatchDriverNames.has(d.name));
-                
+
                 const dbNames = new Set(filteredList.map(d => d.name));
                 dispatchDriverNames.forEach(name => {
                     if(!dbNames.has(name) && dispatchDriverMap.has(name)) {
