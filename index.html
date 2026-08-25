@@ -1096,7 +1096,9 @@
             document.getElementById('inboundCenter').value = ''; 
         }
 
-        function findDispatchDriverAndCenter(storeCodeMatch) {
+        // 문제 2 적용: 1순위 방법만 유지 (dispatch_list 연락처 스페어 참조 삭제)
+        // 문제 1 적용: 백그라운드 탐색 시 DOM 오염을 막기 위해 skipDOMUpdate 추가
+        function findDispatchDriverAndCenter(storeCodeMatch, skipDOMUpdate = false) {
             let driverName = "정보 없음", centerInfo = "", driverContact = "";
             const cleanTarget = cleanNumber(storeCodeMatch);
 
@@ -1107,12 +1109,14 @@
 
                     const foundDriver = driverContacts.find(d => d.name === driverName);
                     if(foundDriver) { driverContact = ` (${foundDriver.phone})`; }
-                    else if(row[15]) { driverContact = ` (${row[15]})`; } 
                     break;
                 }
             }
-            document.getElementById('driverName').value = driverName + driverContact;
-            document.getElementById('mainCenter').value = centerInfo;
+            if (!skipDOMUpdate) {
+                document.getElementById('driverName').value = driverName + driverContact;
+                document.getElementById('mainCenter').value = centerInfo;
+            }
+            return driverName;
         }
 
         function filterProductNames() {
@@ -1705,55 +1709,70 @@
             alert("기사 연락처 데이터가 성공적으로 덮어씌워졌습니다."); renderDriverList();
         }
 
+        // 문제 1 적용: 검색어에 따른 처리 로직 수정
         function filterDriversList(searchStr) {
             let list = driverContacts;
 
             if(!isLoggedIn) {
                 const dispatchDriverNames = new Set();
-                const dispatchDriverMap = new Map();
+                const dispatchDriverRegions = new Map();
+                const dispatchDriverVehicles = new Map();
 
                 dispatchDataList.forEach(r => {
-                    if(r.length > 15 && r[7]) { 
+                    if(r.length > 7 && r[7]) { 
                         dispatchDriverNames.add(r[7]);
-                        if(r[15]) { 
-                            dispatchDriverMap.set(r[7], {
-                                name: r[7], region: r[8] || r[3] || '', vehicle: r[6] || '', phone: r[15]
-                            });
-                        }
+                        dispatchDriverRegions.set(r[7], r[8] || r[3] || '');
+                        dispatchDriverVehicles.set(r[7], r[6] || '');
                     }
                 });
 
                 let filteredList = driverContacts.filter(d => dispatchDriverNames.has(d.name));
-
                 const dbNames = new Set(filteredList.map(d => d.name));
+
                 dispatchDriverNames.forEach(name => {
-                    if(!dbNames.has(name) && dispatchDriverMap.has(name)) {
-                        filteredList.push(dispatchDriverMap.get(name));
-                    } else if (!dbNames.has(name) && !dispatchDriverMap.has(name)) {
-                        filteredList.push({ name: name, region: '', vehicle: '', phone: '정보없음' });
+                    if(!dbNames.has(name)) {
+                        filteredList.push({ name: name, region: dispatchDriverRegions.get(name) || '', vehicle: dispatchDriverVehicles.get(name) || '', phone: '정보없음' });
                     }
                 });
                 list = filteredList;
             }
 
             if(searchStr) {
+                const matchedDriverNames = new Set();
+
+                // 1. 매장명 검색 (orderDataList 탐색 -> account_code -> findDispatchDriverAndCenter 호출)
+                orderDataList.forEach(r => {
+                    if(r.length > 9) {
+                        const storeName = r[9] || r[7] || ""; // account_name 또는 client_name
+                        if(storeName.includes(searchStr)) {
+                            const accountCode = cleanNumber(r[8]);
+                            if(accountCode) {
+                                // skipDOMUpdate=true 파라미터를 통해 배경 데이터만 탐색
+                                const dName = findDispatchDriverAndCenter(accountCode, true);
+                                if(dName && dName !== "정보 없음") {
+                                    matchedDriverNames.add(dName);
+                                }
+                            }
+                        }
+                    }
+                });
+
                 if(!isLoggedIn) {
                     list = list.filter(d => 
+                        matchedDriverNames.has(d.name) ||
                         d.name.includes(searchStr) || 
                         d.phone.includes(searchStr) || 
                         d.vehicle.includes(searchStr) || 
                         d.region.includes(searchStr)
                     );
                 } else {
-                    const matchedDriverNames = new Set();
                     dispatchDataList.forEach(r => { 
                         if(r.length > 15) {
-                            const storeName = r[3] || "";
                             const driverName = r[7] || "";
                             const vehicleNo = r[6] || "";
                             const phone = r[15] || "";
 
-                            if(storeName.includes(searchStr) || driverName.includes(searchStr) || vehicleNo.includes(searchStr) || phone.includes(searchStr)) {
+                            if(driverName.includes(searchStr) || vehicleNo.includes(searchStr) || phone.includes(searchStr)) {
                                 matchedDriverNames.add(driverName);
                             }
                         }
@@ -1769,6 +1788,7 @@
             renderDriverListToDOM(list);
         }
 
+        // 문제 1 적용: 추천리스트 동작 내 매장명(orderDataList) 적용
         function handleDriverStoreSearch() {
             const search = document.getElementById('driverSearchInput').value.trim();
             const suggestList = document.getElementById('driverStoreSuggest');
@@ -1778,21 +1798,29 @@
                 const matches = new Set();
                 let exactMatchFound = false;
 
+                // 1. 이름, 차량번호(전화번호 포함) 추천 (현행 방법 유지)
                 dispatchDataList.forEach(r => {
                     if(r.length > 15) {
-                        const storeName = r[3] || "";
                         const driverName = r[7] || "";
                         const vehicleNo = r[6] || "";
                         const phone = r[15] || "";
 
-                        if(storeName === search || driverName === search || vehicleNo === search || phone === search) {
+                        if(driverName === search || vehicleNo === search || phone === search) {
                             exactMatchFound = true;
                         }
 
-                        if(storeName.includes(search)) matches.add(storeName);
                         if(driverName.includes(search)) matches.add(driverName);
                         if(vehicleNo.includes(search)) matches.add(vehicleNo);
                         if(phone.includes(search)) matches.add(phone);
+                    }
+                });
+
+                // 2. 매장명 추천 (orderDataList 탐색 - 신규 적용)
+                orderDataList.forEach(r => {
+                    if(r.length > 9) {
+                        const storeName = r[9] || r[7] || "";
+                        if(storeName === search) exactMatchFound = true;
+                        if(storeName.includes(search)) matches.add(storeName);
                     }
                 });
 
