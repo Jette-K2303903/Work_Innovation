@@ -167,6 +167,14 @@
 
         #map { width:100%; height:65vh; border-radius:12px; background: transparent !important; z-index: 1; }
 
+        /* [요청] 문제 1. 지도 화이트톤 필터 스타일 적용 */
+        .leaflet-tile { filter: grayscale(100%) brightness(110%) contrast(90%); }
+        
+        /* [요청] 문제 2. 지도 말풍선 스타일 및 투명도 전환 처리 */
+        .custom-map-tooltip { opacity: 0 !important; transition: opacity 0.3s; background: rgba(255,255,255,0.9); border: 1px solid var(--primary); border-radius: 8px; color: var(--text-main); font-size: 12px; font-weight: 700; padding: 6px 10px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.15); white-space: nowrap; pointer-events: none; }
+        .custom-map-tooltip::before { border-top-color: var(--primary) !important; border-bottom-color: var(--primary) !important; border-left-color: var(--primary) !important; border-right-color: var(--primary) !important; }
+        #map.show-labels .custom-map-tooltip { opacity: 1 !important; }
+
         button, .btn-small, .modal-btn, .menu-list-btn, .call-btn, .action-btn, .sortable-item {
             transition: transform 0.1s ease, opacity 0.1s ease, background-color 0.2s ease !important;
         }
@@ -725,6 +733,63 @@
                     }
                 });
             });
+        }
+
+        // [요청] 문제 3, 4 : 연락처 드래그 앤 드롭 구현 함수
+        let dragSrcIndex = null;
+        function handleContactDragStart(e, type) {
+            if(!isLoggedIn) return;
+            dragSrcIndex = parseInt(e.currentTarget.getAttribute('data-index'));
+            e.dataTransfer.effectAllowed = 'move';
+            e.currentTarget.style.opacity = '0.5';
+        }
+        function handleContactDragOver(e) {
+            if(!isLoggedIn) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+        async function handleContactDrop(e, type) {
+            if(!isLoggedIn) return;
+            e.stopPropagation();
+            const dropTarget = e.currentTarget;
+            const dropIndex = parseInt(dropTarget.getAttribute('data-index'));
+
+            if (dragSrcIndex !== null && dragSrcIndex !== dropIndex) {
+                if (type === 'office') {
+                    const item = officeContacts.splice(dragSrcIndex, 1)[0];
+                    officeContacts.splice(dropIndex, 0, item);
+                    renderOfficeList();
+                    await reorderContactsDB('office_contacts', officeContacts);
+                } else if (type === 'field') {
+                    const item = fieldContacts.splice(dragSrcIndex, 1)[0];
+                    fieldContacts.splice(dropIndex, 0, item);
+                    renderFieldList();
+                    await reorderContactsDB('field_contacts', fieldContacts);
+                }
+            }
+            return false;
+        }
+        function handleContactDragEnd(e) {
+            e.currentTarget.style.opacity = '1';
+        }
+        // DB 테이블 덮어쓰기를 통한 순서 보장 (기존 데이터 삭제 후 재생성)
+        async function reorderContactsDB(tableName, currentList) {
+            const { error: delErr } = await supabaseClient.from(tableName).delete().neq('id', 0);
+            if(delErr) { console.error("순서 재정렬 삭제 실패", delErr); return; }
+
+            const insertData = currentList.map(c => {
+                const newC = {...c};
+                delete newC.id; // DB 자동채번을 통해 순서 보장
+                return newC;
+            });
+            await supabaseClient.from(tableName).insert(insertData);
+
+            const { data } = await supabaseClient.from(tableName).select('*');
+            if(data) {
+                if(tableName === 'office_contacts') officeContacts = data;
+                if(tableName === 'field_contacts') fieldContacts = data;
+            }
         }
 
         function openListManageModal() {
@@ -1406,21 +1471,41 @@
             return displayReason;
         }
 
+        // [요청] 문제 5 : 비로그인 업로드 내역 일자별 구분선 렌더링 포함
         function renderHistoryList() {
             const container = document.getElementById('historyListContainer');
             container.innerHTML = '';
 
             let visibleItems = historyDataList.filter(i => isLoggedIn || i.status !== 'delete_requested');
+            
             if (isLoggedIn) {
                 const selectedDate = document.getElementById('historyDateSelect').value;
                 if(selectedDate) visibleItems = visibleItems.filter(i => i.date === selectedDate);
+            } else {
+                // 비로그인 상태일 땐 날짜별로 내림차순 정렬 보장
+                visibleItems.sort((a, b) => b.date.localeCompare(a.date));
             }
 
             if(visibleItems.length === 0) {
                 container.innerHTML = '<p style="text-align:center; color:#8E8E93;">표시할 내역이 없습니다.</p>'; return;
             }
 
+            let lastDate = '';
+
             visibleItems.forEach(item => {
+                // 일자별 구분선 UI 추가
+                if (!isLoggedIn && item.date !== lastDate) {
+                    const divider = document.createElement('div');
+                    divider.innerHTML = `
+                        <div style="text-align:center; margin: 25px 0 15px; position:relative;">
+                            <div style="position:absolute; top:50%; left:0; width:100%; border-top:1px solid #C7C7CC; z-index:1;"></div>
+                            <span style="background:var(--bg-color); padding:0 12px; color:#666; font-size:13px; font-weight:700; position:relative; z-index:2; border-radius:12px;">🗓 ${item.date}</span>
+                        </div>
+                    `;
+                    container.appendChild(divider);
+                    lastDate = item.date;
+                }
+
                 const div = document.createElement('div'); div.className = 'history-item';
                 let actionHtml = '';
 
@@ -1620,13 +1705,26 @@
             else { officeContacts.splice(index, 1); renderOfficeList(); }
         }
 
+        // [요청] 문제 3 : 사무실 연락처 UI에 드래그 앤 드롭 이벤트 속성 추가 
         function renderOfficeList() {
+            let dragHandleHtml = isLoggedIn ? `<div style="width: 20px; color:#C7C7CC; cursor:grab; font-size:18px; display:flex; align-items:center; justify-content:center;">☰</div>` : '';
+            
             document.getElementById('officeListContainer').innerHTML = officeContacts.map((c, index) => `
-                <div class="contact-card" style="flex-direction: column; align-items: stretch; gap: 10px;">
+                <div class="contact-card" 
+                     ${isLoggedIn ? 'draggable="true"' : ''} 
+                     data-index="${index}"
+                     ondragstart="handleContactDragStart(event, 'office')"
+                     ondragover="handleContactDragOver(event)"
+                     ondrop="handleContactDrop(event, 'office')"
+                     ondragend="handleContactDragEnd(event)"
+                     style="flex-direction: column; align-items: stretch; gap: 10px; cursor: ${isLoggedIn ? 'grab' : 'default'};">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong style="font-size:15px;">${c.name}</strong> <span style="font-size:13px; color:#8E8E93;">${c.rank || ''}</span>
-                            <div style="font-size:14px; margin-top:4px;">${c.tell || c.tel || ''}</div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            ${dragHandleHtml}
+                            <div>
+                                <strong style="font-size:15px;">${c.name}</strong> <span style="font-size:13px; color:#8E8E93;">${c.rank || ''}</span>
+                                <div style="font-size:14px; margin-top:4px;">${c.tell || c.tel || ''}</div>
+                            </div>
                         </div>
                         <a href="tel:${c.tell || c.tel}" class="call-btn">통화버튼</a>
                     </div>
@@ -1687,13 +1785,26 @@
             else { fieldContacts.splice(index, 1); renderFieldList(); }
         }
 
+        // [요청] 문제 4 : 현장 연락처 UI에 드래그 앤 드롭 이벤트 속성 추가
         function renderFieldList() {
+            let dragHandleHtml = isLoggedIn ? `<div style="width: 20px; color:#C7C7CC; cursor:grab; font-size:18px; display:flex; align-items:center; justify-content:center;">☰</div>` : '';
+            
             document.getElementById('fieldListContainer').innerHTML = fieldContacts.map((c, index) => `
-                <div class="contact-card" style="flex-direction: column; align-items: stretch; gap: 10px;">
+                <div class="contact-card"
+                     ${isLoggedIn ? 'draggable="true"' : ''} 
+                     data-index="${index}"
+                     ondragstart="handleContactDragStart(event, 'field')"
+                     ondragover="handleContactDragOver(event)"
+                     ondrop="handleContactDrop(event, 'field')"
+                     ondragend="handleContactDragEnd(event)"
+                     style="flex-direction: column; align-items: stretch; gap: 10px; cursor: ${isLoggedIn ? 'grab' : 'default'};">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong style="font-size:15px;">${c.name}</strong> <span style="font-size:13px; color:#8E8E93;">${c.rank || ''}</span>
-                            <div style="font-size:14px; margin-top:4px;">${c.tel || c.tell || ''}</div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            ${dragHandleHtml}
+                            <div>
+                                <strong style="font-size:15px;">${c.name}</strong> <span style="font-size:13px; color:#8E8E93;">${c.rank || ''}</span>
+                                <div style="font-size:14px; margin-top:4px;">${c.tel || c.tell || ''}</div>
+                            </div>
                         </div>
                         <a href="tel:${c.tel || c.tell}" class="call-btn">통화버튼</a>
                     </div>
@@ -1903,9 +2014,19 @@
         function renderMap() {
             if(!map) {
                 map = L.map('map').setView([35.3, 128.0], 8);
+                // [요청] 문제 2 : Max Zoom (19) 기준 5단계 아래인 14부터 툴팁을 표시하도록 이벤트 리스너 추가 (최대 줌 설정 포함)
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
                     attribution: '© OpenStreetMap contributors'
                 }).addTo(map);
+
+                map.on('zoomend', function() {
+                    if (map.getZoom() >= 14) {
+                        document.getElementById('map').classList.add('show-labels');
+                    } else {
+                        document.getElementById('map').classList.remove('show-labels');
+                    }
+                });
             }
 
             map.eachLayer(layer => {
@@ -1946,6 +2067,9 @@
                 regionLayers[t] = L.layerGroup().addTo(map);
             });
 
+            // [요청] 문제 2 : 말풍선 겹침 방지를 위해 마커 위치 인덱스 기반으로 상하좌우 방향 교차 배치
+            const tooltipDirections = ['top', 'bottom', 'left', 'right'];
+
             let colorIdx = 0;
             for(const driver in driverRoutes) {
                 const route = driverRoutes[driver];
@@ -1976,6 +2100,21 @@
                     const marker = L.circleMarker(pt, { radius: 6, color: '#fff', weight: 1, fillColor: color, fillOpacity: 1, originalColor: color })
                          .bindPopup(`<div style='font-size:14px;'><b>${storeName}</b><br><span style='color:var(--primary); font-weight:bold;'>배송기사: ${driver}</span></div>`)
                          .addTo(tLayer);
+
+                    // [요청] 문제 2 : Permanent 툴팁에 교차 Direction 적용 (상/하/좌/우 번갈아가며 생성)
+                    const direction = tooltipDirections[idx % 4];
+                    let offsetArr = [0, 0];
+                    if(direction === 'top') offsetArr = [0, -10];
+                    if(direction === 'bottom') offsetArr = [0, 10];
+                    if(direction === 'left') offsetArr = [-10, 0];
+                    if(direction === 'right') offsetArr = [10, 0];
+
+                    marker.bindTooltip(`${storeName} ${driver}`, {
+                        permanent: true,
+                        direction: direction,
+                        offset: offsetArr,
+                        className: 'custom-map-tooltip'
+                    });
 
                     marker.on('popupopen', function() {
                         this.setStyle({ fillColor: '#FF3B30', color: '#FF3B30' });
