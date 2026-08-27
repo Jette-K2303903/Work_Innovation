@@ -413,7 +413,7 @@
     <div id="dispatchUploadModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box">
             <h2 class="modal-title" style="font-size:18px;">배차업로드 새로 덮어씌우기</h2>
-            <textarea id="newDispatchData" class="textarea-box" style="height:150px;" placeholder="기존 데이터는 삭제되며, 이 데이터로 완전히 교체됩니다."></textarea>
+            <textarea id="newDispatchData" class="textarea-box" style="height:150px;" placeholder="피킹지<블루버배차> OR &#10;사전배차파일<배차시트> 시트 숨김 해제 후 입력 (17개행)."></textarea>
             <button class="modal-btn" onclick="saveNewDispatchData()">저장</button>
             <button class="modal-btn modal-btn-close" onclick="document.getElementById('dispatchUploadModal').style.display='none'">닫기</button>
         </div>
