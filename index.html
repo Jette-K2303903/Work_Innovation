@@ -1642,6 +1642,9 @@
         }
 
         async function requestDelete(id) {
+            // [요청] 문제 1: 비로그인(및 일반) 업로드 내역 삭제 시 최종 확인 팝업 추가
+            if (!confirm("삭제하시겠습니까?")) return;
+
             const item = historyDataList.find(i => i.id === id);
             if(item) { 
                 const { error } = await supabaseClient.from('upload_history').update({ status: 'delete_requested' }).eq('id', id);
