@@ -174,6 +174,26 @@
             transform: scale(0.96) !important;
             opacity: 0.8 !important;
         }
+
+        /* 1번 문제 해결: 화이트톤 지도 필터 추가 */
+        .map-white-filter .leaflet-tile {
+            filter: grayscale(100%) opacity(0.8) brightness(1.1);
+        }
+        
+        /* 2번 문제 해결: 말풍선 툴팁 기본 CSS */
+        .custom-driver-tooltip {
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            padding: 4px 8px; 
+            font-size: 12px; 
+            font-weight: 700; 
+            border-radius: 6px; 
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2); 
+            border: 1px solid var(--border); 
+            background: rgba(255, 255, 255, 0.95);
+            white-space: nowrap; 
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -477,8 +497,8 @@
         let isMenuOpen = false; let menuInactivityTimer; let isLoggedIn = false;
         const ADMIN_PWD = "alfdid13579!!";
 
-        let currentImgSrcs = []; // 여러 장 이미지를 관리하는 배열
-        let currentEditId = null; // 수정 모드일 때 사용할 변수 추가
+        let currentImgSrcs = []; 
+        let currentEditId = null; 
 
         let orderDataList = []; let dispatchDataList = [];
         let historyDataList = [];
@@ -486,6 +506,8 @@
 
         let reasonsList = [];
         let menuOrder = ['menuHome', 'menuOffice', 'menuField', 'menuDriver', 'menuHistory', 'menuMap', 'menuReserve1', 'menuReserve2'];
+        let officeOrder = []; // 3, 4번 해결: 사무실 연락처 순서 저장용
+        let fieldOrder = []; // 현장 연락처 순서 저장용
         let nonUserVisibility = { home: true, office: true, field: false, driver: true, history: true, map: false, reserve1: false, reserve2: false };
         let autoDeleteDays = 7;
         let savePopupTimer;
@@ -497,11 +519,16 @@
             document.getElementById('writeDate').value = new Date().toISOString().split('T')[0];
             await fetchInitialData();
             updateMenuUI();
+            
+            // 3, 4번 해결: 드래그 앤 드롭 정렬 함수 등록 (기존 메뉴 정렬 함수 외에 연락처 용 추가 구현)
+            setupDragAndDrop(); // 메뉴용
+            setupContactDragAndDrop('officeListContainer', 'office');
+            setupContactDragAndDrop('fieldListContainer', 'field');
+            
             renderOfficeList();
             renderFieldList();
             renderDriverList();
             setInterval(checkAutoDelete, 60000); 
-            setupDragAndDrop();
         });
 
         async function fetchInitialData() {
@@ -520,6 +547,8 @@
                             const parsed = JSON.parse(set_data.menu_order_json);
                             if(parsed.vis) nonUserVisibility = parsed.vis;
                             if(parsed.order) menuOrder = parsed.order;
+                            if(parsed.office_order) officeOrder = parsed.office_order;
+                            if(parsed.field_order) fieldOrder = parsed.field_order;
                         } catch(e){}
                     }
                     if(set_data.reasons_json) {
@@ -726,6 +755,84 @@
                 });
             });
         }
+        
+        // 3, 4번 해결을 위한 연락처 전용 드래그 앤 드롭 함수 정의
+        function setupContactDragAndDrop(containerId, dataArrayObjStr) {
+            const container = document.getElementById(containerId);
+            let draggedItem = null;
+
+            container.addEventListener('dragstart', e => {
+                if (!isLoggedIn) return;
+                let item = e.target.closest('.sortable-contact');
+                if(!item) return;
+                draggedItem = item;
+                setTimeout(() => item.style.opacity = '0.5', 0);
+            });
+            
+            container.addEventListener('dragend', async e => {
+                if(!draggedItem) return;
+                setTimeout(() => {
+                    if(draggedItem) draggedItem.style.opacity = '1';
+                    draggedItem = null;
+                }, 0);
+
+                const items = Array.from(container.querySelectorAll('.sortable-contact'));
+                const newOrder = items.map(el => el.getAttribute('data-id')).filter(id => id && id !== 'undefined');
+                
+                if (dataArrayObjStr === 'office') {
+                    officeOrder = newOrder.map(Number);
+                    applyContactOrder(officeContacts, officeOrder);
+                } else {
+                    fieldOrder = newOrder.map(Number);
+                    applyContactOrder(fieldContacts, fieldOrder);
+                }
+                
+                // 순서 DB 저장
+                const payload = { 
+                    id: 1, 
+                    menu_order_json: JSON.stringify({ 
+                        vis: nonUserVisibility, 
+                        order: menuOrder,
+                        office_order: officeOrder,
+                        field_order: fieldOrder
+                    }) 
+                };
+                await supabaseClient.from('app_settings').upsert([payload]);
+                
+                // UI 동기화
+                if (dataArrayObjStr === 'office') renderOfficeList();
+                else renderFieldList();
+            });
+
+            container.addEventListener('dragover', e => e.preventDefault());
+            container.addEventListener('dragenter', function(e) {
+                e.preventDefault();
+                if (!isLoggedIn || !draggedItem) return;
+                let target = e.target.closest('.sortable-contact');
+                if (target && target !== draggedItem) {
+                    let bounding = target.getBoundingClientRect();
+                    let offset = e.clientY - bounding.top;
+                    if(offset > bounding.height / 2) {
+                        if(target.nextSibling) target.parentNode.insertBefore(draggedItem, target.nextSibling);
+                        else target.parentNode.appendChild(draggedItem);
+                    } else {
+                        target.parentNode.insertBefore(draggedItem, target);
+                    }
+                }
+            });
+        }
+        
+        function applyContactOrder(contactsArray, orderArray) {
+            if(orderArray && orderArray.length > 0) {
+                contactsArray.sort((a, b) => {
+                    let idxA = orderArray.indexOf(a.id);
+                    let idxB = orderArray.indexOf(b.id);
+                    if(idxA === -1) idxA = 9999;
+                    if(idxB === -1) idxB = 9999;
+                    return idxA - idxB;
+                });
+            }
+        }
 
         function openListManageModal() {
             document.getElementById('lm_home').checked = nonUserVisibility.home;
@@ -760,7 +867,15 @@
             const items = document.querySelectorAll('#menuSortList .sortable-item');
             menuOrder = Array.from(items).map(li => li.getAttribute('data-id'));
 
-            const payload = { id: 1, menu_order_json: JSON.stringify({ vis: nonUserVisibility, order: menuOrder }) };
+            const payload = { 
+                id: 1, 
+                menu_order_json: JSON.stringify({ 
+                    vis: nonUserVisibility, 
+                    order: menuOrder,
+                    office_order: officeOrder,
+                    field_order: fieldOrder
+                }) 
+            };
             const { error } = await supabaseClient.from('app_settings').upsert([payload]);
             if(!error) {
                 updateMenuUI(); closeListManageModal(); alert('목록 설정이 확정되었습니다.');
@@ -1209,7 +1324,6 @@
             }
         });
 
-        // 수정사항 적용: 수정 폼 불러오기
         function loadEditData(id) {
             const item = historyDataList.find(i => i.id === id);
             if(!item) return;
@@ -1252,7 +1366,6 @@
             }
 
             if (currentEditId) {
-                // 수정 모드
                 const editReason = document.getElementById('editReasonText').value.trim();
                 if(!editReason) {
                     alert("수정 사유를 입력해주세요."); return;
@@ -1287,7 +1400,6 @@
                     img_url: JSON.stringify(currentImgSrcs)
                 };
 
-                // UI 리스트 즉시 반영
                 Object.assign(existingItem, {
                     ...updatedData,
                     sCode: updatedData.store_code,
@@ -1311,12 +1423,10 @@
                 const delay = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
                 savePopupTimer = setTimeout(closeSaveSuccessModal, delay * 1000);
 
-                // 백그라운드 DB 동기화
                 supabaseClient.from('upload_history').update(updatedData).eq('id', existingItem.id).then(({error}) => {
                     if (error) console.error("DB 수정 저장 실패", error);
                 });
             } else {
-                // 신규 업로드 모드
                 const insertData = {
                     id: Date.now(),
                     status: 'active',
@@ -1335,7 +1445,6 @@
                     img_url: JSON.stringify(currentImgSrcs)
                 };
 
-                // UI 리스트 즉시 반영
                 historyDataList.unshift({
                     id: insertData.id, status: insertData.status, reason: insertData.reason, author: insertData.author,
                     date: insertData.date, driver: insertData.driver, store: insertData.store, sCode: insertData.store_code,
@@ -1354,7 +1463,6 @@
                 const delay = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
                 savePopupTimer = setTimeout(closeSaveSuccessModal, delay * 1000);
 
-                // 백그라운드 DB 동기화
                 supabaseClient.from('upload_history').insert([insertData]).then(({error}) => {
                     if (error) console.error("DB 신규 저장 실패", error);
                 });
@@ -1385,16 +1493,13 @@
             } else { select.selectedIndex = 0; }
         }
 
-        // 공통 사유 표시 규칙 적용 함수
         function getDisplayReason(reason) {
             if (!reason) return "";
             let displayReason = reason;
             
-            // 기존 데이터 호환성 유지: [수정사유1] -> 수정 내역 1 : 
             displayReason = displayReason.replace(/\n\[수정사유(\d+)\] /g, '\n수정 내역 $1 : ');
 
             if (!isLoggedIn) {
-                // 비로그인: 원본 사유와 가장 최신 수정 내역 1개만 '수정 내역 : 사유' 형태로 표시
                 let reasonParts = displayReason.split(/\n수정 내역 \d* *: /);
                 if (reasonParts.length > 1) {
                     let originalReason = reasonParts[0];
@@ -1402,7 +1507,6 @@
                     displayReason = originalReason + '\n수정 내역 : ' + latestEdit;
                 }
             }
-            
             return displayReason;
         }
 
@@ -1420,7 +1524,19 @@
                 container.innerHTML = '<p style="text-align:center; color:#8E8E93;">표시할 내역이 없습니다.</p>'; return;
             }
 
+            // 5번 해결: 업로드 내역 일자별 구분선 처리
+            let currentDateStr = '';
+            visibleItems.sort((a, b) => new Date(b.date) - new Date(a.date)); // 날짜 역순 보장
+
             visibleItems.forEach(item => {
+                if (item.date !== currentDateStr) {
+                    currentDateStr = item.date;
+                    const dateHeader = document.createElement('div');
+                    dateHeader.style.cssText = 'background: #007AFF; color: #FFF; padding: 10px; border-radius: 8px; font-weight: 800; font-size: 14px; text-align: center; margin: 15px 0 5px 0; box-shadow: 0 4px 10px rgba(0,122,255,0.2);';
+                    dateHeader.innerHTML = `📅 ${currentDateStr} 업로드 내역`;
+                    container.appendChild(dateHeader);
+                }
+
                 const div = document.createElement('div'); div.className = 'history-item';
                 let actionHtml = '';
 
@@ -1621,8 +1737,11 @@
         }
 
         function renderOfficeList() {
+            // 3번 해결: 저장된 순서(officeOrder)에 기반하여 렌더링
+            applyContactOrder(officeContacts, officeOrder);
+            
             document.getElementById('officeListContainer').innerHTML = officeContacts.map((c, index) => `
-                <div class="contact-card" style="flex-direction: column; align-items: stretch; gap: 10px;">
+                <div class="contact-card sortable-contact" draggable="${isLoggedIn ? 'true' : 'false'}" data-id="${c.id}" style="flex-direction: column; align-items: stretch; gap: 10px; cursor: ${isLoggedIn ? 'grab' : 'default'};">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <strong style="font-size:15px;">${c.name}</strong> <span style="font-size:13px; color:#8E8E93;">${c.rank || ''}</span>
@@ -1688,8 +1807,11 @@
         }
 
         function renderFieldList() {
+            // 4번 해결: 저장된 순서(fieldOrder)에 기반하여 렌더링
+            applyContactOrder(fieldContacts, fieldOrder);
+            
             document.getElementById('fieldListContainer').innerHTML = fieldContacts.map((c, index) => `
-                <div class="contact-card" style="flex-direction: column; align-items: stretch; gap: 10px;">
+                <div class="contact-card sortable-contact" draggable="${isLoggedIn ? 'true' : 'false'}" data-id="${c.id}" style="flex-direction: column; align-items: stretch; gap: 10px; cursor: ${isLoggedIn ? 'grab' : 'default'};">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <strong style="font-size:15px;">${c.name}</strong> <span style="font-size:13px; color:#8E8E93;">${c.rank || ''}</span>
@@ -1899,13 +2021,22 @@
 
         const MILYANG_LAT = 35.472383;
         const MILYANG_LNG = 128.746071;
+        
+        let mapMaxZoom = 18;
 
         function renderMap() {
             if(!map) {
                 map = L.map('map').setView([35.3, 128.0], 8);
+                
+                // 1번 해결: className 'map-white-filter' 속성을 적용하여 스타일 시트의 화이트 필터 효과 바인딩
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
+                    attribution: '© OpenStreetMap contributors',
+                    className: 'map-white-filter',
+                    maxZoom: mapMaxZoom
                 }).addTo(map);
+                
+                // 2번 해결: Zoom end 마다 툴팁 시인성 점검 이벤트 등록
+                map.on('zoomend', updateTooltipVisibility);
             }
 
             map.eachLayer(layer => {
@@ -1976,6 +2107,14 @@
                     const marker = L.circleMarker(pt, { radius: 6, color: '#fff', weight: 1, fillColor: color, fillOpacity: 1, originalColor: color })
                          .bindPopup(`<div style='font-size:14px;'><b>${storeName}</b><br><span style='color:var(--primary); font-weight:bold;'>배송기사: ${driver}</span></div>`)
                          .addTo(tLayer);
+                    
+                    // 2번 해결: 영구 툴팁을 추가하되(겹침 자동방지 direction: 'auto'), CSS로 줌 레벨에 따라 투명도 조정 
+                    marker.bindTooltip(`${storeName} ${driver}`, {
+                        permanent: true,
+                        direction: 'auto',
+                        className: 'custom-driver-tooltip',
+                        offset: [0, -5]
+                    });
 
                     marker.on('popupopen', function() {
                         this.setStyle({ fillColor: '#FF3B30', color: '#FF3B30' });
@@ -1988,7 +2127,23 @@
                 });
             }
 
-            setTimeout(() => { map.invalidateSize(); }, 300);
+            setTimeout(() => { 
+                map.invalidateSize(); 
+                updateTooltipVisibility(); 
+            }, 300);
+        }
+        
+        // 2번 해결: maxZoom 기준 5단계 이하 줌 아웃 시에만 툴팁을 표시(가시성 조절)
+        function updateTooltipVisibility() {
+            let currentZoom = map.getZoom();
+            let threshold = mapMaxZoom - 5; // 기준치 (13)
+            let tooltips = document.querySelectorAll('.custom-driver-tooltip');
+            
+            if (currentZoom >= threshold) {
+                tooltips.forEach(el => el.style.opacity = '1');
+            } else {
+                tooltips.forEach(el => el.style.opacity = '0');
+            }
         }
 
         function filterMapSearch() {
