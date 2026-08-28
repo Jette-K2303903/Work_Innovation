@@ -409,23 +409,23 @@
         </div>
     </div>
 
-    <!-- 개별 업로드 팝업 -->
-    <div id="orderUploadModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
-        <div class="modal-box">
-            <h2 class="modal-title" style="font-size:18px;">주문업로드 새로 덮어씌우기</h2>
-            <textarea id="newDispatchData" class="textarea-box" style="height:150px;" placeholder="피킹지 파일 <유통물류DB> 시트 데이터 입력 필요 &#10;주의! 총 36개행[A~AJ]"></textarea>
-            <button class="modal-btn" onclick="saveNewOrderData()">저장</button>
-            <button class="modal-btn modal-btn-close" onclick="document.getElementById('orderUploadModal').style.display='none'">닫기</button>
-        </div>
-    </div>
-    <div id="dispatchUploadModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
-        <div class="modal-box">
-            <h2 class="modal-title" style="font-size:18px;">배차업로드 새로 덮어씌우기</h2>
-            <textarea id="newDispatchData" class="textarea-box" style="height:150px;" placeholder="피킹지 파일 <블루버배차> 시트 데이터 입력 필요 &#10;주의! 숨김 해제 후 입력필요 총 17개행[B~R]"></textarea>
-            <button class="modal-btn" onclick="saveNewDispatchData()">저장</button>
-            <button class="modal-btn modal-btn-close" onclick="document.getElementById('dispatchUploadModal').style.display='none'">닫기</button>
-        </div>
-    </div>
+    <!-- 개별 업로드 팝업 -->
+    <div id="orderUploadModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box">
+            <h2 class="modal-title" style="font-size:18px;">주문업로드 새로 덮어씌우기</h2>
+            <textarea id="newOrderData" class="textarea-box" style="height:150px;" placeholder="피킹지 파일 <유통물류DB> 시트 데이터 입력 필요 &#10;주의! 총 36개행[A~AJ]"></textarea>
+            <button class="modal-btn" onclick="saveNewOrderData()">저장</button>
+            <button class="modal-btn modal-btn-close" onclick="document.getElementById('orderUploadModal').style.display='none'">닫기</button>
+        </div>
+    </div>
+    <div id="dispatchUploadModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box">
+            <h2 class="modal-title" style="font-size:18px;">배차업로드 새로 덮어씌우기</h2>
+            <textarea id="newDispatchData" class="textarea-box" style="height:150px;" placeholder="피킹지 파일 <블루버배차> 시트 데이터 입력 필요 &#10;주의! 숨김 해제 후 입력필요 총 17개행[B~R]"></textarea>
+            <button class="modal-btn" onclick="saveNewDispatchData()">저장</button>
+            <button class="modal-btn modal-btn-close" onclick="document.getElementById('dispatchUploadModal').style.display='none'">닫기</button>
+        </div>
+    </div>
 
     <!-- 사유 목록 관리 팝업 -->
     <div id="reasonManageModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
