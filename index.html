@@ -230,7 +230,7 @@
         <button id="menuHistory" class="menu-list-btn" onclick="showView('historyView')">📂 업로드 내역</button>
         <button id="menuMap" class="menu-list-btn menu-item-optional" onclick="showView('mapView')">🗺️ 배차 내역</button>
 
-        <button id="menuReserve1" class="menu-list-btn menu-item-optional">예비목록1</button>
+        <button id="menuReserve1" class="menu-list-btn menu-item-optional" onclick="showView('palletView')">📦 파렛트 입고현황</button>
         <button id="menuReserve2" class="menu-list-btn menu-item-optional" onclick="toggleScreenMode()">🖥️ 화면전환</button>
 
         <button id="settingsBtn" class="settings-btn" onclick="openSettingsModal()">⚙️</button>
@@ -396,6 +396,27 @@
             </div>
             <div id="map"></div>
         </div>
+        
+        <!-- 뷰 7: 파렛트 입고현황 -->
+        <div id="palletView" class="view-section">
+            <h2 style="font-size:18px; margin-top:0;">
+                📦 파렛트 입고현황
+            </h2>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <div style="display:flex; gap:5px;">
+                    <button class="btn-small" style="background:var(--primary); color:#fff;" onclick="addPalletRow()">추가</button>
+                    <button class="btn-small" style="background:#4A90E2; color:#fff;" onclick="editPalletRow()">수정</button>
+                    <button class="btn-small btn-delete" onclick="deletePalletRows()">삭제</button>
+                </div>
+                <div style="display:flex; gap:5px;">
+                    <button class="btn-small" onclick="selectAllPallets()">전체 선택</button>
+                    <button class="btn-small" style="background:#34C759; color:#fff;" onclick="downloadPalletExcel()">다운로드</button>
+                </div>
+            </div>
+            <div id="palletListContainer" style="display:flex; flex-direction:column; gap:10px;">
+                <!-- 추가 버튼 클릭시 생성될 영역 -->
+            </div>
+        </div>
     </div>
 
     <!-- 시스템 모달 영역 -->
@@ -480,7 +501,7 @@
                 <li draggable="true" data-id="menuDriver" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_driver"> 기사 연락처</label></li>
                 <li draggable="true" data-id="menuHistory" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_history"> 업로드 내역</label></li>
                 <li draggable="true" data-id="menuMap" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_map"> 배차 내역</label></li>
-                <li draggable="true" data-id="menuReserve1" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_reserve1"> 예비목록1</label></li>
+                <li draggable="true" data-id="menuReserve1" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_reserve1"> 파렛트 입고현황</label></li>
                 <li draggable="true" data-id="menuReserve2" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_reserve2"> 화면전환</label></li>
             </ul>
             <button class="modal-btn" onclick="saveListManage()">저장</button>
@@ -1360,6 +1381,9 @@
             if(e.target.id !== 'mapSearchInput') { 
                 const msl = document.getElementById('mapSearchList');
                 if(msl) msl.style.display = 'none';
+            }
+            if(!e.target.classList.contains('p-author')) {
+                document.querySelectorAll('.p-author-list').forEach(ul => ul.style.display = 'none');
             }
         });
 
@@ -2301,6 +2325,192 @@
                 map.removeLayer(regionLayers[t]);
             }
         }
+
+        /* -------------------------------------------------------------------------
+         * [추가 기능] 파렛트 입고현황 관리 로직
+         * ------------------------------------------------------------------------- */
+
+        // 1. 행 추가 로직
+        function addPalletRow() {
+            const container = document.getElementById('palletListContainer');
+            // 행 갯수 제한 (최대 10개)
+            if (container.querySelectorAll('.pallet-row').length >= 10) {
+                alert('최대 10행까지만 추가할 수 있습니다.');
+                return;
+            }
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const rowHTML = `
+            <div class="pallet-row form-card" style="padding:15px; margin-bottom:10px; position:relative; border:1px solid var(--border);">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:10px;">
+                    <input type="checkbox" class="pallet-chk" style="width:18px; height:18px;">
+                    <strong style="font-size:14px; color:var(--primary);">파렛트 입고 입력란</strong>
+                </div>
+                <div class="input-row" style="margin-bottom:8px;">
+                    <div class="flex-60"><label>간선입고일</label><input type="date" class="input-box p-date" value="${todayStr}"></div>
+                    <div class="flex-40"><label>상하차지</label><input type="text" class="input-box p-loc" placeholder="지역/센터명"></div>
+                </div>
+                <div class="input-row" style="margin-bottom:8px;">
+                    <div class="flex-40"><label>차량번호</label><input type="text" class="input-box p-carnum" placeholder="차번 입력"></div>
+                    <div class="flex-30"><label>톤수</label><input type="text" class="input-box p-ton" placeholder="예: 11t"></div>
+                    <div class="flex-30"><label>도착시간</label><input type="time" class="input-box p-time"></div>
+                </div>
+                <div class="input-row" style="margin-bottom:8px;">
+                    <div style="flex:1; display:flex; flex-direction:column; gap:4px;"><label>KPP N11</label><input type="number" class="input-box p-kpp11" placeholder="0"></div>
+                    <div style="flex:1; display:flex; flex-direction:column; gap:4px;"><label>KPP N12</label><input type="number" class="input-box p-kpp12" placeholder="0"></div>
+                    <div style="flex:1; display:flex; flex-direction:column; gap:4px;"><label>AJ 11A</label><input type="number" class="input-box p-aj11" placeholder="0"></div>
+                    <div style="flex:1; display:flex; flex-direction:column; gap:4px;"><label>AJ 12A</label><input type="number" class="input-box p-aj12" placeholder="0"></div>
+                </div>
+                <div class="input-group" style="margin-bottom:8px; position:relative;">
+                    <label>작성인원</label>
+                    <input type="text" class="input-box p-author" placeholder="작성자 이름" oninput="filterPalletAuthor(this)" autocomplete="off">
+                    <ul class="autocomplete-list p-author-list" style="top:100%; width:100%;"></ul>
+                </div>
+                <div class="input-group" style="margin-bottom:0;">
+                    <label>비고</label>
+                    <input type="text" class="input-box p-remark" placeholder="특이사항 입력">
+                </div>
+            </div>
+            `;
+            container.insertAdjacentHTML('beforeend', rowHTML);
+        }
+
+        // 2. 작성인원 필터링 (fieldContacts 참조)
+        function filterPalletAuthor(inputEl) {
+            const val = inputEl.value.trim();
+            const listUl = inputEl.nextElementSibling;
+            listUl.innerHTML = '';
+            
+            if(!val) { 
+                listUl.style.display = 'none'; 
+                return; 
+            }
+
+            const matches = fieldContacts.filter(c => c.name.includes(val));
+            if(matches.length > 0) {
+                listUl.style.display = 'block';
+                matches.forEach(m => {
+                    const li = document.createElement('li');
+                    li.textContent = m.name;
+                    li.onclick = () => {
+                        inputEl.value = m.name;
+                        listUl.style.display = 'none';
+                    };
+                    listUl.appendChild(li);
+                });
+            } else {
+                listUl.style.display = 'none';
+            }
+        }
+
+        // 3. 수정 안내
+        function editPalletRow() {
+            alert("수정할 항목의 내용은 각 입력칸에서 직접 변경하실 수 있습니다.");
+        }
+
+        // 4. 행 삭제
+        function deletePalletRows() {
+            const checkedBoxes = document.querySelectorAll('.pallet-chk:checked');
+            if(checkedBoxes.length === 0) {
+                alert("삭제할 항목을 체크해주세요.");
+                return;
+            }
+            if(confirm(`선택한 ${checkedBoxes.length}개의 항목을 삭제하시겠습니까?`)) {
+                checkedBoxes.forEach(chk => {
+                    chk.closest('.pallet-row').remove();
+                });
+            }
+        }
+
+        // 5. 전체 선택
+        function selectAllPallets() {
+            const checkboxes = document.querySelectorAll('.pallet-chk');
+            if (checkboxes.length === 0) return;
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            checkboxes.forEach(cb => cb.checked = !allChecked);
+        }
+
+        // 6. 엑셀 다운로드 
+        async function downloadPalletExcel() {
+            const checkedBoxes = document.querySelectorAll('.pallet-chk:checked');
+            if (checkedBoxes.length === 0) {
+                alert("다운로드할 항목을 체크상자를 통해 선택해주세요.");
+                return;
+            }
+
+            try {
+                const workbook = new ExcelJS.Workbook();
+                const sheet = workbook.addWorksheet('파렛트 입고현황', {
+                    views: [{ showGridLines: false }]
+                });
+
+                // 열 너비 지정
+                sheet.columns = [
+                    { width: 15.25 }, // A: 구분 (상하차지)
+                    { width: 19.63 }, // B: 일자 (간선입고일)
+                    { width: 14.88 }, // C: 파렛트 유형
+                    { width: 17.88 }, // D: 입출고수량
+                    { width: 55.30 }, // E: 비고
+                    { width: 12.00 }, // F: 차량번호
+                    { width: 12.00 }, // G: 차량톤수
+                    { width: 12.00 }, // H: 도착시간
+                    { width: 12.00 }  // I: 작성인원
+                ];
+
+                sheet.addRow(['구분', '일자', '파렛트 유형', '입출고수량', '비고', '차량번호', '차량톤수', '도착시간', '작성인원']);
+
+                // A1~E1행 배경색(연두색) 및 헤더 테두리 세팅
+                const headerRow = sheet.getRow(1);
+                for (let i = 1; i <= 5; i++) {
+                    const cell = headerRow.getCell(i);
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
+                }
+                headerRow.eachCell((cell) => {
+                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                    cell.font = { bold: true };
+                });
+
+                // 체크된 요소들 데이터를 파렛트 종류별로 분리해서 행 추가
+                checkedBoxes.forEach(chk => {
+                    const rowDiv = chk.closest('.pallet-row');
+                    const loc = rowDiv.querySelector('.p-loc').value || '';
+                    const date = rowDiv.querySelector('.p-date').value || '';
+                    const carnum = rowDiv.querySelector('.p-carnum').value || '';
+                    const ton = rowDiv.querySelector('.p-ton').value || '';
+                    const time = rowDiv.querySelector('.p-time').value || '';
+                    const author = rowDiv.querySelector('.p-author').value || '';
+                    const remark = rowDiv.querySelector('.p-remark').value || '';
+
+                    const kpp11 = parseInt(rowDiv.querySelector('.p-kpp11').value) || 0;
+                    const kpp12 = parseInt(rowDiv.querySelector('.p-kpp12').value) || 0;
+                    const aj11 = parseInt(rowDiv.querySelector('.p-aj11').value) || 0;
+                    const aj12 = parseInt(rowDiv.querySelector('.p-aj12').value) || 0;
+
+                    // 공통 삽입 함수 (데이터 존재 시 윤곽선 자동 적용)
+                    const addPalletData = (type, qty) => {
+                        if (qty > 0) {
+                            const newRow = sheet.addRow([loc, date, type, qty, remark, carnum, ton, time, author]);
+                            newRow.eachCell((cell) => {
+                                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                            });
+                        }
+                    };
+
+                    addPalletData('KPP N11', kpp11);
+                    addPalletData('KPP N12', kpp12);
+                    addPalletData('AJ 11A', aj11);
+                    addPalletData('AJ 12A', aj12);
+                });
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), `파렛트입고현황_${new Date().toISOString().split('T')[0]}.xlsx`);
+            } catch(e) {
+                alert("엑셀 다운로드 오류: " + e.message);
+            }
+        }
+
     </script>
 </body>
 </html>
