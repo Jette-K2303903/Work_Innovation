@@ -179,8 +179,8 @@
         .sortable-item:active { cursor: grabbing; }
         .drag-handle { color: #8E8E93; font-size: 18px; }
         
-        /* 파렛트 입력 필드 추가 디자인 */
-        .p-input { width: 100%; box-sizing: border-box; padding: 6px; border: 1px solid #E5E5EA; border-radius: 6px; font-size: 13px; background: #FAFAFC; }
+        /* 파렛트 입력 필드 추가 디자인 (수정됨) */
+        .p-input { width: 100%; height: 32px; box-sizing: border-box; padding: 6px; border: 1px solid #E5E5EA; border-radius: 6px; font-size: 13px; background: #FAFAFC; }
         .p-input:focus { border-color: var(--primary); outline: none; background:#FFF; }
         .pallet-chk { width: 18px; height: 18px; margin:0; cursor:pointer;}
 
@@ -559,6 +559,18 @@
         </div>
     </div>
 
+    <!-- 파렛트 삭제 요청 확인 팝업 (비로그인 전용) -->
+    <div id="palletDeleteReqModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box" style="max-width:300px; padding:30px 20px;">
+            <h2 class="modal-title" style="font-size:18px;">파렛트 입고 삭제</h2>
+            <p style="font-size:14px; color:var(--text-main); margin-bottom:20px;">정말 삭제 요청하시겠습니까?</p>
+            <div style="display:flex; gap:10px;">
+                <button class="modal-btn btn-delete" style="flex:1; margin-top:0;" onclick="confirmPalletRequestDelete()">확인</button>
+                <button class="modal-btn modal-btn-close" style="flex:1; margin-top:0;" onclick="document.getElementById('palletDeleteReqModal').style.display='none'">취소</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 기사 상세 내역 팝업 -->
     <div id="driverDetailModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:350px;">
@@ -602,6 +614,7 @@
         let palletDataList = []; // 파렛트 입고현황 리스트
         let palletUnsaved = false; // 저장되지 않은 항목 유무 플래그
         let targetView = '';
+        let palletDeleteTargetIds = []; // 파렛트 삭제 요청용
 
         let reasonsList = [];
         let menuOrder = ['menuHome', 'menuOffice', 'menuField', 'menuDriver', 'menuHistory', 'menuMap', 'menuReserve1', 'menuReserve2'];
@@ -833,6 +846,7 @@
                 document.getElementById('authBtn').innerHTML = "🔒 로그인";
                 document.getElementById('settingsBtn').style.display = "none";
                 updateMenuUI(); showView('formView'); closeMenu();
+                renderPalletTable(); // 파렛트 권한 리셋 적용
             } else {
                 document.getElementById('loginPassword').value = "";
                 document.getElementById('loginModal').style.display = 'flex';
@@ -851,6 +865,7 @@
 
                 updateMenuUI();
                 if(document.getElementById('historyView').classList.contains('active')) showView('historyView');
+                if(document.getElementById('palletView').classList.contains('active')) renderPalletTable();
                 renderDriverList(); 
                 isMenuOpen = true; 
             } else { 
@@ -2392,12 +2407,29 @@
 
             // DB 데이터 렌더링
             palletDataList.forEach(item => {
+                let isDeleteReq = (item.status === 'delete_requested');
+                if (!isLoggedIn && isDeleteReq) return; // 비로그인 시 삭제요청된 항목 숨김
+
                 const tr = document.createElement('tr');
                 tr.className = 'db-row';
                 tr.dataset.id = item.id;
+                
+                if (isDeleteReq) tr.style.backgroundColor = '#FFE5E5';
+
+                let chkBox = isDeleteReq ? '' : `<input type="checkbox" class="pallet-chk" value="${item.id}">`;
+                let actionHtml = '';
+                
+                if (isLoggedIn && isDeleteReq) {
+                    actionHtml = `<br>
+                        <div style="display:flex; gap:5px; justify-content:center; margin-top:4px;">
+                            <button class="btn-small btn-confirm" onclick="confirmPalletDelete(${item.id})">삭제확정</button>
+                            <button class="btn-small" style="background:#8E8E93; color:#fff;" onclick="cancelPalletDelete(${item.id})">삭제취소</button>
+                        </div>`;
+                }
+
                 tr.innerHTML = `
-                    <td style="padding:4px;"><input type="checkbox" class="pallet-chk" value="${item.id}"></td>
-                    <td style="padding:4px;">${item.inbound_date}</td>
+                    <td style="padding:4px;">${chkBox}</td>
+                    <td style="padding:4px;">${item.inbound_date || ''}</td>
                     <td style="padding:4px;">${item.location || ''}</td>
                     <td style="padding:4px;">${item.car_number || ''}</td>
                     <td style="padding:4px;">${item.tonnage || ''}</td>
@@ -2407,7 +2439,11 @@
                     <td style="padding:4px;">${item.aj_11a || 0}</td>
                     <td style="padding:4px;">${item.aj_12a || 0}</td>
                     <td style="padding:4px;">${item.author || ''}</td>
-                    <td style="padding:4px;">${item.remarks || ''}</td>
+                    <td style="padding:4px; font-size:12px;">
+                        ${isDeleteReq ? '<span class="status-red" style="font-weight:bold;">[삭제요청됨]</span><br>' : ''}
+                        ${item.remarks || ''}
+                        ${actionHtml}
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -2515,6 +2551,7 @@
             const inserts = [];
             newRows.forEach(tr => {
                 inserts.push({
+                    status: 'active',
                     inbound_date: tr.querySelector('.p-date').value,
                     location: tr.querySelector('.p-loc').value,
                     car_number: tr.querySelector('.p-car').value,
@@ -2552,6 +2589,10 @@
                 await supabaseClient.from('pallet_inbound').update(updateData).eq('id', id);
             }
 
+            // 추가된 DOM 요소 삭제 및 초기화 (fetch 전 DOM 날리기)
+            document.querySelectorAll('#palletTbody .unsaved-row').forEach(row => row.remove());
+            document.querySelectorAll('#palletTbody .edit-row').forEach(row => row.classList.remove('edit-row'));
+
             palletUnsaved = false;
             await fetchPalletData(); 
             document.getElementById('globalLoader').style.display = 'none';
@@ -2561,26 +2602,100 @@
         async function deletePalletData() {
             const checkboxes = document.querySelectorAll('#palletTbody .pallet-chk:checked');
             if (checkboxes.length === 0) return alert("삭제할 항목을 선택하세요.");
-            
-            if(!confirm("선택한 항목을 삭제하시겠습니까?")) return;
-            
-            const idsToDelete = [];
+
+            let hasDbRows = false;
             checkboxes.forEach(chk => {
-                const tr = chk.closest('tr');
-                if (tr.classList.contains('unsaved-row')) {
-                    tr.remove(); 
-                } else {
-                    idsToDelete.push(parseInt(chk.value));
-                }
+                if (!chk.closest('tr').classList.contains('unsaved-row')) hasDbRows = true;
             });
 
-            if (idsToDelete.length > 0) {
-                document.getElementById('globalLoader').style.display = 'flex';
-                const { error } = await supabaseClient.from('pallet_inbound').delete().in('id', idsToDelete);
-                document.getElementById('globalLoader').style.display = 'none';
-                if (error) { alert("삭제 실패: " + error.message); return; }
-                await fetchPalletData();
+            // 저장되지 않은 신규 행만 선택된 경우 로컬 DOM에서 즉시 제거
+            if (!hasDbRows) {
+                if(!confirm("선택한 항목을 삭제하시겠습니까?")) return;
+                checkboxes.forEach(chk => {
+                    const tr = chk.closest('tr');
+                    if (tr.classList.contains('unsaved-row')) tr.remove();
+                });
+                return;
             }
+            
+            if (!isLoggedIn) {
+                // 비로그인 시 삭제요청 팝업 표시
+                palletDeleteTargetIds = [];
+                checkboxes.forEach(chk => {
+                    const tr = chk.closest('tr');
+                    if (tr.classList.contains('unsaved-row')) {
+                        tr.remove(); // 신규 행은 즉시 삭제
+                    } else {
+                        palletDeleteTargetIds.push(parseInt(chk.value));
+                    }
+                });
+                if (palletDeleteTargetIds.length > 0) {
+                    document.getElementById('palletDeleteReqModal').style.display = 'flex';
+                }
+            } else {
+                // 로그인 시 즉시 완전삭제
+                if(!confirm("선택한 항목을 완전 삭제하시겠습니까?")) return;
+                const idsToDelete = [];
+                checkboxes.forEach(chk => {
+                    const tr = chk.closest('tr');
+                    if (tr.classList.contains('unsaved-row')) {
+                        tr.remove();
+                    } else {
+                        idsToDelete.push(parseInt(chk.value));
+                    }
+                });
+                
+                if (idsToDelete.length > 0) {
+                    document.getElementById('globalLoader').style.display = 'flex';
+                    const { error } = await supabaseClient.from('pallet_inbound').delete().in('id', idsToDelete);
+                    document.getElementById('globalLoader').style.display = 'none';
+                    if (error) { alert("삭제 실패: " + error.message); return; }
+                    await fetchPalletData();
+                }
+            }
+        }
+
+        async function confirmPalletRequestDelete() {
+            if (palletDeleteTargetIds.length === 0) return;
+            
+            document.getElementById('globalLoader').style.display = 'flex';
+            const { error } = await supabaseClient.from('pallet_inbound').update({ status: 'delete_requested' }).in('id', palletDeleteTargetIds);
+            document.getElementById('globalLoader').style.display = 'none';
+            if (error) { alert("상태 변경 실패: " + error.message); return; }
+
+            // 로컬 데이터 반영 및 테이블 재렌더링
+            palletDataList.forEach(item => {
+                if(palletDeleteTargetIds.includes(item.id)) {
+                    item.status = 'delete_requested';
+                }
+            });
+            renderPalletTable();
+            document.getElementById('palletDeleteReqModal').style.display = 'none';
+            palletDeleteTargetIds = [];
+            alert("삭제 요청이 완료되었습니다.");
+        }
+
+        async function confirmPalletDelete(id) {
+            if(!confirm("해당 파렛트 내역을 완전 삭제하시겠습니까?")) return;
+            
+            document.getElementById('globalLoader').style.display = 'flex';
+            const { error } = await supabaseClient.from('pallet_inbound').delete().eq('id', id);
+            document.getElementById('globalLoader').style.display = 'none';
+            if (error) { alert("삭제 실패: " + error.message); return; }
+            
+            palletDataList = palletDataList.filter(i => i.id !== id);
+            renderPalletTable();
+        }
+
+        async function cancelPalletDelete(id) {
+            document.getElementById('globalLoader').style.display = 'flex';
+            const { error } = await supabaseClient.from('pallet_inbound').update({ status: 'active' }).eq('id', id);
+            document.getElementById('globalLoader').style.display = 'none';
+            if (error) { alert("삭제취소 실패: " + error.message); return; }
+            
+            const item = palletDataList.find(i => i.id === id);
+            if (item) item.status = 'active';
+            renderPalletTable();
         }
 
         function toggleAllPallet(source) {
