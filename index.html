@@ -423,6 +423,7 @@
                         <tr style="background:#F0F2F7; border-bottom:2px solid #E5E5EA;">
                             <th style="padding:8px;"><input type="checkbox" id="palletSelectAllChk" onchange="toggleAllPallet(this)" style="width:18px; height:18px;"></th>
                             <th style="padding:8px; min-width:115px;">간선입고일</th>
+                            <th style="padding:8px; min-width:85px;">입출고</th>
                             <th style="padding:8px; min-width:85px;">상하차지</th>
                             <th style="padding:8px; min-width:85px;">차량번호</th>
                             <th style="padding:8px; min-width:60px;">톤수</th>
@@ -2430,6 +2431,7 @@
                 tr.innerHTML = `
                     <td style="padding:4px;">${chkBox}</td>
                     <td style="padding:4px;">${item.inbound_date || ''}</td>
+                    <td style="padding:4px;">${item.inout_type || ''}</td>
                     <td style="padding:4px;">${item.location || ''}</td>
                     <td style="padding:4px;">${item.car_number || ''}</td>
                     <td style="padding:4px;">${item.tonnage || ''}</td>
@@ -2462,6 +2464,12 @@
             tr.innerHTML = `
                 <td style="padding:4px;"><input type="checkbox" class="pallet-chk"></td>
                 <td style="padding:4px;"><input type="date" class="p-input p-date" value="${today}"></td>
+                <td style="padding:4px;">
+                    <select class="p-input p-inout">
+                        <option value="입고">입고</option>
+                        <option value="출고">출고</option>
+                    </select>
+                </td>
                 <td style="padding:4px;"><input type="text" class="p-input p-loc" placeholder="상하차지"></td>
                 <td style="padding:4px;"><input type="text" class="p-input p-car" placeholder="차량번호"></td>
                 <td style="padding:4px;"><input type="text" class="p-input p-ton" placeholder="톤수"></td>
@@ -2521,6 +2529,12 @@
                     tr.innerHTML = `
                         <td style="padding:4px;"><input type="checkbox" class="pallet-chk" value="${item.id}" checked></td>
                         <td style="padding:4px;"><input type="date" class="p-input p-date" value="${item.inbound_date}"></td>
+                        <td style="padding:4px;">
+                            <select class="p-input p-inout">
+                                <option value="입고" ${item.inout_type === '입고' ? 'selected' : ''}>입고</option>
+                                <option value="출고" ${item.inout_type === '출고' ? 'selected' : ''}>출고</option>
+                            </select>
+                        </td>
                         <td style="padding:4px;"><input type="text" class="p-input p-loc" value="${item.location || ''}"></td>
                         <td style="padding:4px;"><input type="text" class="p-input p-car" value="${item.car_number || ''}"></td>
                         <td style="padding:4px;"><input type="text" class="p-input p-ton" value="${item.tonnage || ''}"></td>
@@ -2553,6 +2567,7 @@
                 inserts.push({
                     status: 'active',
                     inbound_date: tr.querySelector('.p-date').value,
+                    inout_type: tr.querySelector('.p-inout').value,
                     location: tr.querySelector('.p-loc').value,
                     car_number: tr.querySelector('.p-car').value,
                     tonnage: tr.querySelector('.p-ton').value,
@@ -2575,6 +2590,7 @@
                 const id = tr.querySelector('.pallet-chk').value;
                 const updateData = {
                     inbound_date: tr.querySelector('.p-date').value,
+                    inout_type: tr.querySelector('.p-inout').value,
                     location: tr.querySelector('.p-loc').value,
                     car_number: tr.querySelector('.p-car').value,
                     tonnage: tr.querySelector('.p-ton').value,
@@ -2718,12 +2734,14 @@
                 views: [{ showGridLines: false }]
             });
 
+            // 문제 2번 요구사항에 맞춘 컬럼 너비 조정 및 항목 구성
             sheet.columns = [
-                { width: 15.25 }, { width: 19.63 }, { width: 14.88 }, { width: 17.88 }, { width: 55.30 },
-                { width: 12.00 }, { width: 12.00 }, { width: 12.00 }, { width: 12.00 }
+                { width: 12.00 }, { width: 15.00 }, { width: 15.00 }, { width: 12.00 }, { width: 30.00 },
+                { width: 15.00 }, { width: 15.00 }, { width: 12.00 }, { width: 12.00 }
             ];
 
-            const header = ['구분', '일자', '파렛트 유형', '입출고수량', '비고', '차량번호', '차량톤수', '도착시간', '작성인원'];
+            // 문제 2번 요청사항 헤더 반영
+            const header = ['구분', '일자', '파렛트 유형', '입출고수량', '비고', '차량번호', '차량번호', '차량톤수', '작성인원'];
             const headerRow = sheet.addRow(header);
 
             headerRow.eachCell((cell, colNumber) => {
@@ -2739,6 +2757,7 @@
                 let rowData = {};
                 if (tr.classList.contains('unsaved-row') || tr.classList.contains('edit-row')) {
                     rowData = {
+                        inout_type: tr.querySelector('.p-inout').value,
                         inbound_date: tr.querySelector('.p-date').value,
                         location: tr.querySelector('.p-loc').value,
                         car_number: tr.querySelector('.p-car').value,
@@ -2759,14 +2778,14 @@
                 const addExcelRow = (type, qty) => {
                     if (qty > 0) {
                         const row = sheet.addRow([
-                            rowData.location || '',
+                            rowData.inout_type || '입고',
                             rowData.inbound_date || '',
                             type,
                             qty,
                             rowData.remarks || '',
                             rowData.car_number || '',
+                            rowData.car_number || '', // F행과 동일하게 G행에도 차량번호 적용
                             rowData.tonnage || '',
-                            rowData.arrival_time || '',
                             rowData.author || ''
                         ]);
                         row.eachCell(cell => {
@@ -2783,7 +2802,7 @@
             });
 
             const buffer = await workbook.xlsx.writeBuffer();
-            saveAs(new Blob([buffer]), `파렛트_입고현황.xlsx`);
+            saveAs(new Blob([buffer]), `파렛트_입출고현황.xlsx`);
         }
 
         function confirmLeavePallet() {
