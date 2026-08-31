@@ -563,7 +563,7 @@
     <div id="palletDeleteReqModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:300px; padding:30px 20px;">
             <h2 class="modal-title" style="font-size:18px;">파렛트 입고 삭제</h2>
-            <p style="font-size:14px; color:var(--text-main); margin-bottom:20px;">정말 삭제 요청하시겠습니까?</p>
+            <p style="font-size:14px; color:var(--text-main); margin-bottom:20px;">정말 삭제하시겠습니까?</p>
             <div style="display:flex; gap:10px;">
                 <button class="modal-btn btn-delete" style="flex:1; margin-top:0;" onclick="confirmPalletRequestDelete()">확인</button>
                 <button class="modal-btn modal-btn-close" style="flex:1; margin-top:0;" onclick="document.getElementById('palletDeleteReqModal').style.display='none'">취소</button>
@@ -2422,8 +2422,8 @@
                 if (isLoggedIn && isDeleteReq) {
                     actionHtml = `<br>
                         <div style="display:flex; gap:5px; justify-content:center; margin-top:4px;">
-                            <button class="btn-small btn-confirm" onclick="confirmPalletDelete(${item.id})">삭제확정</button>
-                            <button class="btn-small" style="background:#8E8E93; color:#fff;" onclick="cancelPalletDelete(${item.id})">삭제취소</button>
+                            <button class="btn-small btn-confirm" onclick="confirmPalletDelete(${item.id})">확정</button>
+                            <button class="btn-small" style="background:#8E8E93; color:#fff;" onclick="cancelPalletDelete(${item.id})">취소</button>
                         </div>`;
                 }
 
@@ -2672,7 +2672,7 @@
             renderPalletTable();
             document.getElementById('palletDeleteReqModal').style.display = 'none';
             palletDeleteTargetIds = [];
-            alert("삭제 요청이 완료되었습니다.");
+            alert("삭제되었습니다..");
         }
 
         async function confirmPalletDelete(id) {
