@@ -1686,6 +1686,9 @@
                     { width: 16.88 }
                 ];
 
+                // [요청] 문제 1. 축소 1번을 해서 A~Q까지 모두 한 화면에 잘 보이도록 자동 조정 (Fit to Page)
+                sheet.pageSetup = { fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+
                 sheet.addRow(['공란', '배송일자', '메인센터명', '고객사코드', '고객사명', '거래처코드', '거래처명', '제품코드', '제품명', '온도', '단위', '품목지정', '재고타입', '수량', '내용', '상세내용', '수정사유']);
 
                 itemsToExport.forEach((item) => {
@@ -1703,12 +1706,12 @@
                         item.qty, dispReason, remarkContent, ''
                     ]);
 
-                    // [요청] 문제 4. 엑셀 셀 I행, P행 제외하고 글 자동 줄바꿈
+                    // [요청] 문제 1. 엑셀 셀 H행, I행, O행은 '텍스트 줄 바꿈', 나머지 A~Q는 '셀에 맞춤' 기본값
                     row.eachCell((cell, colNumber) => {
-                        if (colNumber !== 9 && colNumber !== 16) {
+                        if (colNumber === 8 || colNumber === 9 || colNumber === 15) {
                             cell.alignment = { wrapText: true, vertical: 'middle' };
                         } else {
-                            cell.alignment = { wrapText: false, vertical: 'middle' };
+                            cell.alignment = { shrinkToFit: true, vertical: 'middle' };
                         }
                     });
 
