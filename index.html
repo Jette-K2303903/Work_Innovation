@@ -414,7 +414,8 @@
                 </div>
                 <div style="display:flex; gap:5px;">
                     <button class="btn-small" onclick="selectAllPallet()">전체 선택</button>
-                    <button class="btn-small" style="background:#4A90E2; color:#fff;" onclick="downloadPalletExcel()">다운로드</button>
+                    <!-- [수정사항] 엑셀 다운로드 버튼 클릭 시 모달창 열리도록 변경 -->
+                    <button class="btn-small" style="background:#4A90E2; color:#fff;" onclick="openPalletDownloadModal()">다운로드</button>
                 </div>
             </div>
             <div style="overflow-x:auto; background:#fff; border-radius:12px; padding:10px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
@@ -581,6 +582,26 @@
         </div>
     </div>
 
+    <!-- 파렛트 다운로드 팝업 모달 [추가됨] -->
+    <div id="palletDownloadModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box" style="max-width: 350px;">
+            <h2 class="modal-title">다운로드 날짜 선택</h2>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                <button class="btn-small" onclick="prevMonth()">◀</button>
+                <strong id="calendarMonthYear"></strong>
+                <button class="btn-small" onclick="nextMonth()">▶</button>
+            </div>
+            <div id="calendarGrid" style="display:grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 15px; font-size:14px;">
+            </div>
+            <div style="margin-bottom: 15px; text-align: left;">
+                <label style="cursor:pointer;"><input type="checkbox" id="dlAllDatesChk" onchange="toggleDlAllDates()"> 전체 날짜 다운로드</label>
+                <div id="selectedDateDisplay" style="margin-top: 5px; color: var(--primary); font-weight: bold;">선택된 날짜: 없음</div>
+            </div>
+            <button class="modal-btn" onclick="executePalletDownload()">다운로드 실행</button>
+            <button class="modal-btn modal-btn-close" onclick="document.getElementById('palletDownloadModal').style.display='none'">닫기</button>
+        </div>
+    </div>
+
     <!-- 저장 완료 팝업 -->
     <div id="saveSuccessModal" class="modal-overlay" onclick="if(event.target===this) closeSaveSuccessModal()">
         <div class="modal-box" style="max-width:250px; padding:40px 20px;">
@@ -625,6 +646,11 @@
 
         const STORAGE_TOTAL = 1100;
         let showRemainingStorage = true;
+
+        // [추가됨] 파렛트 모달 관련 변수
+        let currentCalDate = new Date();
+        let selectedDlDate = '';
+        let availableDates = new Set();
 
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('writeDate').value = new Date().toISOString().split('T')[0];
@@ -2725,35 +2751,117 @@
             toggleAllPallet(source);
         }
 
-        async function downloadPalletExcel() {
-            const checkboxes = document.querySelectorAll('#palletTbody .pallet-chk:checked');
-            if (checkboxes.length === 0) return alert("다운로드할 항목을 선택하세요.");
-
-            const workbook = new ExcelJS.Workbook();
-            const sheet = workbook.addWorksheet('파렛트 입고', {
-                views: [{ showGridLines: false }]
+        // ============================================
+        // [수정사항] 파렛트 입고현황 달력 모달 로직
+        // ============================================
+        function openPalletDownloadModal() {
+            availableDates.clear();
+            palletDataList.forEach(item => {
+                if (item.inbound_date) availableDates.add(item.inbound_date);
+            });
+            document.querySelectorAll('#palletTbody tr').forEach(tr => {
+                const dateInput = tr.querySelector('.p-date');
+                if (dateInput && dateInput.value) availableDates.add(dateInput.value);
             });
 
-            // 문제 2번 요구사항에 맞춘 컬럼 너비 조정 및 항목 구성
-            sheet.columns = [
-                { width: 12.00 }, { width: 15.00 }, { width: 15.00 }, { width: 12.00 }, { width: 30.00 },
-                { width: 15.00 }, { width: 15.00 }, { width: 12.00 }, { width: 12.00 }
-            ];
+            selectedDlDate = '';
+            document.getElementById('dlAllDatesChk').checked = false;
+            updateSelectedDateDisplay();
+            renderCalendar();
+            document.getElementById('palletDownloadModal').style.display = 'flex';
+        }
 
-            // 문제 2번 요청사항 헤더 반영
-            const header = ['구분', '일자', '파렛트 유형', '입출고수량', '비고', '차량번호', '차량번호', '차량톤수', '작성인원'];
-            const headerRow = sheet.addRow(header);
+        function renderCalendar() {
+            const year = currentCalDate.getFullYear();
+            const month = currentCalDate.getMonth();
+            document.getElementById('calendarMonthYear').innerText = `${year}년 ${month + 1}월`;
 
-            headerRow.eachCell((cell, colNumber) => {
-                if (colNumber <= 5) {
-                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+            const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+            dayNames.forEach(d => {
+                const div = document.createElement('div');
+                div.innerText = d;
+                div.style.fontWeight = 'bold';
+                div.style.textAlign = 'center';
+                div.style.color = (d === '일' ? '#FF3B30' : (d === '토' ? '#007AFF' : 'var(--text-main)'));
+                grid.appendChild(div);
+            });
+
+            for (let i = 0; i < firstDay; i++) {
+                grid.appendChild(document.createElement('div'));
+            }
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const div = document.createElement('div');
+                div.innerText = i;
+                div.style.textAlign = 'center';
+                div.style.padding = '5px';
+                div.style.borderRadius = '5px';
+                div.style.fontWeight = '600';
+
+                if (availableDates.has(dStr)) {
+                    div.style.cursor = 'pointer';
+                    div.style.backgroundColor = (dStr === selectedDlDate) ? 'var(--primary)' : '#E0EFFF';
+                    div.style.color = (dStr === selectedDlDate) ? '#FFF' : 'var(--primary)';
+                    div.onclick = () => {
+                        selectedDlDate = dStr;
+                        document.getElementById('dlAllDatesChk').checked = false;
+                        updateSelectedDateDisplay();
+                        renderCalendar();
+                    };
+                } else {
+                    div.style.color = '#C7C7CC';
+                    div.style.backgroundColor = '#F2F2F7';
+                    div.style.cursor = 'not-allowed';
                 }
-                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-                cell.alignment = { horizontal: 'center', vertical: 'middle' };
-            });
+                grid.appendChild(div);
+            }
+        }
 
-            checkboxes.forEach(chk => {
-                const tr = chk.closest('tr');
+        function prevMonth() {
+            currentCalDate.setMonth(currentCalDate.getMonth() - 1);
+            renderCalendar();
+        }
+
+        function nextMonth() {
+            currentCalDate.setMonth(currentCalDate.getMonth() + 1);
+            renderCalendar();
+        }
+
+        function toggleDlAllDates() {
+            if (document.getElementById('dlAllDatesChk').checked) {
+                selectedDlDate = '';
+            }
+            updateSelectedDateDisplay();
+            renderCalendar();
+        }
+
+        function updateSelectedDateDisplay() {
+            const disp = document.getElementById('selectedDateDisplay');
+            if (document.getElementById('dlAllDatesChk').checked) {
+                disp.innerText = '선택된 날짜: 전체 데이터';
+            } else {
+                disp.innerText = selectedDlDate ? `선택된 날짜: ${selectedDlDate}` : '선택된 날짜: 없음';
+            }
+        }
+
+        async function executePalletDownload() {
+            const isAll = document.getElementById('dlAllDatesChk').checked;
+            if (!isAll && !selectedDlDate) {
+                return alert("다운로드할 날짜를 선택하거나 '전체 날짜 다운로드'를 체크해주세요.");
+            }
+
+            let itemsToExport = [];
+            const allRows = document.querySelectorAll('#palletTbody tr');
+            
+            if (allRows.length === 0) return alert("다운로드할 데이터가 없습니다.");
+
+            allRows.forEach(tr => {
                 let rowData = {};
                 if (tr.classList.contains('unsaved-row') || tr.classList.contains('edit-row')) {
                     rowData = {
@@ -2770,11 +2878,45 @@
                         author: tr.querySelector('.p-author').value,
                         remarks: tr.querySelector('.p-remark').value
                     };
-                } else {
+                } else if (tr.classList.contains('db-row')) {
                     const id = tr.dataset.id;
                     rowData = palletDataList.find(i => i.id == id);
+                } else {
+                    return;
                 }
 
+                if (rowData) {
+                    if (isAll || rowData.inbound_date === selectedDlDate) {
+                        itemsToExport.push(rowData);
+                    }
+                }
+            });
+
+            if (itemsToExport.length === 0) {
+                return alert("해당 날짜에 대한 데이터가 없습니다.");
+            }
+
+            const workbook = new ExcelJS.Workbook();
+            const sheet = workbook.addWorksheet('파렛트 입고', {
+                views: [{ showGridLines: false }]
+            });
+
+            // 문제 1번: 엑셀 다운로드 양식 변경 (A행부터 J행까지 적용)
+            sheet.columns = [
+                { width: 12.00 }, { width: 15.00 }, { width: 15.00 }, { width: 12.00 }, { width: 20.00 },
+                { width: 15.00 }, { width: 15.00 }, { width: 12.00 }, { width: 12.00 }, { width: 30.00 }
+            ];
+
+            const header = ['구분', '일자', '파렛트 유형', '입출고수량', '상하차지', '차량번호', '차량번호', '차량톤수', '작성인원', '비고'];
+            const headerRow = sheet.addRow(header);
+
+            headerRow.eachCell((cell) => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            });
+
+            itemsToExport.forEach(rowData => {
                 const addExcelRow = (type, qty) => {
                     if (qty > 0) {
                         const row = sheet.addRow([
@@ -2782,11 +2924,12 @@
                             rowData.inbound_date || '',
                             type,
                             qty,
-                            rowData.remarks || '',
+                            rowData.location || '',
                             rowData.car_number || '',
-                            rowData.car_number || '', // F행과 동일하게 G행에도 차량번호 적용
+                            rowData.car_number || '',
                             rowData.tonnage || '',
-                            rowData.author || ''
+                            rowData.author || '',
+                            rowData.remarks || ''
                         ]);
                         row.eachCell(cell => {
                             cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
@@ -2802,19 +2945,21 @@
             });
 
             const buffer = await workbook.xlsx.writeBuffer();
-            saveAs(new Blob([buffer]), `파렛트_입출고현황.xlsx`);
+            const fileNameDate = isAll ? '전체' : selectedDlDate;
+            saveAs(new Blob([buffer]), `파렛트_입출고현황_${fileNameDate}.xlsx`);
+            
+            document.getElementById('palletDownloadModal').style.display = 'none';
         }
+        // ============================================
 
         function confirmLeavePallet() {
             palletUnsaved = false;
             document.getElementById('unsavedAlertModal').style.display = 'none';
             
-            // [수정사항] '추가' 버튼으로 생성된 행 삭제 및 '수정' 상태 초기화
             document.querySelectorAll('#palletTbody .unsaved-row').forEach(row => row.remove());
             document.querySelectorAll('#palletTbody .edit-row').forEach(row => row.classList.remove('edit-row'));
             document.getElementById('palletSelectAllChk').checked = false;
 
-            // 입력중이던 데이터 초기화(DB 데이터로 덮어쓰기)
             renderPalletTable();
             
             if (targetView) {
