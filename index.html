@@ -38,6 +38,23 @@
             -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text;
         }
 
+        /* [요청] 문제 1. 초기 로딩 애니메이션 UI */
+        #globalLoader {
+            position: fixed; top: 20px; right: 20px;
+            background: rgba(0,0,0,0.7); color: #fff;
+            padding: 10px 20px; border-radius: 20px;
+            font-size: 14px; font-weight: bold;
+            display: flex; align-items: center; gap: 10px;
+            z-index: 9999; transition: opacity 0.3s;
+        }
+        .spinner {
+            width: 16px; height: 16px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid #fff; border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
         .menu-toggle-btn {
             position: fixed; top: 20px; left: 20px; z-index: 1000;
             background: var(--primary); color: #FFF; border: none; padding: 10px 16px;
@@ -175,10 +192,10 @@
 
         #map { width:100%; height:65vh; border-radius:12px; background: transparent !important; z-index: 1; }
 
-        /* [요청] 문제 1. 지도 화이트톤 필터 스타일 적용 */
+        /* [기존] 지도 화이트톤 필터 스타일 적용 */
         .leaflet-tile { filter: grayscale(100%) brightness(110%) contrast(90%); }
         
-        /* [요청] 문제 2. 지도 말풍선 스타일 및 투명도 전환 처리 */
+        /* [기존] 지도 말풍선 스타일 및 투명도 전환 처리 */
         .custom-map-tooltip { opacity: 0 !important; transition: opacity 0.3s; background: rgba(255,255,255,0.9); border: 1px solid var(--primary); border-radius: 8px; color: var(--text-main); font-size: 12px; font-weight: 700; padding: 6px 10px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.15); white-space: nowrap; pointer-events: none; }
         .custom-map-tooltip::before { border-top-color: var(--primary) !important; border-bottom-color: var(--primary) !important; border-left-color: var(--primary) !important; border-right-color: var(--primary) !important; }
         #map.show-labels .custom-map-tooltip { opacity: 1 !important; }
@@ -193,6 +210,12 @@
     </style>
 </head>
 <body>
+    
+    <!-- [요청] 문제 1. 초기 로딩 화면 추가 -->
+    <div id="globalLoader">
+        <div class="spinner"></div>
+        <span>데이터 로딩중..</span>
+    </div>
 
     <button id="mobileMenuBtn" class="menu-toggle-btn" onclick="toggleMenu()">☰ 메뉴</button>
     <div id="menuOverlay" class="sidebar-overlay" onclick="closeMenu()"></div>
@@ -200,7 +223,7 @@
     <!-- 사이드바 -->
     <div id="sideMenu" class="sidebar">
         <button id="authBtn" class="menu-list-btn menu-login-btn" onclick="handleAuthClick()">🔒 로그인</button>
-        <button id="menuHome" class="menu-list-btn" onclick="showView('formView')">🏠 홈화면</button>
+        <button id="menuHome" class="menu-list-btn" onclick="handleHomeMenuClick()">🏠 홈화면</button>
         <button id="menuOffice" class="menu-list-btn" onclick="showView('officeContactView')">📞 사무실 연락처</button>
         <button id="menuField" class="menu-list-btn menu-item-optional" onclick="showView('fieldContactView')">👷 현장 연락처</button>
         <button id="menuDriver" class="menu-list-btn" onclick="showView('driverContactView')">📱 기사 연락처</button>
@@ -294,6 +317,11 @@
                 <div class="input-group" id="editReasonGroup" style="display:none;">
                     <label style="color:#FF3B30;">수정 사유</label>
                     <input type="text" id="editReasonText" class="input-box" placeholder="수정 사유를 입력하세요 (예: 수량 변경 등)">
+                </div>
+                <!-- 추가된 상세내용 칸 -->
+                <div class="input-group">
+                    <label>상세내용</label>
+                    <input type="text" id="remarkText" class="input-box" placeholder="상세 내용을 입력하세요." autocomplete="off">
                 </div>
                 <button class="modal-btn" style="margin-top: 10px;" onclick="saveFormData()">작성 완료</button>
             </div>
@@ -460,6 +488,18 @@
         </div>
     </div>
 
+    <!-- [요청] 문제 6. 삭제 요청 확인 팝업 (비로그인 전용) -->
+    <div id="deleteReqModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box" style="max-width:300px; padding:30px 20px;">
+            <h2 class="modal-title" style="font-size:18px;">업로드 내역 삭제</h2>
+            <p style="font-size:14px; color:var(--text-main); margin-bottom:20px;">정말 삭제 요청하시겠습니까?</p>
+            <div style="display:flex; gap:10px;">
+                <button class="modal-btn btn-delete" style="flex:1; margin-top:0;" onclick="confirmRequestDelete()">확인</button>
+                <button class="modal-btn modal-btn-close" style="flex:1; margin-top:0;" onclick="document.getElementById('deleteReqModal').style.display='none'">취소</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 기사 상세 내역 팝업 -->
     <div id="driverDetailModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:350px;">
@@ -511,6 +551,7 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('writeDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('globalLoader').style.display = 'flex'; // 로딩 시작
             await fetchInitialData();
             updateMenuUI();
             renderOfficeList();
@@ -518,7 +559,32 @@
             renderDriverList();
             setInterval(checkAutoDelete, 60000); 
             setupDragAndDrop();
+
+            // 로딩 종료
+            document.getElementById('globalLoader').style.opacity = '0';
+            setTimeout(() => document.getElementById('globalLoader').style.display = 'none', 300);
         });
+
+        function handleHomeMenuClick() {
+            if (currentEditId) {
+                if (confirm("수정 내용이 초기화 됩니다.")) {
+                    resetFormView();
+                    showView('formView');
+                }
+            } else {
+                showView('formView');
+            }
+        }
+
+        function resetFormView() {
+            document.querySelectorAll('#formView .input-box').forEach(el => { if(el.id !== 'writeDate') el.value = ''; });
+            document.getElementById('imagePreviewContainer').style.display = 'none';
+            document.getElementById('imagePreviewContainer').innerHTML = '';
+            currentImgSrcs = [];
+            currentEditId = null;
+            document.getElementById('editReasonGroup').style.display = 'none';
+            document.querySelector('#formView .modal-btn').innerText = "작성 완료";
+        }
 
         async function fetchInitialData() {
             try {
@@ -574,7 +640,7 @@
                         id: d.id, status: d.status, reason: d.reason, author: d.author, date: d.date,
                         driver: d.driver, store: d.store, sCode: d.store_code, mCenter: d.main_center,
                         product: d.product, pCode: d.product_code, iCenter: d.inbound_center,
-                        qty: d.qty, unit: d.unit, img: d.img_url
+                        qty: d.qty, unit: d.unit, img: d.img_url, remark: d.remark || '-'
                     }));
                 }
 
@@ -743,7 +809,6 @@
             });
         }
 
-        // [요청] 문제 3, 4 : 연락처 드래그 앤 드롭 구현 함수
         let dragSrcIndex = null;
         function handleContactDragStart(e, type) {
             if(!isLoggedIn) return;
@@ -781,14 +846,13 @@
         function handleContactDragEnd(e) {
             e.currentTarget.style.opacity = '1';
         }
-        // DB 테이블 덮어쓰기를 통한 순서 보장 (기존 데이터 삭제 후 재생성)
         async function reorderContactsDB(tableName, currentList) {
             const { error: delErr } = await supabaseClient.from(tableName).delete().neq('id', 0);
             if(delErr) { console.error("순서 재정렬 삭제 실패", delErr); return; }
 
             const insertData = currentList.map(c => {
                 const newC = {...c};
-                delete newC.id; // DB 자동채번을 통해 순서 보장
+                delete newC.id; 
                 return newC;
             });
             await supabaseClient.from(tableName).insert(insertData);
@@ -845,6 +909,7 @@
             return text.split('\n').filter(line => line.trim() !== '').map(line => line.split('\t').map(cell => cell.trim()));
         }
 
+        // [요청] 문제 2. Promise.all 병렬 처리로 업로드 속도 개선
         async function saveNewOrderData() {
             const rawOrder = document.getElementById('newOrderData').value;
             if(rawOrder.trim()) {
@@ -865,11 +930,18 @@
                 const { error: delError } = await supabaseClient.from('orders').delete().neq('id', 0);
                 if(delError) { alert("기존 데이터 삭제 실패: " + delError.message); return; }
 
+                document.getElementById('globalLoader').style.display = 'flex';
+
+                const promises = [];
                 for (let i = 0; i < insertData.length; i += 1000) {
-                    const { error } = await supabaseClient.from('orders').insert(insertData.slice(i, i + 1000));
-                    if(error) { alert("저장 실패: " + error.message); return; }
+                    promises.push(supabaseClient.from('orders').insert(insertData.slice(i, i + 1000)));
+                }
+                const results = await Promise.all(promises);
+                for(let res of results) {
+                    if(res.error) { alert("저장 실패: " + res.error.message); document.getElementById('globalLoader').style.display = 'none'; return; }
                 }
 
+                document.getElementById('globalLoader').style.display = 'none';
                 orderDataList = parsed;
                 alert("주문업로드가 완료되었습니다.");
                 document.getElementById('newOrderData').value = '';
@@ -878,6 +950,7 @@
             }
         }
 
+        // [요청] 문제 2. Promise.all 병렬 처리 적용
         async function saveNewDispatchData() {
             const rawDispatch = document.getElementById('newDispatchData').value;
             if(rawDispatch.trim()) {
@@ -892,11 +965,18 @@
                 const { error: delError } = await supabaseClient.from('dispatch_list').delete().neq('id', 0);
                 if(delError) { alert("기존 데이터 삭제 실패: " + delError.message); return; }
 
+                document.getElementById('globalLoader').style.display = 'flex';
+
+                const promises = [];
                 for (let i = 0; i < insertData.length; i += 1000) {
-                    const { error } = await supabaseClient.from('dispatch_list').insert(insertData.slice(i, i + 1000));
-                    if(error) { alert("저장 실패: " + error.message); return; }
+                    promises.push(supabaseClient.from('dispatch_list').insert(insertData.slice(i, i + 1000)));
+                }
+                const results = await Promise.all(promises);
+                for(let res of results) {
+                    if(res.error) { alert("저장 실패: " + res.error.message); document.getElementById('globalLoader').style.display = 'none'; return; }
                 }
 
+                document.getElementById('globalLoader').style.display = 'none';
                 dispatchDataList = parsed;
                 alert("배차업로드가 완료되었습니다.");
                 document.getElementById('newDispatchData').value = '';
@@ -1282,7 +1362,6 @@
             }
         });
 
-        // 수정사항 적용: 수정 폼 불러오기
         function loadEditData(id) {
             const item = historyDataList.find(i => i.id === id);
             if(!item) return;
@@ -1300,6 +1379,7 @@
             document.getElementById('productQty').value = item.qty || '';
             document.getElementById('productUnit').value = item.unit || '';
             document.getElementById('driverName').value = item.driver;
+            document.getElementById('remarkText').value = (item.remark && item.remark !== '-') ? item.remark : '';
 
             currentImgSrcs = [];
             if(item.img) {
@@ -1324,8 +1404,10 @@
                 alert("매장명과 제품명을 입력해주세요."); return;
             }
 
+            let remarkVal = document.getElementById('remarkText').value.trim();
+            if(!remarkVal) remarkVal = '-';
+
             if (currentEditId) {
-                // 수정 모드
                 const editReason = document.getElementById('editReasonText').value.trim();
                 if(!editReason) {
                     alert("수정 사유를 입력해주세요."); return;
@@ -1357,17 +1439,18 @@
                     inbound_center: document.getElementById('inboundCenter').value,
                     qty: document.getElementById('productQty').value ? Number(document.getElementById('productQty').value) : null,
                     unit: document.getElementById('productUnit').value,
+                    remark: remarkVal,
                     img_url: JSON.stringify(currentImgSrcs)
                 };
 
-                // UI 리스트 즉시 반영
                 Object.assign(existingItem, {
                     ...updatedData,
                     sCode: updatedData.store_code,
                     mCenter: updatedData.main_center,
                     pCode: updatedData.product_code,
                     iCenter: updatedData.inbound_center,
-                    img: updatedData.img_url
+                    img: updatedData.img_url,
+                    remark: updatedData.remark
                 });
 
                 document.querySelectorAll('#formView .input-box').forEach(el => { if(el.id !== 'writeDate') el.value = ''; });
@@ -1384,12 +1467,10 @@
                 const delay = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
                 savePopupTimer = setTimeout(closeSaveSuccessModal, delay * 1000);
 
-                // 백그라운드 DB 동기화
                 supabaseClient.from('upload_history').update(updatedData).eq('id', existingItem.id).then(({error}) => {
                     if (error) console.error("DB 수정 저장 실패", error);
                 });
             } else {
-                // 신규 업로드 모드
                 const insertData = {
                     id: Date.now(),
                     status: 'active',
@@ -1405,15 +1486,16 @@
                     inbound_center: document.getElementById('inboundCenter').value,
                     qty: document.getElementById('productQty').value ? Number(document.getElementById('productQty').value) : null,
                     unit: document.getElementById('productUnit').value,
+                    remark: remarkVal,
                     img_url: JSON.stringify(currentImgSrcs)
                 };
 
-                // UI 리스트 즉시 반영
                 historyDataList.unshift({
                     id: insertData.id, status: insertData.status, reason: insertData.reason, author: insertData.author,
                     date: insertData.date, driver: insertData.driver, store: insertData.store, sCode: insertData.store_code,
                     mCenter: insertData.main_center, product: insertData.product, pCode: insertData.product_code,
-                    iCenter: insertData.inbound_center, qty: insertData.qty, unit: insertData.unit, img: insertData.img_url
+                    iCenter: insertData.inbound_center, qty: insertData.qty, unit: insertData.unit, img: insertData.img_url,
+                    remark: insertData.remark
                 });
 
                 document.querySelectorAll('#formView .input-box').forEach(el => { if(el.id !== 'writeDate') el.value = ''; });
@@ -1427,7 +1509,6 @@
                 const delay = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
                 savePopupTimer = setTimeout(closeSaveSuccessModal, delay * 1000);
 
-                // 백그라운드 DB 동기화
                 supabaseClient.from('upload_history').insert([insertData]).then(({error}) => {
                     if (error) console.error("DB 신규 저장 실패", error);
                 });
@@ -1458,16 +1539,13 @@
             } else { select.selectedIndex = 0; }
         }
 
-        // 공통 사유 표시 규칙 적용 함수
         function getDisplayReason(reason) {
             if (!reason) return "";
             let displayReason = reason;
             
-            // 기존 데이터 호환성 유지: [수정사유1] -> 수정 내역 1 : 
             displayReason = displayReason.replace(/\n\[수정사유(\d+)\] /g, '\n수정 내역 $1 : ');
 
             if (!isLoggedIn) {
-                // 비로그인: 원본 사유와 가장 최신 수정 내역 1개만 '수정 내역 : 사유' 형태로 표시
                 let reasonParts = displayReason.split(/\n수정 내역 \d* *: /);
                 if (reasonParts.length > 1) {
                     let originalReason = reasonParts[0];
@@ -1479,7 +1557,6 @@
             return displayReason;
         }
 
-        // [요청] 문제 5 : 비로그인 업로드 내역 일자별 구분선 렌더링 포함
         function renderHistoryList() {
             const container = document.getElementById('historyListContainer');
             container.innerHTML = '';
@@ -1490,7 +1567,6 @@
                 const selectedDate = document.getElementById('historyDateSelect').value;
                 if(selectedDate) visibleItems = visibleItems.filter(i => i.date === selectedDate);
             } else {
-                // 비로그인 상태일 땐 날짜별로 내림차순 정렬 보장
                 visibleItems.sort((a, b) => b.date.localeCompare(a.date));
             }
 
@@ -1501,7 +1577,6 @@
             let lastDate = '';
 
             visibleItems.forEach(item => {
-                // 일자별 구분선 UI 추가
                 if (!isLoggedIn && item.date !== lastDate) {
                     const divider = document.createElement('div');
                     divider.innerHTML = `
@@ -1527,10 +1602,14 @@
                     }
                 }
 
+                // [요청] 문제 6 : 삭제확정 및 삭제취소 버튼 UI 완벽 분리 구현
                 if(item.status === 'delete_requested') {
                     actionHtml = `
-                        <span class="status-red" style="margin-bottom:5px;">[삭제요청]</span>
-                        <button class="btn-small btn-confirm" onclick="confirmDelete(${item.id})">삭제 확정</button>
+                        <span class="status-red" style="margin-bottom:5px; font-size:12px; display:block;">[삭제요청됨]</span>
+                        <div style="display:${isLoggedIn ? 'flex' : 'none'}; gap:5px; justify-content:flex-end;">
+                            <button class="btn-small btn-confirm" onclick="confirmDelete(${item.id})">삭제확정</button>
+                            <button class="btn-small" style="background:#8E8E93; color:#fff;" onclick="cancelDelete(${item.id})">삭제취소</button>
+                        </div>
                     `;
                 } else {
                     actionHtml = `
@@ -1552,6 +1631,7 @@
                         <p><strong>[${item.store}]</strong> ${item.product} (수량: ${item.qty}${item.unit})</p>
                         <p style="color:#8E8E93; font-size:12px;">${item.date} | 기사: ${item.driver}</p>
                         <p style="font-size:12px; color:#FF3B30;">사유: ${dispReason.replace(/\n/g, '<br>')} (${item.author})</p>
+                        <p style="font-size:12px; color:#4A90E2; margin-top:3px; font-weight:600;">비고: ${item.remark || '-'}</p>
                     </div>
                     <div style="display:flex; flex-direction:column; justify-content:center; text-align:right;">
                         ${actionHtml}
@@ -1597,19 +1677,40 @@
                 const workbook = new ExcelJS.Workbook();
                 const sheet = workbook.addWorksheet('특이사항');
 
-                sheet.addRow(['공란', '배송일자', '메인센터명', '고객사코드', '고객사명', '거래처코드', '거래처명', '제품코드', '제품명', '온도', '단위', '품목지정', '재고타입', '수량', '내용', '상세내용', '주체', '귀책', '입고', '자료등록']);
+                // [요청] 문제 3. 엑셀 너비 지정 A~Q행
+                sheet.columns = [
+                    { width: 0.77 }, { width: 11.00 }, { width: 9.38 }, { width: 9.38 },
+                    { width: 16.25 }, { width: 9.38 }, { width: 16.25 }, { width: 9.38 },
+                    { width: 49.38 }, { width: 4.38 }, { width: 4.38 }, { width: 6.88 },
+                    { width: 6.88 }, { width: 4.38 }, { width: 26.68 }, { width: 59.50 },
+                    { width: 16.88 }
+                ];
+
+                sheet.addRow(['공란', '배송일자', '메인센터명', '고객사코드', '고객사명', '거래처코드', '거래처명', '제품코드', '제품명', '온도', '단위', '품목지정', '재고타입', '수량', '내용', '상세내용', '수정사유']);
 
                 itemsToExport.forEach((item) => {
                     let orderInfo = orderDataList.find(r => r.length > 11 && cleanNumber(r[10]) === item.pCode && cleanNumber(r[8]) === item.sCode) || [];
                     let safeSheetName = (item.store || '거래처').substring(0, 31).replace(/[\\/?*\[\]]/g, '');
 
                     let dispReason = getDisplayReason(item.reason);
+                    
+                    // [요청] 문제 4. P행 '전달사항' 데이터 노출 여부 처리
+                    let remarkContent = item.remark && item.remark !== '-' ? item.remark : '';
 
                     const row = sheet.addRow([
                         '', item.date, item.mCenter, item.sCode, (orderInfo[7]||item.store), (orderInfo[8]||''), (orderInfo[9]||item.store),
                         item.pCode, item.product, (orderInfo[15]||''), item.unit, (orderInfo[17]||''), (orderInfo[18]||''),
-                        item.qty, dispReason, `${item.store} 상세`, '', '', '', ''
+                        item.qty, dispReason, remarkContent, ''
                     ]);
+
+                    // [요청] 문제 4. 엑셀 셀 I행, P행 제외하고 글 자동 줄바꿈
+                    row.eachCell((cell, colNumber) => {
+                        if (colNumber !== 9 && colNumber !== 16) {
+                            cell.alignment = { wrapText: true, vertical: 'middle' };
+                        } else {
+                            cell.alignment = { wrapText: false, vertical: 'middle' };
+                        }
+                    });
 
                     let imgArr = [];
                     if (item.img) {
@@ -1634,10 +1735,15 @@
                             }
                         });
 
-                        row.getCell(16).value = {
-                            text: `${item.store} (사유 : ${dispReason})\n\n\n${dispReason}`,
-                            hyperlink: `#'${safeSheetName}'!A1`
-                        };
+                        // [요청] 문제 5. 사진 시트 L3에 메인 시트 귀환 링크
+                        const l3Cell = imgSheet.getCell('L3');
+                        l3Cell.value = { text: '특이사항', hyperlink: `#'특이사항'!A1` };
+                        l3Cell.font = { color: { argb: 'FF0000FF' }, underline: true, bold: true };
+
+                        // [요청] 문제 5. 메인 시트 O행(15번째 컬럼)에 사진 시트로 가는 하이퍼링크 처리
+                        const cellO = row.getCell(15);
+                        cellO.value = { text: dispReason, hyperlink: `#'${safeSheetName}'!A1` };
+                        cellO.font = { color: { argb: 'FF0000FF' }, underline: true };
                     }
                 });
 
@@ -1648,12 +1754,34 @@
             }
         }
 
-        async function requestDelete(id) {
+        // [요청] 문제 6. 삭제 요청 로직 팝업 처리로 변경
+        let deleteTargetId = null;
+        function requestDelete(id) {
+            deleteTargetId = id;
+            document.getElementById('deleteReqModal').style.display = 'flex';
+        }
+
+        async function confirmRequestDelete() {
+            if(!deleteTargetId) return;
+            const id = deleteTargetId;
             const item = historyDataList.find(i => i.id === id);
             if(item) { 
                 const { error } = await supabaseClient.from('upload_history').update({ status: 'delete_requested' }).eq('id', id);
                 if (error) { alert("상태 변경 실패: " + error.message); return; }
-                item.status = 'delete_requested'; renderHistoryList(); 
+                item.status = 'delete_requested'; 
+                renderHistoryList(); 
+            }
+            document.getElementById('deleteReqModal').style.display = 'none';
+        }
+
+        // [요청] 문제 6. 삭제 취소 로직 (로그인 전용)
+        async function cancelDelete(id) {
+            const item = historyDataList.find(i => i.id === id);
+            if(item) {
+                const { error } = await supabaseClient.from('upload_history').update({ status: 'active' }).eq('id', id);
+                if (error) { alert("삭제 취소 실패: " + error.message); return; }
+                item.status = 'active';
+                renderHistoryList();
             }
         }
 
@@ -1713,7 +1841,6 @@
             else { officeContacts.splice(index, 1); renderOfficeList(); }
         }
 
-        // [요청] 문제 3 : 사무실 연락처 UI에 드래그 앤 드롭 이벤트 속성 추가 
         function renderOfficeList() {
             let dragHandleHtml = isLoggedIn ? `<div style="width: 20px; color:#C7C7CC; cursor:grab; font-size:18px; display:flex; align-items:center; justify-content:center;">☰</div>` : '';
             
@@ -1793,7 +1920,6 @@
             else { fieldContacts.splice(index, 1); renderFieldList(); }
         }
 
-        // [요청] 문제 4 : 현장 연락처 UI에 드래그 앤 드롭 이벤트 속성 추가
         function renderFieldList() {
             let dragHandleHtml = isLoggedIn ? `<div style="width: 20px; color:#C7C7CC; cursor:grab; font-size:18px; display:flex; align-items:center; justify-content:center;">☰</div>` : '';
             
@@ -2022,7 +2148,6 @@
         function renderMap() {
             if(!map) {
                 map = L.map('map').setView([35.3, 128.0], 8);
-                // [요청] 문제 2 : Max Zoom (19) 기준 5단계 아래인 14부터 툴팁을 표시하도록 이벤트 리스너 추가 (최대 줌 설정 포함)
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
                     attribution: '© OpenStreetMap contributors'
@@ -2075,7 +2200,6 @@
                 regionLayers[t] = L.layerGroup().addTo(map);
             });
 
-            // [요청] 문제 2 : 말풍선 겹침 방지를 위해 마커 위치 인덱스 기반으로 상하좌우 방향 교차 배치
             const tooltipDirections = ['top', 'bottom', 'left', 'right'];
 
             let colorIdx = 0;
@@ -2109,7 +2233,6 @@
                          .bindPopup(`<div style='font-size:14px;'><b>${storeName}</b><br><span style='color:var(--primary); font-weight:bold;'>배송기사: ${driver}</span></div>`)
                          .addTo(tLayer);
 
-                    // [요청] 문제 2 : Permanent 툴팁에 교차 Direction 적용 (상/하/좌/우 번갈아가며 생성)
                     const direction = tooltipDirections[idx % 4];
                     let offsetArr = [0, 0];
                     if(direction === 'top') offsetArr = [0, -10];
