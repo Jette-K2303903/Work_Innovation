@@ -489,7 +489,7 @@
                 <label style="display:block; margin-bottom:10px;">작성완료 자동닫힘(초): <input type="number" id="autoCloseSecondsInput" class="input-box" style="width:60px; padding:6px;" value="2"></label>
                 <div style="display:flex; gap:10px; margin-top:5px;">
                     <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="openListManageModal()">📋 비로그인 목록 관리</button>
-                    <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="document.getElementById('reasonManageModal').style.display='flex'; renderReasonManageList();">📝 사유 목록 관리</button>
+                    <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="document.getElementById('reasonManageModal').style.display='flex'; renderReasonManageList()">📝 사유 목록 관리</button>
                 </div>
             </div>
             <button class="modal-btn" style="margin-top:25px;" onclick="saveSystemSettings()">설정 저장 (Supabase 적용)</button>
@@ -2809,6 +2809,11 @@
             palletUnsaved = false;
             document.getElementById('unsavedAlertModal').style.display = 'none';
             
+            // [수정사항] '추가' 버튼으로 생성된 행 삭제 및 '수정' 상태 초기화
+            document.querySelectorAll('#palletTbody .unsaved-row').forEach(row => row.remove());
+            document.querySelectorAll('#palletTbody .edit-row').forEach(row => row.classList.remove('edit-row'));
+            document.getElementById('palletSelectAllChk').checked = false;
+
             // 입력중이던 데이터 초기화(DB 데이터로 덮어쓰기)
             renderPalletTable();
             
