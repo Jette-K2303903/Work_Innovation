@@ -178,6 +178,11 @@
         .sortable-item { cursor: grab; padding: 8px 10px; background: #FAFAFC; border: 1px solid #E5E5EA; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
         .sortable-item:active { cursor: grabbing; }
         .drag-handle { color: #8E8E93; font-size: 18px; }
+        
+        /* 파렛트 입력 필드 추가 디자인 */
+        .p-input { width: 100%; box-sizing: border-box; padding: 6px; border: 1px solid #E5E5EA; border-radius: 6px; font-size: 13px; background: #FAFAFC; }
+        .p-input:focus { border-color: var(--primary); outline: none; background:#FFF; }
+        .pallet-chk { width: 18px; height: 18px; margin:0; cursor:pointer;}
 
         body.pc-mode { flex-direction: row; overflow: hidden; }
         body.pc-mode .menu-toggle-btn { display: none; }
@@ -230,7 +235,7 @@
         <button id="menuHistory" class="menu-list-btn" onclick="showView('historyView')">📂 업로드 내역</button>
         <button id="menuMap" class="menu-list-btn menu-item-optional" onclick="showView('mapView')">🗺️ 배차 내역</button>
 
-        <button id="menuReserve1" class="menu-list-btn menu-item-optional" onclick="showView('palletView')">📦 파렛트 입고현황</button>
+        <button id="menuReserve1" class="menu-list-btn menu-item-optional" onclick="showView('palletView')">파렛트 입고현황</button>
         <button id="menuReserve2" class="menu-list-btn menu-item-optional" onclick="toggleScreenMode()">🖥️ 화면전환</button>
 
         <button id="settingsBtn" class="settings-btn" onclick="openSettingsModal()">⚙️</button>
@@ -398,43 +403,45 @@
         </div>
 
         <!-- 파렛트 입고현황 뷰 -->
-        <div id="palletView" class="view-section" style="max-width:100%;">
+        <div id="palletView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">📦 파렛트 입고현황</h2>
-            <div style="display:flex; justify-content:space-between; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-                <div style="display:flex; gap:8px;">
-                    <button class="btn-small" style="background:var(--primary); color:#fff; padding:8px 12px; font-size:14px;" onclick="addPalletRow()">추가</button>
-                    <button class="btn-small" style="background:#34C759; color:#fff; padding:8px 12px; font-size:14px;" onclick="savePalletData()">저장</button>
-                    <button class="btn-small" style="background:#FF9500; color:#fff; padding:8px 12px; font-size:14px;" onclick="editPalletData()">수정</button>
-                    <button class="btn-small btn-delete" style="padding:8px 12px; font-size:14px;" onclick="deletePalletData()">삭제</button>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px; flex-wrap: wrap; gap: 5px;">
+                <div style="display:flex; gap:5px;">
+                    <button class="btn-small" style="background:var(--primary); color:#fff;" onclick="addPalletRow()">추가</button>
+                    <button class="btn-small" style="background:#34C759; color:#fff;" onclick="savePalletData()">저장</button>
+                    <button class="btn-small" style="background:#FF9500; color:#fff;" onclick="editPalletData()">수정</button>
+                    <button class="btn-small btn-delete" onclick="deletePalletData()">삭제</button>
                 </div>
-                <div style="display:flex; gap:8px;">
-                    <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); padding:8px 12px; font-size:14px;" onclick="selectAllPallet()">전체 선택</button>
-                    <button class="btn-small" style="background:#E0EFFF; color:var(--primary); padding:8px 12px; font-size:14px;" onclick="downloadPalletExcel()">다운로드</button>
+                <div style="display:flex; gap:5px;">
+                    <button class="btn-small" onclick="selectAllPallet()">전체 선택</button>
+                    <button class="btn-small" style="background:#4A90E2; color:#fff;" onclick="downloadPalletExcel()">다운로드</button>
                 </div>
             </div>
-            
-            <div style="overflow-x:auto; background:#FFF; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05); border:1px solid var(--border);">
-                <table id="palletTable" style="width:100%; border-collapse:collapse; min-width:950px; text-align:center; font-size:13px;">
+            <div style="overflow-x:auto; background:#fff; border-radius:12px; padding:10px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                <table style="width:100%; min-width:900px; border-collapse:collapse; font-size:13px; text-align:center;" id="palletTable">
                     <thead>
-                        <tr style="background:#F2F2F7; color:var(--text-sub);">
-                            <th style="padding:10px; border-bottom:1px solid var(--border);"><input type="checkbox" id="palletSelectAllChk" onclick="togglePalletSelectAll()" style="width:16px; height:16px;"></th>
-                            <th style="padding:10px; border-bottom:1px solid var(--border);">간선입고일</th>
-                            <th style="padding:10px; border-bottom:1px solid var(--border);">상하차지</th>
-                            <th style="padding:10px; border-bottom:1px solid var(--border);">차량번호</th>
-                            <th style="padding:10px; border-bottom:1px solid var(--border);">톤수</th>
-                            <th style="padding:10px; border-bottom:1px solid var(--border);">도착시간</th>
-                            <th style="padding:10px; border-bottom:1px solid var(--border);">KPP N11</th>
-                            <th style="padding:10px; border-bottom:1px solid var(--border);">KPP N12</th>
-                            <th style="padding:10px; border-bottom:1px solid var(--border);">AJ 11A</th>
-                            <th style="padding:10px; border-bottom:1px solid var(--border);">AJ 12A</th>
-                            <th style="padding:10px; border-bottom:1px solid var(--border);">작성인원</th>
-                            <th style="padding:10px; border-bottom:1px solid var(--border);">비고</th>
+                        <tr style="background:#F0F2F7; border-bottom:2px solid #E5E5EA;">
+                            <th style="padding:8px;"><input type="checkbox" id="palletSelectAllChk" onchange="toggleAllPallet(this)" style="width:18px; height:18px;"></th>
+                            <th style="padding:8px; min-width:115px;">간선입고일</th>
+                            <th style="padding:8px; min-width:85px;">상하차지</th>
+                            <th style="padding:8px; min-width:85px;">차량번호</th>
+                            <th style="padding:8px; min-width:60px;">톤수</th>
+                            <th style="padding:8px; min-width:85px;">도착시간</th>
+                            <th style="padding:8px; min-width:65px;">KPP N11</th>
+                            <th style="padding:8px; min-width:65px;">KPP N12</th>
+                            <th style="padding:8px; min-width:65px;">AJ 11A</th>
+                            <th style="padding:8px; min-width:65px;">AJ 12A</th>
+                            <th style="padding:8px; min-width:80px;">작성인원</th>
+                            <th style="padding:8px; min-width:100px;">비고</th>
                         </tr>
                     </thead>
                     <tbody id="palletTbody">
+                        <!-- 동적 데이터 추가 영역 -->
                     </tbody>
                 </table>
             </div>
+            <!-- 작성인원 자동완성 -->
+            <ul id="palletAuthorList" class="autocomplete-list" style="position:fixed; width:150px; z-index:9999; display:none;"></ul>
         </div>
     </div>
 
@@ -446,6 +453,18 @@
             <input type="password" id="loginPassword" class="input-box" placeholder="비밀번호" style="text-align:center; margin-bottom:10px;" onkeydown="if(event.key === 'Enter') processLogin()">
             <button class="modal-btn" onclick="processLogin()">로그인</button>
             <button class="modal-btn modal-btn-close" onclick="closeLoginModal()">취소</button>
+        </div>
+    </div>
+
+    <!-- 파렛트 저장 경고 모달 -->
+    <div id="unsavedAlertModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box" style="max-width:300px; padding:30px 20px;">
+            <h2 class="modal-title" style="font-size:18px;">알림</h2>
+            <p style="font-size:14px; margin-bottom:20px;">저장되지 않은 내용은 초기화됩니다.</p>
+            <div style="display:flex; gap:10px;">
+                <button class="modal-btn" style="flex:1; margin-top:0;" onclick="confirmLeavePallet()">예</button>
+                <button class="modal-btn modal-btn-close" style="flex:1; margin-top:0;" onclick="document.getElementById('unsavedAlertModal').style.display='none'">아니요</button>
+            </div>
         </div>
     </div>
 
@@ -565,18 +584,6 @@
         </div>
     </div>
 
-    <!-- 파렛트 저장 취소 알림 팝업 -->
-    <div id="unsavedModal" class="modal-overlay">
-        <div class="modal-box" style="max-width:300px;">
-            <h2 class="modal-title" style="font-size:18px; color:var(--text-main);">안내</h2>
-            <p style="font-size:14px; margin-bottom:20px; color:var(--text-sub);">저장되지 않은 내용은 초기화됩니다.</p>
-            <div style="display:flex; gap:10px;">
-                <button class="modal-btn" style="flex:1; background:var(--primary);" onclick="confirmUnsavedMove()">예</button>
-                <button class="modal-btn modal-btn-close" style="flex:1; margin-top:0;" onclick="cancelUnsavedMove()">아니요</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         const SUPABASE_URL = 'https://whmltqxmramimlwrdkma.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobWx0cXhtcmFtaW1sd3Jka21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4MjczMzAsImV4cCI6MjEwMTQwMzMzMH0.W60TYb4NIRR7lXpbgQlj1h7yGGPcXRSh3Ui3IuFH-j0';
@@ -585,13 +592,16 @@
         let isMenuOpen = false; let menuInactivityTimer; let isLoggedIn = false;
         const ADMIN_PWD = "alfdid13579!!";
 
-        let currentImgSrcs = []; // 여러 장 이미지를 관리하는 배열
-        let currentEditId = null; // 수정 모드일 때 사용할 변수 추가
+        let currentImgSrcs = []; 
+        let currentEditId = null; 
 
         let orderDataList = []; let dispatchDataList = [];
         let historyDataList = [];
         let officeContacts = []; let fieldContacts = []; let driverContacts = [];
+        
         let palletDataList = []; // 파렛트 입고현황 리스트
+        let palletUnsaved = false; // 저장되지 않은 항목 유무 플래그
+        let targetView = '';
 
         let reasonsList = [];
         let menuOrder = ['menuHome', 'menuOffice', 'menuField', 'menuDriver', 'menuHistory', 'menuMap', 'menuReserve1', 'menuReserve2'];
@@ -601,13 +611,10 @@
 
         const STORAGE_TOTAL = 1100;
         let showRemainingStorage = true;
-        
-        let isPalletModified = false;
-        let nextViewTarget = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('writeDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('globalLoader').style.display = 'flex'; // 로딩 시작
+            document.getElementById('globalLoader').style.display = 'flex'; 
             await fetchInitialData();
             updateMenuUI();
             renderOfficeList();
@@ -616,7 +623,6 @@
             setInterval(checkAutoDelete, 60000); 
             setupDragAndDrop();
 
-            // 로딩 종료
             document.getElementById('globalLoader').style.opacity = '0';
             setTimeout(() => document.getElementById('globalLoader').style.display = 'none', 300);
         });
@@ -690,7 +696,6 @@
                 }
 
                 const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
-                if (histErr) console.error("업로드 내역 로드 에러:", histErr.message);
                 if (histData) {
                     historyDataList = histData.map(d => ({
                         id: d.id, status: d.status, reason: d.reason, correction: d.correction || '',
@@ -701,22 +706,30 @@
                     }));
                 }
 
-                const { data: offData, error: offErr } = await supabaseClient.from('office_contacts').select('*');
-                if (offErr) console.error("사무실 연락처 로드 에러:", offErr.message);
+                const { data: offData } = await supabaseClient.from('office_contacts').select('*');
                 if (offData) officeContacts = offData;
 
-                const { data: fldData, error: fldErr } = await supabaseClient.from('field_contacts').select('*');
-                if (!fldErr && fldData) fieldContacts = fldData;
+                const { data: fldData } = await supabaseClient.from('field_contacts').select('*');
+                if (fldData) fieldContacts = fldData;
 
-                const { data: drvData, error: drvErr } = await supabaseClient.from('driver_contacts').select('*');
-                if (drvErr) console.error("기사 연락처 로드 에러:", drvErr.message);
+                const { data: drvData } = await supabaseClient.from('driver_contacts').select('*');
                 if (drvData) driverContacts = drvData;
-
-                const { data: pData } = await supabaseClient.from('pallet_status').select('*').order('created_at', { ascending: false });
-                if (pData) { palletDataList = pData; renderPalletTable(); }
+                
+                // 파렛트 데이터 로드
+                await fetchPalletData();
 
             } catch(e) { console.error("데이터 로드 실패", e); }
             renderStorage();
+        }
+
+        async function fetchPalletData() {
+            try {
+                const { data, error } = await supabaseClient.from('pallet_inbound').select('*').order('id', { ascending: false });
+                if (data) {
+                    palletDataList = data;
+                    renderPalletTable();
+                }
+            } catch(e) { console.error(e); }
         }
 
         function toggleMenu() { isMenuOpen ? closeMenu() : openMenu(); }
@@ -789,13 +802,11 @@
             renderStorage();
         }
 
-        function showView(viewId, force = false) {
-            const activeView = document.querySelector('.view-section.active');
-            
-            // 파렛트 입고현황 이동 제어 (저장하지 않은 상태인지 확인)
-            if (!force && activeView && activeView.id === 'palletView' && isPalletModified) {
-                nextViewTarget = viewId;
-                document.getElementById('unsavedModal').style.display = 'flex';
+        function showView(viewId) {
+            // [추가] 파렛트 입고현황 저장 전 이탈 시 알림
+            if (palletUnsaved && document.getElementById('palletView').classList.contains('active') && viewId !== 'palletView') {
+                targetView = viewId;
+                document.getElementById('unsavedAlertModal').style.display = 'flex';
                 return;
             }
 
@@ -809,6 +820,9 @@
             }
             if(viewId === 'mapView') {
                 renderMap();
+            }
+            if(viewId === 'palletView') {
+                if(palletDataList.length === 0) fetchPalletData();
             }
             if(!document.body.classList.contains('pc-mode')) closeMenu();
         }
@@ -978,7 +992,6 @@
             return text.split('\n').filter(line => line.trim() !== '').map(line => line.split('\t').map(cell => cell.trim()));
         }
 
-        // [요청] 문제 2. Promise.all 병렬 처리로 업로드 속도 개선
         async function saveNewOrderData() {
             const rawOrder = document.getElementById('newOrderData').value;
             if(rawOrder.trim()) {
@@ -1019,7 +1032,6 @@
             }
         }
 
-        // [요청] 문제 2. Promise.all 병렬 처리 적용
         async function saveNewDispatchData() {
             const rawDispatch = document.getElementById('newDispatchData').value;
             if(rawDispatch.trim()) {
@@ -1419,6 +1431,7 @@
             if(sCode) findDispatchDriverAndCenter(sCode);
         }
 
+        let activeAuthorInput = null;
         document.addEventListener('click', e => {
             if(e.target.id !== 'storeName') document.getElementById('storeList').style.display = 'none';
             if(e.target.id !== 'productName') document.getElementById('productList').style.display = 'none';
@@ -1429,8 +1442,8 @@
                 const msl = document.getElementById('mapSearchList');
                 if(msl) msl.style.display = 'none';
             }
-            if(!e.target.classList.contains('p-author')) {
-                document.querySelectorAll('.p-author-list').forEach(ul => ul.style.display = 'none');
+            if(activeAuthorInput && e.target !== activeAuthorInput) {
+                document.getElementById('palletAuthorList').style.display = 'none';
             }
         });
 
@@ -1439,7 +1452,7 @@
             if(!item) return;
 
             currentEditId = id;
-            document.getElementById('reasonText').value = item.reason; // 변경: 순수 원본 사유만 로드
+            document.getElementById('reasonText').value = item.reason; 
             document.getElementById('authorName').value = item.author;
             document.getElementById('writeDate').value = item.date;
             document.getElementById('storeName').value = item.store;
@@ -1488,7 +1501,6 @@
                 let existingItem = historyDataList.find(i => i.id === currentEditId);
                 if(!existingItem) return;
 
-                // [요청] 문제 2. 수정 내역(correction) 컬럼 분리
                 let editCount = (existingItem.correction ? (existingItem.correction.match(/수정 내역/g) || []).length : 0) + 1;
                 let newCorrection = (existingItem.correction ? existingItem.correction + '\n' : '') + `수정 내역 ${editCount} : ` + editReason;
                 let baseReason = document.getElementById('reasonText').value;
@@ -1543,7 +1555,7 @@
                     id: Date.now(),
                     status: 'active',
                     reason: document.getElementById('reasonText').value,
-                    correction: '', // 신규 등록 시 빈 값
+                    correction: '', 
                     author: document.getElementById('authorName').value,
                     date: document.getElementById('writeDate').value,
                     driver: document.getElementById('driverName').value,
@@ -1608,7 +1620,6 @@
             } else { select.selectedIndex = 0; }
         }
 
-        // 화면 UI 노출용 사유 포맷 (원본 + correction 결합 표기)
         function getDisplayReason(reason, correction) {
             if (!reason) return "";
             let displayReason = reason;
@@ -1742,7 +1753,6 @@
             try {
                 const workbook = new ExcelJS.Workbook();
                 
-                // [요청] 문제 1 & 3: 눈금선 제거, 축소 1번(zoom 80)으로 한 화면에 잘 보이게 자동 조정
                 const sheet = workbook.addWorksheet('특이사항', {
                     views: [{ showGridLines: false, zoomScale: 80 }]
                 });
@@ -1757,13 +1767,12 @@
 
                 sheet.addRow(['공란', '배송일자', '메인센터명', '고객사코드', '고객사명', '거래처코드', '거래처명', '제품코드', '제품명', '온도', '단위', '품목지정', '재고타입', '수량', '내용', '상세내용', '수정사유']);
 
-                // [요청] 문제 3: 헤더 셀 제일 연한 연두색 배경 적용, 테두리, 가운데 맞춤 적용
                 const headerRow = sheet.getRow(1);
                 headerRow.eachCell((cell) => {
                     cell.fill = {
                         type: 'pattern',
                         pattern: 'solid',
-                        fgColor: { argb: 'FFE2EFDA' } // 연한 연두색
+                        fgColor: { argb: 'FFE2EFDA' } 
                     };
                     cell.alignment = { horizontal: 'center', vertical: 'middle' };
                     cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
@@ -1773,9 +1782,9 @@
                     let orderInfo = orderDataList.find(r => r.length > 11 && cleanNumber(r[10]) === item.pCode && cleanNumber(r[8]) === item.sCode) || [];
                     let safeSheetName = (item.store || '거래처').substring(0, 31).replace(/[\\/?*\[\]]/g, '');
 
-                    let baseReasonText = item.reason || ''; // O행
-                    let remarkContent = item.remark && item.remark !== '-' ? item.remark : ''; // P행
-                    let correctionContent = item.correction || ''; // Q행
+                    let baseReasonText = item.reason || ''; 
+                    let remarkContent = item.remark && item.remark !== '-' ? item.remark : ''; 
+                    let correctionContent = item.correction || ''; 
 
                     const row = sheet.addRow([
                         '', item.date, item.mCenter, item.sCode, (orderInfo[7]||item.store), (orderInfo[8]||''), (orderInfo[9]||item.store),
@@ -1783,8 +1792,6 @@
                         item.qty, baseReasonText, remarkContent, correctionContent
                     ]);
 
-                    // [요청] 문제 1 & 3: A~Q 가운데 맞춤, 텍스트 칸 윤곽선 테두리 적용
-                    // H(8), I(9), O(15) -> 텍스트 줄바꿈 / 그 외 -> 셀에 맞춤
                     row.eachCell((cell, colNumber) => {
                         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                         
@@ -1872,7 +1879,6 @@
         }
 
         let editingOfficeIndex = -1;
-
         async function saveOfficeContact() {
             const name = document.getElementById('offName').value, rank = document.getElementById('offRank').value, tell = document.getElementById('offTel').value;
             if(name && tell) {
@@ -1951,7 +1957,6 @@
         }
 
         let editingFieldIndex = -1;
-
         async function saveFieldContact() {
             const name = document.getElementById('fldName').value, rank = document.getElementById('fldRank').value, tel = document.getElementById('fldTel').value;
             if(name && tel) {
@@ -2373,315 +2378,311 @@
             }
         }
 
-        /* -------------------------------------------
-           파렛트 입고현황 (Pallet Status) 스크립트 추가
-           ------------------------------------------- */
+        // ============================================
+        // 파렛트 입고현황 기능 로직
+        // ============================================
 
         function renderPalletTable() {
             const tbody = document.getElementById('palletTbody');
+            const unsavedRows = Array.from(tbody.querySelectorAll('.unsaved-row'));
             tbody.innerHTML = '';
+            
+            // 저장되지 않은 행 복구
+            unsavedRows.forEach(row => tbody.appendChild(row));
+
+            // DB 데이터 렌더링
             palletDataList.forEach(item => {
                 const tr = document.createElement('tr');
-                tr.className = 'saved-pallet-row';
-                tr.setAttribute('data-id', item.id);
-                tr.setAttribute('data-item', JSON.stringify(item));
+                tr.className = 'db-row';
+                tr.dataset.id = item.id;
                 tr.innerHTML = `
-                    <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="checkbox" class="pallet-chk" style="width:16px; height:16px;"></td>
-                    <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="date" class="input-box p-date" value="${item.inbound_date || ''}" style="width:110px; padding:4px;" onchange="markPalletModified()"></td>
-                    <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="text" class="input-box p-location" value="${item.location || ''}" style="width:80px; padding:4px;" onchange="markPalletModified()"></td>
-                    <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="text" class="input-box p-vehicle" value="${item.vehicle_no || ''}" style="width:80px; padding:4px;" onchange="markPalletModified()"></td>
-                    <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="text" class="input-box p-tonnage" value="${item.tonnage || ''}" style="width:60px; padding:4px;" onchange="markPalletModified()"></td>
-                    <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="time" class="input-box p-time" value="${item.arrival_time || ''}" style="width:80px; padding:4px;" onchange="markPalletModified()"></td>
-                    <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="number" class="input-box p-kpp11" value="${item.kpp_n11 || 0}" style="width:60px; padding:4px;" onchange="markPalletModified()"></td>
-                    <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="number" class="input-box p-kpp12" value="${item.kpp_n12 || 0}" style="width:60px; padding:4px;" onchange="markPalletModified()"></td>
-                    <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="number" class="input-box p-aj11" value="${item.aj_11a || 0}" style="width:60px; padding:4px;" onchange="markPalletModified()"></td>
-                    <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="number" class="input-box p-aj12" value="${item.aj_12a || 0}" style="width:60px; padding:4px;" onchange="markPalletModified()"></td>
-                    <td style="border-bottom:1px solid var(--border); padding:8px; position:relative;">
-                        <input type="text" class="input-box p-author" value="${item.author || ''}" style="width:70px; padding:4px;" oninput="filterPalletAuthor(this)" onchange="markPalletModified()">
-                        <ul class="autocomplete-list p-author-list" style="width:120px; left:0; top:100%;"></ul>
-                    </td>
-                    <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="text" class="input-box p-remark" value="${item.remark || ''}" style="width:100px; padding:4px;" onchange="markPalletModified()"></td>
+                    <td style="padding:4px;"><input type="checkbox" class="pallet-chk" value="${item.id}"></td>
+                    <td style="padding:4px;">${item.inbound_date}</td>
+                    <td style="padding:4px;">${item.location || ''}</td>
+                    <td style="padding:4px;">${item.car_number || ''}</td>
+                    <td style="padding:4px;">${item.tonnage || ''}</td>
+                    <td style="padding:4px;">${item.arrival_time || ''}</td>
+                    <td style="padding:4px;">${item.kpp_n11 || 0}</td>
+                    <td style="padding:4px;">${item.kpp_n12 || 0}</td>
+                    <td style="padding:4px;">${item.aj_11a || 0}</td>
+                    <td style="padding:4px;">${item.aj_12a || 0}</td>
+                    <td style="padding:4px;">${item.author || ''}</td>
+                    <td style="padding:4px;">${item.remarks || ''}</td>
                 `;
                 tbody.appendChild(tr);
             });
-            document.getElementById('palletSelectAllChk').checked = false;
-        }
-
-        function markPalletModified() {
-            isPalletModified = true;
         }
 
         function addPalletRow() {
-            const tbody = document.getElementById('palletTbody');
-            const newRowsCount = tbody.querySelectorAll('.new-pallet-row').length;
-            if (newRowsCount >= 10) {
-                alert("최대 10행까지만 추가 가능합니다.");
+            const currentNewRows = document.querySelectorAll('#palletTbody tr.unsaved-row').length;
+            if (currentNewRows >= 10) {
+                alert("최대 10행까지만 추가할 수 있습니다.");
                 return;
             }
-            isPalletModified = true;
-            const today = new Date().toISOString().split('T')[0];
+            palletUnsaved = true;
             const tr = document.createElement('tr');
-            tr.className = 'new-pallet-row';
+            tr.className = 'unsaved-row';
+            const today = new Date().toISOString().split('T')[0];
             tr.innerHTML = `
-                <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="checkbox" class="pallet-chk" style="width:16px; height:16px;"></td>
-                <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="date" class="input-box p-date" value="${today}" style="width:110px; padding:4px;" onchange="markPalletModified()"></td>
-                <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="text" class="input-box p-location" style="width:80px; padding:4px;" onchange="markPalletModified()"></td>
-                <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="text" class="input-box p-vehicle" style="width:80px; padding:4px;" onchange="markPalletModified()"></td>
-                <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="text" class="input-box p-tonnage" style="width:60px; padding:4px;" onchange="markPalletModified()"></td>
-                <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="time" class="input-box p-time" style="width:80px; padding:4px;" onchange="markPalletModified()"></td>
-                <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="number" class="input-box p-kpp11" style="width:60px; padding:4px;" onchange="markPalletModified()"></td>
-                <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="number" class="input-box p-kpp12" style="width:60px; padding:4px;" onchange="markPalletModified()"></td>
-                <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="number" class="input-box p-aj11" style="width:60px; padding:4px;" onchange="markPalletModified()"></td>
-                <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="number" class="input-box p-aj12" style="width:60px; padding:4px;" onchange="markPalletModified()"></td>
-                <td style="border-bottom:1px solid var(--border); padding:8px; position:relative;">
-                    <input type="text" class="input-box p-author" style="width:70px; padding:4px;" oninput="filterPalletAuthor(this)" onchange="markPalletModified()" autocomplete="off">
-                    <ul class="autocomplete-list p-author-list" style="width:120px; left:0; top:100%;"></ul>
+                <td style="padding:4px;"><input type="checkbox" class="pallet-chk"></td>
+                <td style="padding:4px;"><input type="date" class="p-input p-date" value="${today}"></td>
+                <td style="padding:4px;"><input type="text" class="p-input p-loc" placeholder="상하차지"></td>
+                <td style="padding:4px;"><input type="text" class="p-input p-car" placeholder="차량번호"></td>
+                <td style="padding:4px;"><input type="text" class="p-input p-ton" placeholder="톤수"></td>
+                <td style="padding:4px;"><input type="time" class="p-input p-time"></td>
+                <td style="padding:4px;"><input type="number" class="p-input p-n11" value="0" min="0"></td>
+                <td style="padding:4px;"><input type="number" class="p-input p-n12" value="0" min="0"></td>
+                <td style="padding:4px;"><input type="number" class="p-input p-aj11" value="0" min="0"></td>
+                <td style="padding:4px;"><input type="number" class="p-input p-aj12" value="0" min="0"></td>
+                <td style="padding:4px;">
+                    <input type="text" class="p-input p-author" placeholder="작성인원" oninput="filterPalletAuthor(this)" autocomplete="off">
                 </td>
-                <td style="border-bottom:1px solid var(--border); padding:8px;"><input type="text" class="input-box p-remark" style="width:100px; padding:4px;" onchange="markPalletModified()"></td>
+                <td style="padding:4px;"><input type="text" class="p-input p-remark" placeholder="비고"></td>
             `;
-            tbody.insertBefore(tr, tbody.firstChild);
+            document.getElementById('palletTbody').prepend(tr);
         }
 
-        function togglePalletSelectAll() {
-            const isChecked = document.getElementById('palletSelectAllChk').checked;
-            document.querySelectorAll('.pallet-chk').forEach(chk => chk.checked = isChecked);
-        }
-
-        function selectAllPallet() {
-            const chkBox = document.getElementById('palletSelectAllChk');
-            chkBox.checked = !chkBox.checked;
-            togglePalletSelectAll();
-        }
-
-        function filterPalletAuthor(inputEl) {
-            markPalletModified();
-            const val = inputEl.value.trim();
-            const listUl = inputEl.nextElementSibling;
+        function filterPalletAuthor(inputElement) {
+            activeAuthorInput = inputElement;
+            const val = inputElement.value.trim();
+            const listUl = document.getElementById('palletAuthorList');
             listUl.innerHTML = '';
-            
-            document.querySelectorAll('.p-author-list').forEach(ul => {
-                if (ul !== listUl) ul.style.display = 'none';
-            });
-
             if(!val) { listUl.style.display = 'none'; return; }
-            
+
             const matches = fieldContacts.filter(c => c.name.includes(val));
             if(matches.length > 0) {
                 listUl.style.display = 'block';
+                const rect = inputElement.getBoundingClientRect();
+                listUl.style.left = rect.left + 'px';
+                listUl.style.top = (rect.bottom + 5) + 'px';
                 matches.forEach(m => {
                     const li = document.createElement('li');
                     li.textContent = m.name;
                     li.onclick = () => {
-                        inputEl.value = m.name;
+                        inputElement.value = m.name;
                         listUl.style.display = 'none';
                     };
                     listUl.appendChild(li);
                 });
-            } else {
-                listUl.style.display = 'none';
-            }
+            } else { listUl.style.display = 'none'; }
+        }
+
+        function editPalletData() {
+            const checkboxes = document.querySelectorAll('#palletTbody .pallet-chk:checked');
+            if (checkboxes.length === 0) return alert("수정할 항목을 선택하세요.");
+            
+            checkboxes.forEach(chk => {
+                const tr = chk.closest('tr');
+                if (tr.classList.contains('db-row')) {
+                    const id = tr.dataset.id;
+                    const item = palletDataList.find(i => i.id == id);
+                    if(!item) return;
+
+                    tr.classList.remove('db-row');
+                    tr.classList.add('edit-row');
+                    palletUnsaved = true;
+
+                    tr.innerHTML = `
+                        <td style="padding:4px;"><input type="checkbox" class="pallet-chk" value="${item.id}" checked></td>
+                        <td style="padding:4px;"><input type="date" class="p-input p-date" value="${item.inbound_date}"></td>
+                        <td style="padding:4px;"><input type="text" class="p-input p-loc" value="${item.location || ''}"></td>
+                        <td style="padding:4px;"><input type="text" class="p-input p-car" value="${item.car_number || ''}"></td>
+                        <td style="padding:4px;"><input type="text" class="p-input p-ton" value="${item.tonnage || ''}"></td>
+                        <td style="padding:4px;"><input type="time" class="p-input p-time" value="${item.arrival_time || ''}"></td>
+                        <td style="padding:4px;"><input type="number" class="p-input p-n11" value="${item.kpp_n11 || 0}" min="0"></td>
+                        <td style="padding:4px;"><input type="number" class="p-input p-n12" value="${item.kpp_n12 || 0}" min="0"></td>
+                        <td style="padding:4px;"><input type="number" class="p-input p-aj11" value="${item.aj_11a || 0}" min="0"></td>
+                        <td style="padding:4px;"><input type="number" class="p-input p-aj12" value="${item.aj_12a || 0}" min="0"></td>
+                        <td style="padding:4px;">
+                            <input type="text" class="p-input p-author" value="${item.author || ''}" oninput="filterPalletAuthor(this)" autocomplete="off">
+                        </td>
+                        <td style="padding:4px;"><input type="text" class="p-input p-remark" value="${item.remarks || ''}"></td>
+                    `;
+                }
+            });
         }
 
         async function savePalletData() {
-            const newRows = document.querySelectorAll('.new-pallet-row');
-            if (newRows.length === 0) {
-                alert("저장할 신규 항목이 없습니다."); return;
-            }
+            const newRows = document.querySelectorAll('#palletTbody .unsaved-row');
+            const editRows = document.querySelectorAll('#palletTbody .edit-row');
             
-            let insertArr = [];
+            if (newRows.length === 0 && editRows.length === 0) {
+                return alert("저장할 내용이 없습니다.");
+            }
+
+            document.getElementById('globalLoader').style.display = 'flex';
+
+            const inserts = [];
             newRows.forEach(tr => {
-                insertArr.push({
-                    inbound_date: tr.querySelector('.p-date').value || null,
-                    location: tr.querySelector('.p-location').value,
-                    vehicle_no: tr.querySelector('.p-vehicle').value,
-                    tonnage: tr.querySelector('.p-tonnage').value,
-                    arrival_time: tr.querySelector('.p-time').value || null,
-                    kpp_n11: parseInt(tr.querySelector('.p-kpp11').value) || 0,
-                    kpp_n12: parseInt(tr.querySelector('.p-kpp12').value) || 0,
+                inserts.push({
+                    inbound_date: tr.querySelector('.p-date').value,
+                    location: tr.querySelector('.p-loc').value,
+                    car_number: tr.querySelector('.p-car').value,
+                    tonnage: tr.querySelector('.p-ton').value,
+                    arrival_time: tr.querySelector('.p-time').value,
+                    kpp_n11: parseInt(tr.querySelector('.p-n11').value) || 0,
+                    kpp_n12: parseInt(tr.querySelector('.p-n12').value) || 0,
                     aj_11a: parseInt(tr.querySelector('.p-aj11').value) || 0,
                     aj_12a: parseInt(tr.querySelector('.p-aj12').value) || 0,
                     author: tr.querySelector('.p-author').value,
-                    remark: tr.querySelector('.p-remark').value
+                    remarks: tr.querySelector('.p-remark').value
                 });
             });
 
-            document.getElementById('globalLoader').style.display = 'flex';
-            const { error } = await supabaseClient.from('pallet_status').insert(insertArr);
-            document.getElementById('globalLoader').style.display = 'none';
-
-            if (error) {
-                alert("저장 실패: " + error.message);
-            } else {
-                alert("저장 완료");
-                isPalletModified = false;
-                await fetchPalletData();
+            if (inserts.length > 0) {
+                const { error } = await supabaseClient.from('pallet_inbound').insert(inserts);
+                if (error) { alert("저장 실패: " + error.message); document.getElementById('globalLoader').style.display = 'none'; return; }
             }
-        }
 
-        async function editPalletData() {
-            const checked = document.querySelectorAll('.saved-pallet-row .pallet-chk:checked');
-            if (checked.length === 0) { alert("수정할 기존 항목을 선택하세요."); return; }
-            
-            document.getElementById('globalLoader').style.display = 'flex';
-            let success = true;
-            for (let chk of checked) {
-                const tr = chk.closest('tr');
-                const id = tr.getAttribute('data-id');
-                const upd = {
-                    inbound_date: tr.querySelector('.p-date').value || null,
-                    location: tr.querySelector('.p-location').value,
-                    vehicle_no: tr.querySelector('.p-vehicle').value,
-                    tonnage: tr.querySelector('.p-tonnage').value,
-                    arrival_time: tr.querySelector('.p-time').value || null,
-                    kpp_n11: parseInt(tr.querySelector('.p-kpp11').value) || 0,
-                    kpp_n12: parseInt(tr.querySelector('.p-kpp12').value) || 0,
+            for (let tr of editRows) {
+                const id = tr.querySelector('.pallet-chk').value;
+                const updateData = {
+                    inbound_date: tr.querySelector('.p-date').value,
+                    location: tr.querySelector('.p-loc').value,
+                    car_number: tr.querySelector('.p-car').value,
+                    tonnage: tr.querySelector('.p-ton').value,
+                    arrival_time: tr.querySelector('.p-time').value,
+                    kpp_n11: parseInt(tr.querySelector('.p-n11').value) || 0,
+                    kpp_n12: parseInt(tr.querySelector('.p-n12').value) || 0,
                     aj_11a: parseInt(tr.querySelector('.p-aj11').value) || 0,
                     aj_12a: parseInt(tr.querySelector('.p-aj12').value) || 0,
                     author: tr.querySelector('.p-author').value,
-                    remark: tr.querySelector('.p-remark').value
+                    remarks: tr.querySelector('.p-remark').value
                 };
-                const { error } = await supabaseClient.from('pallet_status').update(upd).eq('id', id);
-                if (error) { success = false; console.error(error); }
+                await supabaseClient.from('pallet_inbound').update(updateData).eq('id', id);
             }
+
+            palletUnsaved = false;
+            await fetchPalletData(); 
             document.getElementById('globalLoader').style.display = 'none';
-            
-            if (success) {
-                alert("수정 완료");
-                isPalletModified = false;
-                await fetchPalletData();
-            } else {
-                alert("일부 항목 수정 실패");
-            }
+            alert("저장되었습니다.");
         }
 
         async function deletePalletData() {
-            const checked = document.querySelectorAll('.pallet-chk:checked');
-            if (checked.length === 0) { alert("삭제할 항목을 선택하세요."); return; }
-            if (!confirm("선택한 항목을 삭제하시겠습니까?")) return;
-
-            let idsToDelete = [];
-            checked.forEach(chk => {
+            const checkboxes = document.querySelectorAll('#palletTbody .pallet-chk:checked');
+            if (checkboxes.length === 0) return alert("삭제할 항목을 선택하세요.");
+            
+            if(!confirm("선택한 항목을 삭제하시겠습니까?")) return;
+            
+            const idsToDelete = [];
+            checkboxes.forEach(chk => {
                 const tr = chk.closest('tr');
-                if (tr.classList.contains('saved-pallet-row')) {
-                    idsToDelete.push(tr.getAttribute('data-id'));
-                } else {
+                if (tr.classList.contains('unsaved-row')) {
                     tr.remove(); 
+                } else {
+                    idsToDelete.push(parseInt(chk.value));
                 }
             });
 
             if (idsToDelete.length > 0) {
                 document.getElementById('globalLoader').style.display = 'flex';
-                const { error } = await supabaseClient.from('pallet_status').delete().in('id', idsToDelete);
+                const { error } = await supabaseClient.from('pallet_inbound').delete().in('id', idsToDelete);
                 document.getElementById('globalLoader').style.display = 'none';
                 if (error) { alert("삭제 실패: " + error.message); return; }
+                await fetchPalletData();
             }
-            
-            const remainingNew = document.querySelectorAll('.new-pallet-row').length;
-            if (remainingNew === 0) isPalletModified = false;
-            
-            alert("삭제 완료");
-            await fetchPalletData();
         }
 
-        async function fetchPalletData() {
-            try {
-                const { data } = await supabaseClient.from('pallet_status').select('*').order('created_at', { ascending: false });
-                palletDataList = data || [];
-                renderPalletTable();
-            } catch(e) { console.error("파렛트 데이터 로드 실패"); }
+        function toggleAllPallet(source) {
+            const checkboxes = document.querySelectorAll('#palletTbody .pallet-chk');
+            checkboxes.forEach(cb => cb.checked = source.checked);
+        }
+
+        function selectAllPallet() {
+            const source = document.getElementById('palletSelectAllChk');
+            source.checked = !source.checked;
+            toggleAllPallet(source);
         }
 
         async function downloadPalletExcel() {
-            const checkboxes = document.querySelectorAll('.pallet-chk:checked');
-            if(checkboxes.length === 0) {
-                alert("다운로드할 데이터를 체크박스로 선택해주세요.");
-                return;
-            }
-            
+            const checkboxes = document.querySelectorAll('#palletTbody .pallet-chk:checked');
+            if (checkboxes.length === 0) return alert("다운로드할 항목을 선택하세요.");
+
             const workbook = new ExcelJS.Workbook();
-            const sheet = workbook.addWorksheet('파렛트 입고현황', {
+            const sheet = workbook.addWorksheet('파렛트 입고', {
                 views: [{ showGridLines: false }]
             });
 
             sheet.columns = [
-                { width: 15.25 }, { width: 19.63 }, { width: 14.88 }, { width: 17.88 }, 
-                { width: 55.30 }, { width: 12.00 }, { width: 12.00 }, { width: 12.00 }, { width: 12.00 }
+                { width: 15.25 }, { width: 19.63 }, { width: 14.88 }, { width: 17.88 }, { width: 55.30 },
+                { width: 12.00 }, { width: 12.00 }, { width: 12.00 }, { width: 12.00 }
             ];
 
-            const headerRow = sheet.addRow(['구분', '일자', '파렛트 유형', '입출고수량', '비고', '차량번호', '차량톤수', '도착시간', '작성인원']);
-            
-            for(let i = 1; i <= 5; i++) {
-                const cell = headerRow.getCell(i);
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
-            }
-            
-            headerRow.eachCell((cell) => {
-                cell.border = { top: { style:'thin' }, left: { style:'thin' }, bottom: { style:'thin' }, right: { style:'thin' } };
+            const header = ['구분', '일자', '파렛트 유형', '입출고수량', '비고', '차량번호', '차량톤수', '도착시간', '작성인원'];
+            const headerRow = sheet.addRow(header);
+
+            headerRow.eachCell((cell, colNumber) => {
+                if (colNumber <= 5) {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
+                }
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                 cell.alignment = { horizontal: 'center', vertical: 'middle' };
             });
 
             checkboxes.forEach(chk => {
                 const tr = chk.closest('tr');
-                const isNew = tr.classList.contains('new-pallet-row');
-                
-                let date, loc, veh, ton, arr, k11, k12, a11, a12, auth, rem;
-                
-                if (isNew) {
-                    date = tr.querySelector('.p-date').value;
-                    loc = tr.querySelector('.p-location').value;
-                    veh = tr.querySelector('.p-vehicle').value;
-                    ton = tr.querySelector('.p-tonnage').value;
-                    arr = tr.querySelector('.p-time').value;
-                    k11 = parseInt(tr.querySelector('.p-kpp11').value) || 0;
-                    k12 = parseInt(tr.querySelector('.p-kpp12').value) || 0;
-                    a11 = parseInt(tr.querySelector('.p-aj11').value) || 0;
-                    a12 = parseInt(tr.querySelector('.p-aj12').value) || 0;
-                    auth = tr.querySelector('.p-author').value;
-                    rem = tr.querySelector('.p-remark').value;
+                let rowData = {};
+                if (tr.classList.contains('unsaved-row') || tr.classList.contains('edit-row')) {
+                    rowData = {
+                        inbound_date: tr.querySelector('.p-date').value,
+                        location: tr.querySelector('.p-loc').value,
+                        car_number: tr.querySelector('.p-car').value,
+                        tonnage: tr.querySelector('.p-ton').value,
+                        arrival_time: tr.querySelector('.p-time').value,
+                        kpp_n11: parseInt(tr.querySelector('.p-n11').value) || 0,
+                        kpp_n12: parseInt(tr.querySelector('.p-n12').value) || 0,
+                        aj_11a: parseInt(tr.querySelector('.p-aj11').value) || 0,
+                        aj_12a: parseInt(tr.querySelector('.p-aj12').value) || 0,
+                        author: tr.querySelector('.p-author').value,
+                        remarks: tr.querySelector('.p-remark').value
+                    };
                 } else {
-                    const item = JSON.parse(tr.getAttribute('data-item'));
-                    date = item.inbound_date || ''; loc = item.location || ''; veh = item.vehicle_no || ''; 
-                    ton = item.tonnage || ''; arr = item.arrival_time || '';
-                    k11 = item.kpp_n11 || 0; k12 = item.kpp_n12 || 0; a11 = item.aj_11a || 0; a12 = item.aj_12a || 0;
-                    auth = item.author || ''; rem = item.remark || '';
+                    const id = tr.dataset.id;
+                    rowData = palletDataList.find(i => i.id == id);
                 }
 
-                const pallets = [
-                    { name: 'KPP N11', qty: k11 },
-                    { name: 'KPP N12', qty: k12 },
-                    { name: 'AJ 11A', qty: a11 },
-                    { name: 'AJ 12A', qty: a12 }
-                ];
-
-                pallets.forEach(p => {
-                    if (p.qty > 0) {
-                        const newRow = sheet.addRow([
-                            loc, date, p.name, p.qty, rem, veh, ton, arr, auth
+                const addExcelRow = (type, qty) => {
+                    if (qty > 0) {
+                        const row = sheet.addRow([
+                            rowData.location || '',
+                            rowData.inbound_date || '',
+                            type,
+                            qty,
+                            rowData.remarks || '',
+                            rowData.car_number || '',
+                            rowData.tonnage || '',
+                            rowData.arrival_time || '',
+                            rowData.author || ''
                         ]);
-                        newRow.eachCell((cell) => {
-                            cell.border = { top: { style:'thin' }, left: { style:'thin' }, bottom: { style:'thin' }, right: { style:'thin' } };
+                        row.eachCell(cell => {
+                            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                             cell.alignment = { horizontal: 'center', vertical: 'middle' };
                         });
                     }
-                });
+                };
+
+                addExcelRow('KPP N11', rowData.kpp_n11);
+                addExcelRow('KPP N12', rowData.kpp_n12);
+                addExcelRow('AJ 11A', rowData.aj_11a);
+                addExcelRow('AJ 12A', rowData.aj_12a);
             });
 
             const buffer = await workbook.xlsx.writeBuffer();
-            saveAs(new Blob([buffer]), `파렛트입고현황_${new Date().toISOString().split('T')[0]}.xlsx`);
+            saveAs(new Blob([buffer]), `파렛트_입고현황.xlsx`);
         }
 
-        function confirmUnsavedMove() {
-            document.getElementById('unsavedModal').style.display = 'none';
-            isPalletModified = false; 
-            renderPalletTable(); 
-            if(nextViewTarget) showView(nextViewTarget, true);
+        function confirmLeavePallet() {
+            palletUnsaved = false;
+            document.getElementById('unsavedAlertModal').style.display = 'none';
+            
+            // 입력중이던 데이터 초기화(DB 데이터로 덮어쓰기)
+            renderPalletTable();
+            
+            if (targetView) {
+                showView(targetView);
+                targetView = '';
+            }
         }
-
-        function cancelUnsavedMove() {
-            document.getElementById('unsavedModal').style.display = 'none';
-            nextViewTarget = null;
-        }
-
     </script>
 </body>
 </html>
