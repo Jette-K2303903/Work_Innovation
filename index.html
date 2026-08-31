@@ -637,7 +637,8 @@
                 if (histErr) console.error("업로드 내역 로드 에러:", histErr.message);
                 if (histData) {
                     historyDataList = histData.map(d => ({
-                        id: d.id, status: d.status, reason: d.reason, author: d.author, date: d.date,
+                        id: d.id, status: d.status, reason: d.reason, correction: d.correction || '',
+                        author: d.author, date: d.date,
                         driver: d.driver, store: d.store, sCode: d.store_code, mCenter: d.main_center,
                         product: d.product, pCode: d.product_code, iCenter: d.inbound_center,
                         qty: d.qty, unit: d.unit, img: d.img_url, remark: d.remark || '-'
@@ -1367,7 +1368,7 @@
             if(!item) return;
 
             currentEditId = id;
-            document.getElementById('reasonText').value = item.reason.split(/\n수정 내역|\n\[수정사유/)[0];
+            document.getElementById('reasonText').value = item.reason; // 변경: 순수 원본 사유만 로드
             document.getElementById('authorName').value = item.author;
             document.getElementById('writeDate').value = item.date;
             document.getElementById('storeName').value = item.store;
@@ -1416,18 +1417,14 @@
                 let existingItem = historyDataList.find(i => i.id === currentEditId);
                 if(!existingItem) return;
 
-                let editCount = (existingItem.reason.match(/\n수정 내역|\n\[수정사유/g) || []).length + 1;
+                // [요청] 문제 2. 수정 내역(correction) 컬럼 분리
+                let editCount = (existingItem.correction ? (existingItem.correction.match(/수정 내역/g) || []).length : 0) + 1;
+                let newCorrection = (existingItem.correction ? existingItem.correction + '\n' : '') + `수정 내역 ${editCount} : ` + editReason;
                 let baseReason = document.getElementById('reasonText').value;
-                let previousEdits = "";
-                let splitIdx = existingItem.reason.search(/\n수정 내역|\n\[수정사유/);
-                if(splitIdx !== -1) {
-                    previousEdits = existingItem.reason.substring(splitIdx);
-                }
-                
-                let newFullReason = baseReason + previousEdits + `\n수정 내역 ${editCount} : ` + editReason;
 
                 let updatedData = {
-                    reason: newFullReason,
+                    reason: baseReason,
+                    correction: newCorrection,
                     author: document.getElementById('authorName').value,
                     date: document.getElementById('writeDate').value,
                     driver: document.getElementById('driverName').value,
@@ -1475,6 +1472,7 @@
                     id: Date.now(),
                     status: 'active',
                     reason: document.getElementById('reasonText').value,
+                    correction: '', // 신규 등록 시 빈 값
                     author: document.getElementById('authorName').value,
                     date: document.getElementById('writeDate').value,
                     driver: document.getElementById('driverName').value,
@@ -1491,9 +1489,9 @@
                 };
 
                 historyDataList.unshift({
-                    id: insertData.id, status: insertData.status, reason: insertData.reason, author: insertData.author,
-                    date: insertData.date, driver: insertData.driver, store: insertData.store, sCode: insertData.store_code,
-                    mCenter: insertData.main_center, product: insertData.product, pCode: insertData.product_code,
+                    id: insertData.id, status: insertData.status, reason: insertData.reason, correction: insertData.correction, 
+                    author: insertData.author, date: insertData.date, driver: insertData.driver, store: insertData.store, 
+                    sCode: insertData.store_code, mCenter: insertData.main_center, product: insertData.product, pCode: insertData.product_code,
                     iCenter: insertData.inbound_center, qty: insertData.qty, unit: insertData.unit, img: insertData.img_url,
                     remark: insertData.remark
                 });
@@ -1539,21 +1537,19 @@
             } else { select.selectedIndex = 0; }
         }
 
-        function getDisplayReason(reason) {
+        // 화면 UI 노출용 사유 포맷 (원본 + correction 결합 표기)
+        function getDisplayReason(reason, correction) {
             if (!reason) return "";
             let displayReason = reason;
             
-            displayReason = displayReason.replace(/\n\[수정사유(\d+)\] /g, '\n수정 내역 $1 : ');
-
-            if (!isLoggedIn) {
-                let reasonParts = displayReason.split(/\n수정 내역 \d* *: /);
-                if (reasonParts.length > 1) {
-                    let originalReason = reasonParts[0];
-                    let latestEdit = reasonParts[reasonParts.length - 1];
-                    displayReason = originalReason + '\n수정 내역 : ' + latestEdit;
+            if (correction) {
+                if (!isLoggedIn) {
+                    let corrParts = correction.split('\n');
+                    displayReason += '<br><span style="color:#FF3B30;">' + corrParts[corrParts.length - 1] + '</span>';
+                } else {
+                    displayReason += '<br><span style="color:#FF3B30;">' + correction.replace(/\n/g, '<br>') + '</span>';
                 }
             }
-            
             return displayReason;
         }
 
@@ -1602,7 +1598,6 @@
                     }
                 }
 
-                // [요청] 문제 6 : 삭제확정 및 삭제취소 버튼 UI 완벽 분리 구현
                 if(item.status === 'delete_requested') {
                     actionHtml = `
                         <span class="status-red" style="margin-bottom:5px; font-size:12px; display:block;">[삭제요청됨]</span>
@@ -1620,7 +1615,7 @@
                     `;
                 }
 
-                let dispReason = getDisplayReason(item.reason);
+                let dispReason = getDisplayReason(item.reason, item.correction);
 
                 div.innerHTML = `
                     <div class="history-checkbox-wrap" style="display:${isLoggedIn?'block':'none'}">
@@ -1630,7 +1625,7 @@
                     <div class="history-info">
                         <p><strong>[${item.store}]</strong> ${item.product} (수량: ${item.qty}${item.unit})</p>
                         <p style="color:#8E8E93; font-size:12px;">${item.date} | 기사: ${item.driver}</p>
-                        <p style="font-size:12px; color:#FF3B30;">사유: ${dispReason.replace(/\n/g, '<br>')} (${item.author})</p>
+                        <p style="font-size:12px; color:#FF3B30;">사유: ${dispReason} (${item.author})</p>
                         <p style="font-size:12px; color:#4A90E2; margin-top:3px; font-weight:600;">비고: ${item.remark || '-'}</p>
                     </div>
                     <div style="display:flex; flex-direction:column; justify-content:center; text-align:right;">
@@ -1675,9 +1670,12 @@
 
             try {
                 const workbook = new ExcelJS.Workbook();
-                const sheet = workbook.addWorksheet('특이사항');
+                
+                // [요청] 문제 1 & 3: 눈금선 제거, 축소 1번(zoom 80)으로 한 화면에 잘 보이게 자동 조정
+                const sheet = workbook.addWorksheet('특이사항', {
+                    views: [{ showGridLines: false, zoomScale: 80 }]
+                });
 
-                // [요청] 문제 3. 엑셀 너비 지정 A~Q행
                 sheet.columns = [
                     { width: 0.77 }, { width: 11.00 }, { width: 9.38 }, { width: 9.38 },
                     { width: 16.25 }, { width: 9.38 }, { width: 16.25 }, { width: 9.38 },
@@ -1686,32 +1684,43 @@
                     { width: 16.88 }
                 ];
 
-                // [요청] 문제 1. 축소 1번을 해서 A~Q까지 모두 한 화면에 잘 보이도록 자동 조정 (Fit to Page)
-                sheet.pageSetup = { fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
-
                 sheet.addRow(['공란', '배송일자', '메인센터명', '고객사코드', '고객사명', '거래처코드', '거래처명', '제품코드', '제품명', '온도', '단위', '품목지정', '재고타입', '수량', '내용', '상세내용', '수정사유']);
+
+                // [요청] 문제 3: 헤더 셀 제일 연한 연두색 배경 적용, 테두리, 가운데 맞춤 적용
+                const headerRow = sheet.getRow(1);
+                headerRow.eachCell((cell) => {
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFE2EFDA' } // 연한 연두색
+                    };
+                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                });
 
                 itemsToExport.forEach((item) => {
                     let orderInfo = orderDataList.find(r => r.length > 11 && cleanNumber(r[10]) === item.pCode && cleanNumber(r[8]) === item.sCode) || [];
                     let safeSheetName = (item.store || '거래처').substring(0, 31).replace(/[\\/?*\[\]]/g, '');
 
-                    let dispReason = getDisplayReason(item.reason);
-                    
-                    // [요청] 문제 4. P행 '전달사항' 데이터 노출 여부 처리
-                    let remarkContent = item.remark && item.remark !== '-' ? item.remark : '';
+                    let baseReasonText = item.reason || ''; // O행
+                    let remarkContent = item.remark && item.remark !== '-' ? item.remark : ''; // P행
+                    let correctionContent = item.correction || ''; // Q행
 
                     const row = sheet.addRow([
                         '', item.date, item.mCenter, item.sCode, (orderInfo[7]||item.store), (orderInfo[8]||''), (orderInfo[9]||item.store),
                         item.pCode, item.product, (orderInfo[15]||''), item.unit, (orderInfo[17]||''), (orderInfo[18]||''),
-                        item.qty, dispReason, remarkContent, ''
+                        item.qty, baseReasonText, remarkContent, correctionContent
                     ]);
 
-                    // [요청] 문제 1. 엑셀 셀 H행, I행, O행은 '텍스트 줄 바꿈', 나머지 A~Q는 '셀에 맞춤' 기본값
+                    // [요청] 문제 1 & 3: A~Q 가운데 맞춤, 텍스트 칸 윤곽선 테두리 적용
+                    // H(8), I(9), O(15) -> 텍스트 줄바꿈 / 그 외 -> 셀에 맞춤
                     row.eachCell((cell, colNumber) => {
+                        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                        
                         if (colNumber === 8 || colNumber === 9 || colNumber === 15) {
-                            cell.alignment = { wrapText: true, vertical: 'middle' };
+                            cell.alignment = { wrapText: true, shrinkToFit: false, horizontal: 'center', vertical: 'middle' };
                         } else {
-                            cell.alignment = { shrinkToFit: true, vertical: 'middle' };
+                            cell.alignment = { wrapText: false, shrinkToFit: true, horizontal: 'center', vertical: 'middle' };
                         }
                     });
 
@@ -1738,14 +1747,12 @@
                             }
                         });
 
-                        // [요청] 문제 5. 사진 시트 L3에 메인 시트 귀환 링크
                         const l3Cell = imgSheet.getCell('L3');
                         l3Cell.value = { text: '특이사항', hyperlink: `#'특이사항'!A1` };
                         l3Cell.font = { color: { argb: 'FF0000FF' }, underline: true, bold: true };
 
-                        // [요청] 문제 5. 메인 시트 O행(15번째 컬럼)에 사진 시트로 가는 하이퍼링크 처리
                         const cellO = row.getCell(15);
-                        cellO.value = { text: dispReason, hyperlink: `#'${safeSheetName}'!A1` };
+                        cellO.value = { text: baseReasonText, hyperlink: `#'${safeSheetName}'!A1` };
                         cellO.font = { color: { argb: 'FF0000FF' }, underline: true };
                     }
                 });
@@ -1757,7 +1764,6 @@
             }
         }
 
-        // [요청] 문제 6. 삭제 요청 로직 팝업 처리로 변경
         let deleteTargetId = null;
         function requestDelete(id) {
             deleteTargetId = id;
@@ -1777,7 +1783,6 @@
             document.getElementById('deleteReqModal').style.display = 'none';
         }
 
-        // [요청] 문제 6. 삭제 취소 로직 (로그인 전용)
         async function cancelDelete(id) {
             const item = historyDataList.find(i => i.id === id);
             if(item) {
