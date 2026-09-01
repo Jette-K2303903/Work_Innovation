@@ -38,6 +38,7 @@
             -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text;
         }
 
+        /* [요청] 문제 1. 초기 로딩 애니메이션 UI */
         #globalLoader {
             position: fixed; top: 20px; right: 20px;
             background: rgba(0,0,0,0.7); color: #fff;
@@ -178,6 +179,7 @@
         .sortable-item:active { cursor: grabbing; }
         .drag-handle { color: #8E8E93; font-size: 18px; }
         
+        /* 파렛트 입력 필드 추가 디자인 (수정됨) */
         .p-input { width: 100%; height: 32px; box-sizing: border-box; padding: 6px; border: 1px solid #E5E5EA; border-radius: 6px; font-size: 13px; background: #FAFAFC; }
         .p-input:focus { border-color: var(--primary); outline: none; background:#FFF; }
         .pallet-chk { width: 18px; height: 18px; margin:0; cursor:pointer;}
@@ -195,8 +197,10 @@
 
         #map { width:100%; height:65vh; border-radius:12px; background: transparent !important; z-index: 1; }
 
+        /* [기존] 지도 화이트톤 필터 스타일 적용 */
         .leaflet-tile { filter: grayscale(100%) brightness(110%) contrast(90%); }
         
+        /* [기존] 지도 말풍선 스타일 및 투명도 전환 처리 */
         .custom-map-tooltip { opacity: 0 !important; transition: opacity 0.3s; background: rgba(255,255,255,0.9); border: 1px solid var(--primary); border-radius: 8px; color: var(--text-main); font-size: 12px; font-weight: 700; padding: 6px 10px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.15); white-space: nowrap; pointer-events: none; }
         .custom-map-tooltip::before { border-top-color: var(--primary) !important; border-bottom-color: var(--primary) !important; border-left-color: var(--primary) !important; border-right-color: var(--primary) !important; }
         #map.show-labels .custom-map-tooltip { opacity: 1 !important; }
@@ -208,22 +212,11 @@
             transform: scale(0.96) !important;
             opacity: 0.8 !important;
         }
-
-        /* 팝업 공지용 스타일 추가 */
-        .popup-carousel { position:relative; width:100%; height:200px; overflow:hidden; border-radius:12px; margin-bottom:10px; background:#000; }
-        .popup-carousel-inner { display:flex; height:100%; transition:transform 0.3s ease; }
-        .popup-carousel-inner img { width:100%; height:100%; object-fit:contain; flex-shrink:0; cursor:pointer; }
-        .popup-btn-prev, .popup-btn-next { position:absolute; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:#fff; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; z-index:10; font-size:16px; }
-        .popup-btn-prev { left:10px; }
-        .popup-btn-next { right:10px; }
-        .popup-zoom-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; justify-content:center; align-items:center; }
-        .popup-zoom-modal img { max-width:95%; max-height:95%; object-fit:contain; cursor:pointer; }
-        .popup-card { background:var(--surface); width:90%; max-width:400px; border-radius:20px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.15); max-height:85vh; display:flex; flex-direction:column; position:relative; }
-        .popup-content-scroll { overflow-y:auto; flex:1; margin-bottom:15px; font-size:14px; white-space:pre-wrap; text-align:left; color:var(--text-main); }
     </style>
 </head>
 <body>
     
+    <!-- [요청] 문제 1. 초기 로딩 화면 추가 -->
     <div id="globalLoader">
         <div class="spinner"></div>
         <span>데이터 로딩중..</span>
@@ -241,6 +234,7 @@
         <button id="menuDriver" class="menu-list-btn" onclick="showView('driverContactView')">📱 기사 연락처</button>
         <button id="menuHistory" class="menu-list-btn" onclick="showView('historyView')">📂 업로드 내역</button>
         <button id="menuMap" class="menu-list-btn menu-item-optional" onclick="showView('mapView')">🗺️ 배차 내역</button>
+
         <button id="menuReserve1" class="menu-list-btn menu-item-optional" onclick="showView('palletView')">📦 파렛트 입고현황</button>
         <button id="menuReserve2" class="menu-list-btn menu-item-optional" onclick="toggleScreenMode()">🖥️ 화면전환</button>
 
@@ -257,7 +251,9 @@
                 <button class="action-btn" onclick="document.getElementById('cameraInput').click()">📸 카메라 촬영</button>
                 <button class="action-btn" onclick="document.getElementById('galleryInput').click()">🖼️ 갤러리 선택</button>
             </div>
-            <div id="imagePreviewContainer" class="preview-container"></div>
+            <div id="imagePreviewContainer" class="preview-container">
+                <!-- 동적으로 다중 이미지가 추가될 영역 -->
+            </div>
 
             <div class="form-card">
                 <div class="input-row">
@@ -322,10 +318,12 @@
                         <input type="text" id="productUnit" class="input-box" readonly placeholder="단위">
                     </div>
                 </div>
+                <!-- 수정 시 노출되는 수정 사유 칸 -->
                 <div class="input-group" id="editReasonGroup" style="display:none;">
                     <label style="color:#FF3B30;">수정 사유</label>
                     <input type="text" id="editReasonText" class="input-box" placeholder="수정 사유를 입력하세요 (예: 수량 변경 등)">
                 </div>
+                <!-- 추가된 상세내용 칸 -->
                 <div class="input-group">
                     <label>상세내용</label>
                     <input type="text" id="remarkText" class="input-box" placeholder="상세 내용을 입력하세요." autocomplete="off">
@@ -416,6 +414,7 @@
                 </div>
                 <div style="display:flex; gap:5px;">
                     <button class="btn-small" onclick="selectAllPallet()">전체 선택</button>
+                    <!-- [수정사항] 엑셀 다운로드 버튼 클릭 시 모달창 열리도록 변경 -->
                     <button class="btn-small" style="background:#4A90E2; color:#fff;" onclick="openPalletDownloadModal()">다운로드</button>
                 </div>
             </div>
@@ -439,67 +438,16 @@
                         </tr>
                     </thead>
                     <tbody id="palletTbody">
+                        <!-- 동적 데이터 추가 영역 -->
                     </tbody>
                 </table>
             </div>
+            <!-- 작성인원 자동완성 -->
             <ul id="palletAuthorList" class="autocomplete-list" style="position:fixed; width:150px; z-index:9999; display:none;"></ul>
         </div>
     </div>
 
-    <!-- 팝업 이미지 확대 모달 -->
-    <div id="imgZoomModal" class="popup-zoom-modal" onclick="this.style.display='none'">
-        <img id="zoomedImg" src="">
-    </div>
-
-    <!-- 팝업 공지 설정 관리 목록 모달 -->
-    <div id="popupManageModal" class="modal-overlay" style="z-index: 2001;" onclick="if(event.target===this) this.style.display='none'">
-        <div class="modal-box" style="max-width:500px; padding:20px;">
-            <h2 class="modal-title" style="font-size:18px;">팝업 공지 관리 (최대 10개)</h2>
-            <div style="text-align:right; margin-bottom:10px;">
-                <button class="btn-small" style="background:var(--primary); color:#fff; padding:8px 12px;" onclick="openPopupEditModal()">+ 새 공지 추가</button>
-            </div>
-            <div id="popupManageList" style="max-height:300px; overflow-y:auto; text-align:left; display:flex; flex-direction:column; gap:10px;">
-            </div>
-            <button class="modal-btn modal-btn-close" style="margin-top:20px;" onclick="document.getElementById('popupManageModal').style.display='none'">닫기</button>
-        </div>
-    </div>
-
-    <!-- 팝업 공지 추가/수정 폼 모달 -->
-    <div id="popupEditModal" class="modal-overlay" style="z-index: 2002;" onclick="if(event.target===this) this.style.display='none'">
-        <div class="modal-box" style="max-width:500px; padding:20px;">
-            <h2 class="modal-title" style="font-size:18px;" id="popupEditTitle">팝업 공지 추가</h2>
-            <input type="hidden" id="popupEditId">
-            <div class="input-group">
-                <label>제목</label>
-                <input type="text" id="popupTitleInput" class="input-box" placeholder="공지 제목">
-            </div>
-            <div class="input-group">
-                <label>내용</label>
-                <textarea id="popupContentInput" class="textarea-box" style="height:100px;" placeholder="공지 내용"></textarea>
-            </div>
-            <div class="input-row">
-                <div class="flex-50" style="flex:1; display:flex; flex-direction:column; gap:6px;">
-                    <label>게시 시작일</label>
-                    <input type="date" id="popupStartInput" class="input-box">
-                </div>
-                <div class="flex-50" style="flex:1; display:flex; flex-direction:column; gap:6px;">
-                    <label>게시 종료일</label>
-                    <input type="date" id="popupEndInput" class="input-box">
-                </div>
-            </div>
-            <div class="input-group" style="margin-top:10px;">
-                <label>사진 첨부 (최대 5장)</label>
-                <input type="file" id="popupImgInput" accept="image/*" multiple style="display:none;" onchange="previewPopupImages(this)">
-                <button class="btn-small" style="background:#E0EFFF; color:var(--primary); padding:10px; border-radius:8px; border:1px dashed var(--primary); width:100%; margin-bottom:10px;" onclick="document.getElementById('popupImgInput').click()">이미지 선택</button>
-                <div id="popupImgPreviewContainer" style="display:flex; gap:10px; overflow-x:auto;"></div>
-            </div>
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                <button class="modal-btn" style="flex:1; margin-top:0;" onclick="savePopupNotice()">저장</button>
-                <button class="modal-btn modal-btn-close" style="flex:1; margin-top:0;" onclick="document.getElementById('popupEditModal').style.display='none'">취소</button>
-            </div>
-        </div>
-    </div>
-
+    <!-- 시스템 모달 영역 -->
     <!-- 로그인 모달 -->
     <div id="loginModal" class="modal-overlay" onclick="if(event.target===this) closeLoginModal()">
         <div class="modal-box">
@@ -540,15 +488,12 @@
             <div style="text-align:left; font-size:14px; margin-top:20px; border-top:1px solid var(--border); padding-top:15px;">
                 <label style="display:block; margin-bottom:10px;">데이터 유지기간(일): <input type="number" id="autoDeleteDaysInput" class="input-box" style="width:60px; padding:6px;" value="7"></label>
                 <label style="display:block; margin-bottom:10px;">작성완료 자동닫힘(초): <input type="number" id="autoCloseSecondsInput" class="input-box" style="width:60px; padding:6px;" value="2"></label>
-                
                 <div style="display:flex; gap:10px; margin-top:5px;">
                     <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="openListManageModal()">📋 비로그인 목록 관리</button>
                     <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="document.getElementById('reasonManageModal').style.display='flex'; renderReasonManageList()">📝 사유 목록 관리</button>
                 </div>
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="openPopupManageModal()">📢 팝업 공지 설정</button>
-                </div>
-                
+                <!-- 팝업 공지 관리 버튼 추가됨 -->
+                <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); width:100%; padding:10px; margin-top:10px;" onclick="document.getElementById('noticeManageModal').style.display='flex'; renderNoticeManageList()">📢 팝업 공지 관리</button>
             </div>
             <button class="modal-btn" style="margin-top:25px;" onclick="saveSystemSettings()">설정 저장</button>
             <button class="modal-btn modal-btn-close" onclick="closeSettingsModal()">닫기</button>
@@ -586,7 +531,40 @@
         </div>
     </div>
 
-    <!-- 목록 관리 팝업 -->
+    <!-- 팝업 공지 관리 모달 -->
+    <div id="noticeManageModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box" style="max-width:400px; max-height:85vh; overflow-y:auto;">
+            <h2 class="modal-title" style="font-size:18px;">팝업 공지 관리 (최대 10개)</h2>
+            <div style="margin-bottom:15px; border:1px solid #E5E5EA; padding:15px; border-radius:12px; background:#FAFAFC;">
+                <input type="text" id="newNoticeTitle" class="input-box" placeholder="공지 제목" style="margin-bottom:10px;">
+                <textarea id="newNoticeContent" class="textarea-box" placeholder="공지 내용" style="margin-bottom:10px; height:100px;"></textarea>
+                <input type="file" id="newNoticeImg" accept="image/*" class="input-box" style="padding:10px; margin-bottom:10px;">
+                <button class="modal-btn" style="margin-top:0;" onclick="handleAddNotice()">공지 추가</button>
+            </div>
+            <ul id="noticeManageUl" style="list-style:none; padding:0; text-align:left;"></ul>
+            <button class="modal-btn modal-btn-close" onclick="document.getElementById('noticeManageModal').style.display='none'">닫기</button>
+        </div>
+    </div>
+
+    <!-- 비로그인 사용자용 메인 공지 팝업 -->
+    <div id="mainNoticeModal" class="modal-overlay" style="z-index: 10000; align-items: center; justify-content: center; background: rgba(0,0,0,0.6);">
+        <div class="modal-box" style="padding:0; overflow:hidden; display:flex; flex-direction:column; max-width:90%; width:400px; max-height:80vh; background:#fff; border-radius:16px;">
+            <div id="noticeContentArea" style="flex:1; overflow-y:auto; padding:20px; text-align:left;">
+                <!-- 동적 렌더링 영역 -->
+            </div>
+            <div style="display:flex; border-top:1px solid #E5E5EA;">
+                <button style="flex:1; padding:15px; background:#F2F2F7; border:none; border-right:1px solid #E5E5EA; font-size:14px; color:var(--text-main); cursor:pointer;" onclick="hideNoticeToday()">오늘 하루 띄우지 않기</button>
+                <button style="flex:1; padding:15px; background:#fff; border:none; font-size:15px; color:var(--primary); font-weight:bold; cursor:pointer;" onclick="document.getElementById('mainNoticeModal').style.display='none'">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 이미지 확대용 팝업 -->
+    <div id="enlargedImgModal" class="modal-overlay" style="z-index: 10001; align-items:center; justify-content:center; background: rgba(0,0,0,0.85);" onclick="this.style.display='none'">
+        <img id="enlargedImg" src="" style="max-width:95%; max-height:95%; object-fit:contain; border-radius:8px; cursor:pointer;">
+    </div>
+
+    <!-- 목록 관리 팝업 (드래그 지원) -->
     <div id="listManageModal" class="modal-overlay" onclick="if(event.target===this) closeListManageModal()">
         <div class="modal-box" style="max-width:300px;">
             <h2 class="modal-title" style="font-size:18px;">비로그인 목록 노출 설정</h2>
@@ -606,7 +584,7 @@
         </div>
     </div>
 
-    <!-- 삭제 요청 확인 팝업 -->
+    <!-- 삭제 요청 확인 팝업 (비로그인 전용) -->
     <div id="deleteReqModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:300px; padding:30px 20px;">
             <h2 class="modal-title" style="font-size:18px;">업로드 내역 삭제</h2>
@@ -618,7 +596,7 @@
         </div>
     </div>
 
-    <!-- 파렛트 삭제 요청 확인 팝업 -->
+    <!-- 파렛트 삭제 요청 확인 팝업 (비로그인 전용) -->
     <div id="palletDeleteReqModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:300px; padding:30px 20px;">
             <h2 class="modal-title" style="font-size:18px;">파렛트 입고 삭제</h2>
@@ -690,10 +668,12 @@
         let historyDataList = [];
         let officeContacts = []; let fieldContacts = []; let driverContacts = [];
         
-        let palletDataList = []; 
-        let palletUnsaved = false; 
+        let palletDataList = []; // 파렛트 입고현황 리스트
+        let palletUnsaved = false; // 저장되지 않은 항목 유무 플래그
         let targetView = '';
-        let palletDeleteTargetIds = []; 
+        let palletDeleteTargetIds = []; // 파렛트 삭제 요청용
+        
+        let popupNoticesList = []; // 팝업 공지 리스트 추가
 
         let reasonsList = [];
         let menuOrder = ['menuHome', 'menuOffice', 'menuField', 'menuDriver', 'menuHistory', 'menuMap', 'menuReserve1', 'menuReserve2'];
@@ -704,13 +684,10 @@
         const STORAGE_TOTAL = 1100;
         let showRemainingStorage = true;
 
+        // 파렛트 모달 관련 변수
         let currentCalDate = new Date();
         let selectedDlDate = '';
         let availableDates = new Set();
-        
-        // 팝업 공지용 변수
-        let adminPopupList = [];
-        let popupImgSrcs = [];
 
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('writeDate').value = new Date().toISOString().split('T')[0];
@@ -724,8 +701,56 @@
             setupDragAndDrop();
 
             document.getElementById('globalLoader').style.opacity = '0';
-            setTimeout(() => document.getElementById('globalLoader').style.display = 'none', 300);
+            setTimeout(() => {
+                document.getElementById('globalLoader').style.display = 'none';
+                checkAndShowNotice(); // 로딩 종료 후 팝업 공지 확인 및 노출
+            }, 300);
         });
+
+        // 비로그인 사용자용 팝업 공지 로직
+        function checkAndShowNotice() {
+            if (isLoggedIn) return; // 로그인 사용자는 보지 않음
+            if (!popupNoticesList || popupNoticesList.length === 0) return;
+
+            const hideUntil = localStorage.getItem('hideNoticeUntil');
+            if (hideUntil && new Date().getTime() < parseInt(hideUntil)) {
+                return;
+            }
+
+            renderMainNotice();
+            document.getElementById('mainNoticeModal').style.display = 'flex';
+        }
+
+        function renderMainNotice() {
+            const container = document.getElementById('noticeContentArea');
+            container.innerHTML = popupNoticesList.map(notice => `
+                <div style="margin-bottom:20px; padding-bottom:20px; border-bottom:1px solid #E5E5EA;">
+                    <h3 style="margin-top:0; color:var(--text-main); font-size:18px;">${notice.title}</h3>
+                    ${notice.img ? `<img src="${notice.img}" style="width:100%; border-radius:8px; margin-bottom:10px; cursor:pointer;" onclick="document.getElementById('enlargedImg').src=this.src; document.getElementById('enlargedImgModal').style.display='flex'">` : ''}
+                    <p style="white-space:pre-wrap; font-size:14px; line-height:1.5; color:var(--text-main); margin:0;">${notice.content}</p>
+                </div>
+            `).join('');
+            
+            if(container.lastElementChild) {
+                container.lastElementChild.style.borderBottom = 'none';
+                container.lastElementChild.style.paddingBottom = '0';
+                container.lastElementChild.style.marginBottom = '0';
+            }
+        }
+
+        function hideNoticeToday() {
+            const now = new Date();
+            let threshold = new Date(now);
+            threshold.setHours(18, 0, 0, 0);
+
+            // 현재 시간이 당일 18시 이후라면, 다음날 18시로 설정
+            if (now.getTime() >= threshold.getTime()) {
+                threshold.setDate(threshold.getDate() + 1);
+            }
+
+            localStorage.setItem('hideNoticeUntil', threshold.getTime());
+            document.getElementById('mainNoticeModal').style.display = 'none';
+        }
 
         function handleHomeMenuClick() {
             if (currentEditId) {
@@ -769,6 +794,10 @@
                     if(set_data.reasons_json) {
                         try { reasonsList = JSON.parse(set_data.reasons_json); } catch(e){}
                     }
+                    // 팝업 공지 데이터 파싱
+                    if(set_data.popup_notices_json) {
+                        try { popupNoticesList = JSON.parse(set_data.popup_notices_json); } catch(e){}
+                    }
                 }
 
                 const { data: ordData, error: ordErr } = await supabaseClient.from('orders').select('*');
@@ -795,26 +824,13 @@
                     ]);
                 }
 
-                function getStoreNameByCode(code) {
-                    if(!code) return '';
-                    const c = cleanNumber(String(code));
-                    for(let r of orderDataList) {
-                        if(r.length > 9 && r[8] && cleanNumber(String(r[8])) === c) return r[9] || r[7] || '';
-                    }
-                    for(let r of dispatchDataList) {
-                        if(r.length > 3 && r[1] && cleanNumber(String(r[1])) === c) return r[3] || '';
-                    }
-                    return '';
-                }
-
-                // 🚨 수정된 부분: limit(10000) -> limit(300) 으로 변경하여 서버 부담을 줄이고 500 에러를 해결합니다.
-                const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false }).limit(300);
+                const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
                 if (histData) {
                     historyDataList = histData.map(d => ({
                         id: d.id, status: d.status, reason: d.reason, correction: d.correction || '',
                         author: d.author, date: d.date,
-                        driver: d.driver, store: d.store || getStoreNameByCode(d.store_code) || '정보없음', sCode: d.store_code, mCenter: d.main_center,
-                        product: d.product || '정보없음', pCode: d.product_code, iCenter: d.inbound_center,
+                        driver: d.driver, store: d.store, sCode: d.store_code, mCenter: d.main_center,
+                        product: d.product, pCode: d.product_code, iCenter: d.inbound_center,
                         qty: d.qty, unit: d.unit, img: d.img_url, remark: d.remark || '-'
                     }));
                 }
@@ -829,274 +845,9 @@
                 if (drvData) driverContacts = drvData;
                 
                 await fetchPalletData();
-                await fetchUserPopups();
 
             } catch(e) { console.error("데이터 로드 실패", e); }
             renderStorage();
-        }
-        
-        async function fetchUserPopups() {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const { data } = await supabaseClient.from('popup_notices')
-                .select('*')
-                .lte('start_date', todayStr)
-                .gte('end_date', todayStr);
-                
-            if(data && data.length > 0) {
-                data.forEach((p, index) => {
-                    const hideUntil = localStorage.getItem(`popup_hide_until_${p.id}`);
-                    if(hideUntil && parseInt(hideUntil) > Date.now()) return;
-                    
-                    createUserPopupDOM(p, index);
-                });
-            }
-        }
-
-        function createUserPopupDOM(p, index) {
-            const overlay = document.createElement('div');
-            overlay.className = 'modal-overlay popup-overlay-user';
-            overlay.style.display = 'flex';
-            overlay.style.zIndex = 3000 + index;
-            overlay.id = `userPopupOverlay_${p.id}`;
-            
-            let imgHtml = '';
-            let imgs = [];
-            try { imgs = JSON.parse(p.images) || []; } catch(e){}
-            
-            if(imgs.length > 0) {
-                let slidesHtml = imgs.map((img, i) => `<img src="${img}" onclick="zoomPopupImg(this.src)">`).join('');
-                let btns = imgs.length > 1 ? `
-                    <button class="popup-btn-prev" onclick="movePopupSlide(${p.id}, -1)">&#10094;</button>
-                    <button class="popup-btn-next" onclick="movePopupSlide(${p.id}, 1)">&#10095;</button>
-                ` : '';
-                
-                imgHtml = `
-                    <div class="popup-carousel" id="popupCarousel_${p.id}" data-idx="0" data-count="${imgs.length}">
-                        <div class="popup-carousel-inner" id="popupCarouselInner_${p.id}">
-                            ${slidesHtml}
-                        </div>
-                        ${btns}
-                    </div>
-                `;
-            }
-
-            overlay.innerHTML = `
-                <div class="popup-card">
-                    <h2 class="modal-title" style="font-size:18px; margin-bottom:5px;">${p.title}</h2>
-                    <div style="font-size:12px; color:#8E8E93; margin-bottom:15px; text-align:center;">게시기간: ${p.start_date} ~ ${p.end_date}</div>
-                    ${imgHtml}
-                    <div class="popup-content-scroll">${p.content || ''}</div>
-                    <div style="display:flex; gap:10px;">
-                        <button class="modal-btn modal-btn-close" style="flex:1; margin-top:0;" onclick="closeUserPopup(${p.id})">닫기</button>
-                        <button class="modal-btn" style="flex:1; margin-top:0;" onclick="hideUserPopupToday(${p.id})">오늘 하루 띄우지 않기</button>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(overlay);
-            
-            if(imgs.length > 1) {
-                setupPopupSwipe(p.id);
-            }
-        }
-
-        function zoomPopupImg(src) {
-            document.getElementById('zoomedImg').src = src;
-            document.getElementById('imgZoomModal').style.display = 'flex';
-        }
-
-        function movePopupSlide(id, dir) {
-            const carousel = document.getElementById(`popupCarousel_${id}`);
-            const inner = document.getElementById(`popupCarouselInner_${id}`);
-            let idx = parseInt(carousel.getAttribute('data-idx'));
-            const count = parseInt(carousel.getAttribute('data-count'));
-            
-            idx += dir;
-            if(idx < 0) idx = count - 1;
-            if(idx >= count) idx = 0;
-            
-            carousel.setAttribute('data-idx', idx);
-            inner.style.transform = `translateX(-${idx * 100}%)`;
-        }
-
-        function setupPopupSwipe(id) {
-            const inner = document.getElementById(`popupCarouselInner_${id}`);
-            let startX = 0;
-            let endX = 0;
-            
-            inner.addEventListener('touchstart', e => { startX = e.changedTouches[0].screenX; }, {passive: true});
-            inner.addEventListener('touchend', e => { 
-                endX = e.changedTouches[0].screenX;
-                if(startX - endX > 30) movePopupSlide(id, 1);
-                else if(endX - startX > 30) movePopupSlide(id, -1);
-            }, {passive: true});
-        }
-
-        function closeUserPopup(id) {
-            const el = document.getElementById(`userPopupOverlay_${id}`);
-            if(el) el.remove();
-        }
-
-        function hideUserPopupToday(id) {
-            const now = new Date();
-            let target = new Date(now);
-            target.setHours(18, 0, 0, 0);
-            if (now.getHours() >= 18) {
-                target.setDate(target.getDate() + 1);
-            }
-            
-            localStorage.setItem(`popup_hide_until_${id}`, target.getTime());
-            closeUserPopup(id);
-        }
-
-        async function openPopupManageModal() {
-            document.getElementById('globalLoader').style.display = 'flex';
-            const { data, error } = await supabaseClient.from('popup_notices').select('*').order('created_at', { ascending: false });
-            document.getElementById('globalLoader').style.display = 'none';
-            if(error) { alert("팝업 공지 불러오기 실패"); return; }
-            adminPopupList = data || [];
-            renderPopupManageList();
-            document.getElementById('popupManageModal').style.display = 'flex';
-        }
-
-        function renderPopupManageList() {
-            const container = document.getElementById('popupManageList');
-            container.innerHTML = '';
-            if(adminPopupList.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#8E8E93;">등록된 공지가 없습니다.</p>';
-                return;
-            }
-            adminPopupList.forEach((p, idx) => {
-                const div = document.createElement('div');
-                div.style.background = '#F0F2F7';
-                div.style.padding = '10px';
-                div.style.borderRadius = '8px';
-                div.innerHTML = `
-                    <div style="font-weight:bold; margin-bottom:5px;">${p.title}</div>
-                    <div style="font-size:12px; color:#666; margin-bottom:8px;">${p.start_date} ~ ${p.end_date}</div>
-                    <div style="display:flex; justify-content:flex-end; gap:5px;">
-                        <button class="btn-small" style="background:#4A90E2; color:#fff;" onclick="editPopupNotice(${idx})">수정</button>
-                        <button class="btn-small btn-delete" onclick="deletePopupNotice(${p.id})">삭제</button>
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function openPopupEditModal() {
-            if(adminPopupList.length >= 10) {
-                alert("팝업 공지는 최대 10개까지만 등록 가능합니다.");
-                return;
-            }
-            document.getElementById('popupEditTitle').innerText = "팝업 공지 추가";
-            document.getElementById('popupEditId').value = "";
-            document.getElementById('popupTitleInput').value = "";
-            document.getElementById('popupContentInput').value = "";
-            
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('popupStartInput').value = today;
-            document.getElementById('popupEndInput').value = today;
-            
-            popupImgSrcs = [];
-            renderPopupImgPreview();
-            
-            document.getElementById('popupEditModal').style.display = 'flex';
-        }
-
-        function editPopupNotice(index) {
-            const p = adminPopupList[index];
-            document.getElementById('popupEditTitle').innerText = "팝업 공지 수정";
-            document.getElementById('popupEditId').value = p.id;
-            document.getElementById('popupTitleInput').value = p.title;
-            document.getElementById('popupContentInput').value = p.content;
-            document.getElementById('popupStartInput').value = p.start_date;
-            document.getElementById('popupEndInput').value = p.end_date;
-            
-            try {
-                popupImgSrcs = JSON.parse(p.images) || [];
-            } catch(e) {
-                popupImgSrcs = [];
-            }
-            renderPopupImgPreview();
-            document.getElementById('popupEditModal').style.display = 'flex';
-        }
-
-        function previewPopupImages(input) {
-            if (input.files) {
-                let files = Array.from(input.files);
-                let remain = 5 - popupImgSrcs.length;
-                if (files.length > remain) {
-                    alert(`최대 5장까지만 첨부할 수 있습니다.`);
-                    files = files.slice(0, remain);
-                }
-                if (files.length === 0) { input.value = ""; return; }
-
-                let loadedCount = 0;
-                files.forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        popupImgSrcs.push(e.target.result);
-                        loadedCount++;
-                        if (loadedCount === files.length) {
-                            renderPopupImgPreview();
-                        }
-                    }
-                    reader.readAsDataURL(file);
-                });
-            }
-            input.value = "";
-        }
-
-        function renderPopupImgPreview() {
-            const container = document.getElementById('popupImgPreviewContainer');
-            container.innerHTML = '';
-            popupImgSrcs.forEach((src, index) => {
-                const wrapper = document.createElement('div');
-                wrapper.style.position = 'relative';
-                wrapper.style.flexShrink = '0';
-                wrapper.innerHTML = `
-                    <img src="${src}" style="width:60px; height:60px; object-fit:cover; border-radius:8px;">
-                    <button onclick="popupImgSrcs.splice(${index}, 1); renderPopupImgPreview();" style="position:absolute; top:-5px; right:-5px; background:#FF3B30; color:#fff; border:none; border-radius:50%; width:20px; height:20px; font-size:10px; cursor:pointer;">X</button>
-                `;
-                container.appendChild(wrapper);
-            });
-        }
-
-        async function savePopupNotice() {
-            const title = document.getElementById('popupTitleInput').value.trim();
-            const content = document.getElementById('popupContentInput').value.trim();
-            const start_date = document.getElementById('popupStartInput').value;
-            const end_date = document.getElementById('popupEndInput').value;
-            const id = document.getElementById('popupEditId').value;
-            
-            if(!title || !start_date || !end_date) {
-                alert("제목과 게시 기간을 입력해주세요.");
-                return;
-            }
-            
-            document.getElementById('globalLoader').style.display = 'flex';
-            const payload = {
-                title, content, start_date, end_date, images: JSON.stringify(popupImgSrcs)
-            };
-            
-            if(id) {
-                await supabaseClient.from('popup_notices').update(payload).eq('id', id);
-            } else {
-                await supabaseClient.from('popup_notices').insert([payload]);
-            }
-            
-            document.getElementById('globalLoader').style.display = 'none';
-            document.getElementById('popupEditModal').style.display = 'none';
-            alert("저장되었습니다.");
-            openPopupManageModal();
-        }
-
-        async function deletePopupNotice(id) {
-            if(!confirm("해당 팝업 공지를 삭제하시겠습니까?")) return;
-            document.getElementById('globalLoader').style.display = 'flex';
-            await supabaseClient.from('popup_notices').delete().eq('id', id);
-            document.getElementById('globalLoader').style.display = 'none';
-            openPopupManageModal();
         }
 
         async function fetchPalletData() {
@@ -1128,7 +879,7 @@
             }
         }
         window.addEventListener('mousemove', resetInactivityTimer);
-        window.addEventListener('touchstart', resetInactivityTimer, {passive: true});
+        window.addEventListener('touchstart', resetInactivityTimer);
         window.addEventListener('keydown', resetInactivityTimer);
 
         function toggleScreenMode() {
@@ -1457,6 +1208,113 @@
             closeSettingsModal();
         }
 
+        // 팝업 공지 관리 관련 스크립트 추가
+        function renderNoticeManageList() {
+            const ul = document.getElementById('noticeManageUl');
+            ul.innerHTML = popupNoticesList.map(n => `
+                <li style="display:flex; flex-direction:column; padding:10px; border:1px solid #E5E5EA; border-radius:8px; margin-bottom:10px; background:#fff;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="font-size:15px; color:var(--primary);">${n.title}</strong>
+                        <button class="btn-small btn-delete" onclick="deletePopupNotice(${n.id})">삭제</button>
+                    </div>
+                    <p style="font-size:13px; color:var(--text-main); margin:5px 0;">${n.content.substring(0, 30)}${n.content.length > 30 ? '...' : ''}</p>
+                    ${n.img ? `<span style="font-size:12px; color:#8E8E93;">📷 이미지 첨부됨</span>` : ''}
+                </li>
+            `).join('');
+            if (popupNoticesList.length === 0) {
+                ul.innerHTML = '<li style="text-align:center; color:#8E8E93; font-size:13px; padding: 10px;">등록된 공지가 없습니다.</li>';
+            }
+        }
+
+        function handleAddNotice() {
+            if (popupNoticesList.length >= 10) {
+                alert("공지는 최대 10개까지만 등록할 수 있습니다.");
+                return;
+            }
+            const title = document.getElementById('newNoticeTitle').value.trim();
+            const content = document.getElementById('newNoticeContent').value.trim();
+            const fileInput = document.getElementById('newNoticeImg');
+
+            if (!title || !content) {
+                alert("제목과 내용을 모두 입력해주세요.");
+                return;
+            }
+
+            document.getElementById('globalLoader').style.display = 'flex';
+
+            if (fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        let width = img.width;
+                        let height = img.height;
+                        const MAX_WIDTH = 800; // 해상도 리사이즈
+                        const MAX_HEIGHT = 800;
+                        if (width > height) {
+                            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                        } else {
+                            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                        }
+                        canvas.width = width; canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const base64Img = canvas.toDataURL('image/jpeg', 0.8);
+                        finishAddNotice(title, content, base64Img);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                finishAddNotice(title, content, "");
+            }
+        }
+
+        async function finishAddNotice(title, content, imgBase64) {
+            const newNotice = {
+                id: Date.now(),
+                title: title,
+                content: content,
+                img: imgBase64
+            };
+            popupNoticesList.push(newNotice);
+
+            const { error } = await supabaseClient.from('app_settings').update({ popup_notices_json: JSON.stringify(popupNoticesList) }).eq('id', 1);
+            
+            document.getElementById('globalLoader').style.display = 'none';
+
+            if (error) {
+                alert("저장 실패: " + error.message);
+                popupNoticesList.pop();
+                return;
+            }
+
+            document.getElementById('newNoticeTitle').value = '';
+            document.getElementById('newNoticeContent').value = '';
+            document.getElementById('newNoticeImg').value = '';
+            renderNoticeManageList();
+            alert("공지가 성공적으로 등록되었습니다.");
+        }
+
+        async function deletePopupNotice(id) {
+            if(!confirm("해당 공지를 삭제하시겠습니까?")) return;
+            const originalList = [...popupNoticesList];
+            popupNoticesList = popupNoticesList.filter(n => n.id !== id);
+
+            document.getElementById('globalLoader').style.display = 'flex';
+            const { error } = await supabaseClient.from('app_settings').update({ popup_notices_json: JSON.stringify(popupNoticesList) }).eq('id', 1);
+            document.getElementById('globalLoader').style.display = 'none';
+            
+            if (error) {
+                alert("삭제 실패: " + error.message);
+                popupNoticesList = originalList;
+                return;
+            }
+            renderNoticeManageList();
+        }
+
         async function checkAutoDelete() {
             const now = new Date();
             if(now.getHours() === 20 && now.getMinutes() === 30) {
@@ -1469,9 +1327,6 @@
 
                 updateHistoryDates(); renderHistoryList(); renderStorage();
                 console.log("D-7 데이터 자동 삭제 완료");
-                
-                const todayStr2 = new Date().toISOString().split('T')[0];
-                await supabaseClient.from('popup_notices').delete().lt('end_date', todayStr2);
             }
         }
 
@@ -1983,7 +1838,7 @@
 
         function updateHistoryDates() {
             const select = document.getElementById('historyDateSelect');
-            const uniqueDates = [...new Set(historyDataList.map(h => h.date).filter(Boolean))].sort((a,b) => b.localeCompare(a));
+            const uniqueDates = [...new Set(historyDataList.map(h => h.date))].sort((a,b) => b.localeCompare(a));
             const todayStr = new Date().toISOString().split('T')[0];
             const currentVal = select.value;
 
@@ -2026,7 +1881,7 @@
                 const selectedDate = document.getElementById('historyDateSelect').value;
                 if(selectedDate) visibleItems = visibleItems.filter(i => i.date === selectedDate);
             } else {
-                visibleItems.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+                visibleItems.sort((a, b) => b.date.localeCompare(a.date));
             }
 
             if(visibleItems.length === 0) {
@@ -2759,16 +2614,22 @@
             }
         }
 
+        // ============================================
+        // 파렛트 입고현황 기능 로직
+        // ============================================
+
         function renderPalletTable() {
             const tbody = document.getElementById('palletTbody');
             const unsavedRows = Array.from(tbody.querySelectorAll('.unsaved-row'));
             tbody.innerHTML = '';
             
+            // 저장되지 않은 행 복구
             unsavedRows.forEach(row => tbody.appendChild(row));
 
+            // DB 데이터 렌더링
             palletDataList.forEach(item => {
                 let isDeleteReq = (item.status === 'delete_requested');
-                if (!isLoggedIn && isDeleteReq) return; 
+                if (!isLoggedIn && isDeleteReq) return; // 비로그인 시 삭제요청된 항목 숨김
 
                 const tr = document.createElement('tr');
                 tr.className = 'db-row';
@@ -2996,7 +2857,7 @@
                 checkboxes.forEach(chk => {
                     const tr = chk.closest('tr');
                     if (tr.classList.contains('unsaved-row')) {
-                        tr.remove();
+                        tr.remove(); 
                     } else {
                         palletDeleteTargetIds.push(parseInt(chk.value));
                     }
@@ -3042,7 +2903,7 @@
             renderPalletTable();
             document.getElementById('palletDeleteReqModal').style.display = 'none';
             palletDeleteTargetIds = [];
-            alert("삭제되었습니다.");
+            alert("삭제되었습니다..");
         }
 
         async function confirmPalletDelete(id) {
@@ -3079,6 +2940,9 @@
             toggleAllPallet(source);
         }
 
+        // ============================================
+        // 파렛트 입고현황 달력 모달 로직
+        // ============================================
         function openPalletDownloadModal() {
             availableDates.clear();
             palletDataList.forEach(item => {
