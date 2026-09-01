@@ -702,10 +702,11 @@
         let autoDeleteDays = 7;
         let savePopupTimer;
 
-        const STORAGE_TOTAL = 1100;
-        const PHOTO_STORAGE_TOTAL = 1024; // 1GB (Supabase Free Tier Storage 기준)
+        const DB_TOTAL_MB = 500;
+        const PHOTO_TOTAL_MB = 1024;
+        let cachedPhotoSizeMB = 0;
+        let isFetchingPhotoSize = false;
         let showRemainingStorage = true;
-        let photoStorageUsedMB = 0; // 사진 보관함(storage) 사용량
 
         let currentCalDate = new Date();
         let selectedDlDate = '';
@@ -715,7 +716,28 @@
         let adminPopupList = [];
         let popupImgSrcs = [];
 
-        // ★ 신규 추가: DB에서 이미지 삭제 시 스토리지 파일도 완전 동기화 삭제되도록 하는 함수
+        // 사진 스토리지 용량 가져오는 백그라운드 함수
+        async function fetchPhotoStorageSize() {
+            if(isFetchingPhotoSize) return;
+            isFetchingPhotoSize = true;
+            try {
+                let totalSize = 0;
+                let limit = 1000;
+                let offset = 0;
+                while(true) {
+                    const { data, error } = await supabaseClient.storage.from('photos').list('', { limit, offset });
+                    if(error || !data || data.length === 0) break;
+                    data.forEach(f => { if(f.metadata && f.metadata.size) totalSize += f.metadata.size; });
+                    if(data.length < limit) break;
+                    offset += limit;
+                }
+                cachedPhotoSizeMB = totalSize / (1024 * 1024);
+                renderStorage();
+            } catch(e) { console.error(e); }
+            isFetchingPhotoSize = false;
+        }
+
+        // DB에서 이미지 삭제 시 스토리지 파일도 완전 동기화 삭제되도록 하는 함수
         async function deleteStorageImages(imgJsonStr) {
             if (!imgJsonStr) return;
             try {
@@ -732,6 +754,7 @@
                     }
                     if (fileNames.length > 0) {
                         await supabaseClient.storage.from('photos').remove(fileNames);
+                        fetchPhotoStorageSize(); // 삭제 후 스토리지 용량 갱신
                     }
                 }
             } catch(e) { } // JSON 파싱 에러(단일 문자열 등) 시 무시
@@ -833,7 +856,6 @@
                     return '';
                 }
 
-                // 🚨 수정된 부분: limit(10000) -> limit(300) 으로 변경하여 서버 부담을 줄이고 500 에러를 해결합니다.
                 const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false }).limit(300);
                 if (histData) {
                     historyDataList = histData.map(d => ({
@@ -857,22 +879,11 @@
                 await fetchPalletData();
                 await fetchUserPopups();
 
-                // 사진 스토리지 용량 계산을 위한 추가 처리
-                try {
-                    const { data: photoData } = await supabaseClient.storage.from('photos').list('', { limit: 10000 });
-                    if (photoData) {
-                        let tSize = 0;
-                        photoData.forEach(f => {
-                            if (f.metadata && f.metadata.size) {
-                                tSize += f.metadata.size;
-                            }
-                        });
-                        photoStorageUsedMB = tSize / (1024 * 1024);
-                    }
-                } catch(e) { console.error("사진 용량 로드 실패", e); }
-
             } catch(e) { console.error("데이터 로드 실패", e); }
-            renderStorage();
+            
+            // 사진(Storage) 용량 갱신을 비동기로 실행
+            fetchPhotoStorageSize();
+            renderStorage(); // 일단 DB사이즈 기준으로 먼저 렌더링
         }
 
         async function fetchUserPopups() {
@@ -1504,7 +1515,7 @@
                 cutoff.setDate(cutoff.getDate() - autoDeleteDays); 
                 const targetStr = cutoff.toISOString().split('T')[0];
 
-                // ★ 추가: 유지기간 초과 항목의 Storage 사진 먼저 삭제
+                // 유지기간 초과 항목의 Storage 사진 먼저 삭제
                 const { data: oldItems } = await supabaseClient.from('upload_history').select('id, img').eq('date', targetStr);
                 if (oldItems && oldItems.length > 0) {
                     for (const item of oldItems) {
@@ -1528,32 +1539,28 @@
             renderStorage();
         }
 
-        // ====== 🔴 문제 1 수정 파트 시작 ======
         function renderStorage() {
             const el = document.getElementById('storageInfo');
             if(!isLoggedIn) { el.style.display = 'none'; return; }
             el.style.display = 'inline';
 
             const payloadString = JSON.stringify(historyDataList) + JSON.stringify(orderDataList) + JSON.stringify(dispatchDataList);
-            const sizeMB = (new Blob([payloadString]).size / (1024 * 1024)).toFixed(1);
-
-            const photoUsed = Number(photoStorageUsedMB);
-            const photoRemain = (PHOTO_STORAGE_TOTAL - photoUsed).toFixed(1);
-            
-            const photoPct = Math.floor((photoRemain / PHOTO_STORAGE_TOTAL) * 100);
-            const photoUsedPct = Math.floor((photoUsed / PHOTO_STORAGE_TOTAL) * 100);
+            const dbSizeMB = (new Blob([payloadString]).size / (1024 * 1024));
 
             if(showRemainingStorage) {
-                const remain = (STORAGE_TOTAL - sizeMB).toFixed(1);
-                const pct = Math.floor((remain / STORAGE_TOTAL) * 100);
-                // 요구사항 반영: 잔여량##%(#.##mb) l 사진 잔여량 ##%(#.##mb)
-                el.innerText = `잔여량 ${pct}% (${Number(remain).toLocaleString()}mb) l 사진 잔여량 ${photoPct}% (${Number(photoRemain).toLocaleString()}mb)`;
+                const remainDB = Math.max(0, DB_TOTAL_MB - dbSizeMB).toFixed(1);
+                const pctDB = Math.floor((remainDB / DB_TOTAL_MB) * 100);
+                
+                const remainPhoto = Math.max(0, PHOTO_TOTAL_MB - cachedPhotoSizeMB).toFixed(1);
+                const pctPhoto = Math.floor((remainPhoto / PHOTO_TOTAL_MB) * 100);
+                
+                el.innerText = `잔여량 ${pctDB}% (${Number(remainDB).toLocaleString()}mb) l 사진 잔여량 ${pctPhoto}% (${Number(remainPhoto).toLocaleString()}mb)`;
             } else {
-                const pct = Math.floor((sizeMB / STORAGE_TOTAL) * 100);
-                el.innerText = `사용량 ${pct}% (${Number(sizeMB).toLocaleString()}mb) l 사진 사용량 ${photoUsedPct}% (${Number(photoUsed.toFixed(1)).toLocaleString()}mb)`;
+                const pctDB = Math.floor((dbSizeMB / DB_TOTAL_MB) * 100);
+                const pctPhoto = Math.floor((cachedPhotoSizeMB / PHOTO_TOTAL_MB) * 100);
+                el.innerText = `사용량 ${pctDB}% (${Number(dbSizeMB.toFixed(1)).toLocaleString()}mb) l 사진 사용량 ${pctPhoto}% (${Number(cachedPhotoSizeMB.toFixed(1)).toLocaleString()}mb)`;
             }
         }
-        // ====== 🔴 문제 1 수정 파트 종료 ======
 
         function previewImage(input) {
             if (input.files) {
@@ -1967,6 +1974,11 @@
                 }
             }
             // =============== Storage 업로드 로직 끝 ===============
+            
+            // 사진 데이터 갱신
+            if(uploadedUrls.length > 0) {
+                fetchPhotoStorageSize();
+            }
 
             if (currentEditId) {
                 const editReason = document.getElementById('editReasonText').value.trim();
@@ -2207,7 +2219,6 @@
             checkboxes.forEach(cb => cb.checked = !allChecked);
         }
 
-        // ★ 변경된 부분: 전체 선택 후 삭제 시 Storage 이미지 삭제 로직 포함
         async function deleteSelectedHistory() {
             const checkedIds = Array.from(document.querySelectorAll('.hist-chk:checked')).map(cb => parseInt(cb.value));
             if(checkedIds.length === 0) return alert("삭제할 항목을 선택하세요.");
@@ -2228,7 +2239,6 @@
             }
         }
 
-        // ★ 변경된 부분: URL 형태의 이미지를 Excel에 포함하기 위해 Fetch 처리 로직 포함
         async function downloadSelectedHistory() {
             const checkedIds = Array.from(document.querySelectorAll('.hist-chk:checked')).map(cb => parseInt(cb.value));
             const dateStr = document.getElementById('historyDateSelect').value;
@@ -2271,7 +2281,6 @@
                     cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                 });
 
-                // ★ forEach를 for...of로 변경 (내부에서 await를 사용하기 위함)
                 for (const item of itemsToExport) {
                     let orderInfo = orderDataList.find(r => r.length > 11 && cleanNumber(r[10]) === item.pCode && cleanNumber(r[8]) === item.sCode) || [];
                     let safeSheetName = (item.store || '거래처').substring(0, 31).replace(/[\\/?*\[\]]/g, '');
@@ -2393,7 +2402,6 @@
             }
         }
 
-        // ★ 변경된 부분: 단일 항목 삭제 시 Storage 이미지 삭제 로직 포함
         async function confirmDelete(id) {
             document.getElementById('globalLoader').style.display = 'flex'; // 로딩 표시
             const item = historyDataList.find(i => i.id === id);
@@ -3379,7 +3387,7 @@
                 { width: 15.00 }, { width: 15.00 }, { width: 12.00 }, { width: 12.00 }, { width: 30.00 }
             ];
 
-            const header = ['구분', '일자', '파렛트 유형', '입출고수량', '상하차지', '차량번호', '차량번호', '차량톤수', '작성인원', '비고'];
+            const header = ['구분', '일자', '파렛트 유형', '입출고수량', '상하차지', '도착시간', '차량번호', '차량톤수', '작성인원', '비고'];
             const headerRow = sheet.addRow(header);
 
             headerRow.eachCell((cell) => {
@@ -3397,7 +3405,7 @@
                             type,
                             qty,
                             rowData.location || '',
-                            rowData.car_number || '',
+                            rowData.arrival_time || '',
                             rowData.car_number || '',
                             rowData.tonnage || '',
                             rowData.author || '',
