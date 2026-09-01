@@ -159,7 +159,7 @@
 
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(5px); justify-content: center; align-items: center; z-index: 4000;
+            background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(5px); justify-content: center; align-items: center; z-index: 1001;
         }
         .modal-box {
             background: var(--surface); width: 90%; max-width: 400px; border-radius: 24px; padding: 30px;
@@ -452,7 +452,7 @@
     </div>
 
     <!-- 팝업 공지 설정 관리 목록 모달 -->
-    <div id="popupManageModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+    <div id="popupManageModal" class="modal-overlay" style="z-index: 2001;" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:500px; padding:20px;">
             <h2 class="modal-title" style="font-size:18px;">팝업 공지 관리 (최대 10개)</h2>
             <div style="text-align:right; margin-bottom:10px;">
@@ -465,7 +465,7 @@
     </div>
 
     <!-- 팝업 공지 추가/수정 폼 모달 -->
-    <div id="popupEditModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+    <div id="popupEditModal" class="modal-overlay" style="z-index: 2002;" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:500px; padding:20px;">
             <h2 class="modal-title" style="font-size:18px;" id="popupEditTitle">팝업 공지 추가</h2>
             <input type="hidden" id="popupEditId">
@@ -795,13 +795,25 @@
                     ]);
                 }
 
-                const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('id', { ascending: false });
+                function getStoreNameByCode(code) {
+                    if(!code) return '';
+                    const c = cleanNumber(String(code));
+                    for(let r of orderDataList) {
+                        if(r.length > 9 && r[8] && cleanNumber(String(r[8])) === c) return r[9] || r[7] || '';
+                    }
+                    for(let r of dispatchDataList) {
+                        if(r.length > 3 && r[1] && cleanNumber(String(r[1])) === c) return r[3] || '';
+                    }
+                    return '';
+                }
+
+                const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false }).limit(10000);
                 if (histData) {
                     historyDataList = histData.map(d => ({
                         id: d.id, status: d.status, reason: d.reason, correction: d.correction || '',
                         author: d.author, date: d.date,
-                        driver: d.driver, store: d.store, sCode: d.store_code, mCenter: d.main_center,
-                        product: d.product, pCode: d.product_code, iCenter: d.inbound_center,
+                        driver: d.driver, store: d.store || getStoreNameByCode(d.store_code) || '정보없음', sCode: d.store_code, mCenter: d.main_center,
+                        product: d.product || '정보없음', pCode: d.product_code, iCenter: d.inbound_center,
                         qty: d.qty, unit: d.unit, img: d.img_url, remark: d.remark || '-'
                     }));
                 }
@@ -1970,7 +1982,7 @@
 
         function updateHistoryDates() {
             const select = document.getElementById('historyDateSelect');
-            const uniqueDates = [...new Set(historyDataList.map(h => h.date))].sort((a,b) => b.localeCompare(a));
+            const uniqueDates = [...new Set(historyDataList.map(h => h.date).filter(Boolean))].sort((a,b) => b.localeCompare(a));
             const todayStr = new Date().toISOString().split('T')[0];
             const currentVal = select.value;
 
@@ -2013,7 +2025,7 @@
                 const selectedDate = document.getElementById('historyDateSelect').value;
                 if(selectedDate) visibleItems = visibleItems.filter(i => i.date === selectedDate);
             } else {
-                visibleItems.sort((a, b) => b.date.localeCompare(a.date));
+                visibleItems.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
             }
 
             if(visibleItems.length === 0) {
