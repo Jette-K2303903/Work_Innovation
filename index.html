@@ -212,7 +212,7 @@
         /* 팝업 공지용 스타일 추가 */
         .popup-carousel { position:relative; width:100%; height:200px; overflow:hidden; border-radius:12px; margin-bottom:10px; background:#000; }
         .popup-carousel-inner { display:flex; height:100%; transition:transform 0.3s ease; }
-        .popup-carousel-inner img { flex: 0 0 100%; width:100%; height:100%; object-fit:contain; cursor:pointer; }
+        .popup-carousel-inner img { width:100%; height:100%; object-fit:contain; flex-shrink:0; cursor:pointer; }
         .popup-btn-prev, .popup-btn-next { position:absolute; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:#fff; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; z-index:10; font-size:16px; }
         .popup-btn-prev { left:10px; }
         .popup-btn-next { right:10px; }
@@ -450,7 +450,7 @@
     </div>
 
     <!-- 팝업 이미지 확대 모달 -->
-    <div id="imgZoomModal" class="popup-zoom-modal" onclick="this.style.display='none'">
+    <div id="imgZoomModal" class="popup-zoom-modal" onclick="this.style.display='none'; document.body.style.overflow='';">
         <img id="zoomedImg" src="">
     </div>
 
@@ -836,16 +836,19 @@
 
             historyZoomIndex = 0;
             const carousel = document.getElementById('historyZoomCarousel');
-            carousel.innerHTML = currentHistoryImages.map(src => `<img src="${src}" style="flex: 0 0 100%; width:100%; height:100%; object-fit:contain;">`).join('');
+            // max-width: 100%, max-height: 100%를 추가하여 다른 CSS(.popup-zoom-modal img max-width:95%)를 덮어쓰고 꽉 차게 만듭니다.
+            carousel.innerHTML = currentHistoryImages.map(src => `<img src="${src}" style="width:100%; height:100%; max-width:100%; max-height:100%; object-fit:contain; flex-shrink:0;">`).join('');
 
             updateHistoryZoom();
             document.getElementById('historyZoomModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // 사진 볼 때 배경 스크롤 고정
             
             document.addEventListener('keydown', handleHistoryZoomKey);
         }
 
         function closeHistoryZoomModal() {
             document.getElementById('historyZoomModal').style.display = 'none';
+            document.body.style.overflow = ''; // 모달 닫을 때 원래대로 스크롤 복구
             document.removeEventListener('keydown', handleHistoryZoomKey);
         }
 
@@ -1067,6 +1070,7 @@
         function zoomPopupImg(src) {
             document.getElementById('zoomedImg').src = src;
             document.getElementById('imgZoomModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // 이미지 확대 팝업도 스크롤 방지 추가
         }
 
         function movePopupSlide(id, dir) {
