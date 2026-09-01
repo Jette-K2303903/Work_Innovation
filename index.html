@@ -807,13 +807,14 @@
                     return '';
                 }
 
-                const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false }).limit(300);
+                const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
+                if (histErr) console.error("업로드 내역 로드 에러:", histErr.message);
                 if (histData) {
                     historyDataList = histData.map(d => ({
                         id: d.id, status: d.status, reason: d.reason, correction: d.correction || '',
                         author: d.author, date: d.date,
-                        driver: d.driver, store: d.store || getStoreNameByCode(d.store_code) || '정보없음', sCode: d.store_code, mCenter: d.main_center,
-                        product: d.product || '정보없음', pCode: d.product_code, iCenter: d.inbound_center,
+                        driver: d.driver, store: d.store, sCode: d.store_code, mCenter: d.main_center,
+                        product: d.product, pCode: d.product_code, iCenter: d.inbound_center,
                         qty: d.qty, unit: d.unit, img: d.img_url, remark: d.remark || '-'
                     }));
                 }
