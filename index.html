@@ -452,7 +452,7 @@
     </div>
 
     <!-- 팝업 공지 설정 관리 목록 모달 -->
-    <div id="popupManageModal" class="modal-overlay" style="z-index: 2001;" onclick="if(event.target===this) this.style.display='none'">
+    <div id="popupManageModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:500px; padding:20px;">
             <h2 class="modal-title" style="font-size:18px;">팝업 공지 관리 (최대 10개)</h2>
             <div style="text-align:right; margin-bottom:10px;">
@@ -465,7 +465,7 @@
     </div>
 
     <!-- 팝업 공지 추가/수정 폼 모달 -->
-    <div id="popupEditModal" class="modal-overlay" style="z-index: 2002;" onclick="if(event.target===this) this.style.display='none'">
+    <div id="popupEditModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:500px; padding:20px;">
             <h2 class="modal-title" style="font-size:18px;" id="popupEditTitle">팝업 공지 추가</h2>
             <input type="hidden" id="popupEditId">
@@ -684,7 +684,8 @@
         const ADMIN_PWD = "alfdid13579!!";
 
         let currentImgSrcs = []; 
-        let currentEditId = null; 
+        let currentFiles = []; // 실제 업로드할 파일 객체를 담는 배열
+        let currentEditId = null;
 
         let orderDataList = []; let dispatchDataList = [];
         let historyDataList = [];
@@ -795,26 +796,13 @@
                     ]);
                 }
 
-                function getStoreNameByCode(code) {
-                    if(!code) return '';
-                    const c = cleanNumber(String(code));
-                    for(let r of orderDataList) {
-                        if(r.length > 9 && r[8] && cleanNumber(String(r[8])) === c) return r[9] || r[7] || '';
-                    }
-                    for(let r of dispatchDataList) {
-                        if(r.length > 3 && r[1] && cleanNumber(String(r[1])) === c) return r[3] || '';
-                    }
-                    return '';
-                }
-
-                // 🚨 수정된 부분: limit(10000) -> limit(300) 으로 변경하여 서버 부담을 줄이고 500 에러를 해결합니다.
-                const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false }).limit(300);
+                const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false });
                 if (histData) {
                     historyDataList = histData.map(d => ({
                         id: d.id, status: d.status, reason: d.reason, correction: d.correction || '',
                         author: d.author, date: d.date,
-                        driver: d.driver, store: d.store || getStoreNameByCode(d.store_code) || '정보없음', sCode: d.store_code, mCenter: d.main_center,
-                        product: d.product || '정보없음', pCode: d.product_code, iCenter: d.inbound_center,
+                        driver: d.driver, store: d.store, sCode: d.store_code, mCenter: d.main_center,
+                        product: d.product, pCode: d.product_code, iCenter: d.inbound_center,
                         qty: d.qty, unit: d.unit, img: d.img_url, remark: d.remark || '-'
                     }));
                 }
@@ -1032,9 +1020,12 @@
                 if (files.length === 0) { input.value = ""; return; }
 
                 let loadedCount = 0;
+	// ... (기존 previewImage 코드 중 forEach 부분 수정)
                 files.forEach(file => {
+                    currentFiles.push(file); // ★ 이 줄 추가: 실제 파일 저장
                     const reader = new FileReader();
                     reader.onload = function(e) {
+	// ... (이하 동일)
                         popupImgSrcs.push(e.target.result);
                         loadedCount++;
                         if (loadedCount === files.length) {
@@ -1562,10 +1553,13 @@
                     delBtn.style.height = '24px';
                     delBtn.style.cursor = 'pointer';
                     delBtn.style.fontWeight = 'bold';
+	// ... (기존 renderPreview 코드 중 delBtn.onclick 부분 수정)
                     delBtn.onclick = () => {
                         currentImgSrcs.splice(index, 1);
+                        currentFiles.splice(index, 1); // ★ 이 줄 추가: 파일 배열에서도 삭제
                         renderPreview();
                     };
+	// ... (이하 동일)
 
                     wrapper.appendChild(img);
                     wrapper.appendChild(delBtn);
@@ -1856,6 +1850,8 @@
                     if(item.img.startsWith('data:image')) currentImgSrcs = [item.img];
                 }
             }
+            currentFiles = currentImgSrcs.map(() => null); 
+            
             renderPreview();
 
             document.getElementById('editReasonGroup').style.display = 'flex';
@@ -1873,7 +1869,42 @@
             let remarkVal = document.getElementById('remarkText').value.trim();
             if(!remarkVal) remarkVal = '-';
 
-            if (currentEditId) {
+document.getElementById('globalLoader').style.display = 'flex'; // 로딩 시작
+
+            let uploadedUrls = [];
+            for (let i = 0; i < currentImgSrcs.length; i++) {
+                if (currentFiles[i]) { // 새로 추가된 파일이 있다면 Storage에 업로드
+                    const file = currentFiles[i];
+                    const fileExt = file.name.split('.').pop();
+                    // 파일명 중복 방지를 위해 현재시간+랜덤문자열로 파일명 생성
+                    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+                    
+                    // photos 버킷에 업로드 (버킷 이름이 다를 경우 'photos' 부분을 수정하세요)
+                    const { error: uploadError, data } = await supabaseClient
+                        .storage
+                        .from('photos')
+                        .upload(fileName, file);
+
+                    if (uploadError) {
+                        alert("이미지 업로드 실패: " + uploadError.message);
+                        document.getElementById('globalLoader').style.display = 'none';
+                        return;
+                    }
+
+                    // 업로드 성공 후 Public URL 가져오기
+                    const { data: publicUrlData } = supabaseClient
+                        .storage
+                        .from('photos')
+                        .getPublicUrl(fileName);
+
+                    uploadedUrls.push(publicUrlData.publicUrl);
+                } else {
+                    // 이미 업로드된 기존 URL인 경우 그대로 유지
+                    uploadedUrls.push(currentImgSrcs[i]);
+                }
+            } 
+
+           if (currentEditId) {
                 const editReason = document.getElementById('editReasonText').value.trim();
                 if(!editReason) {
                     alert("수정 사유를 입력해주세요."); return;
@@ -1901,7 +1932,7 @@
                     qty: document.getElementById('productQty').value ? Number(document.getElementById('productQty').value) : null,
                     unit: document.getElementById('productUnit').value,
                     remark: remarkVal,
-                    img_url: JSON.stringify(currentImgSrcs)
+                    img_url: JSON.stringify(uploadedUrls)
                 };
 
                 Object.assign(existingItem, {
@@ -1949,7 +1980,7 @@
                     qty: document.getElementById('productQty').value ? Number(document.getElementById('productQty').value) : null,
                     unit: document.getElementById('productUnit').value,
                     remark: remarkVal,
-                    img_url: JSON.stringify(currentImgSrcs)
+                    img_url: JSON.stringify(uploadedUrls)
                 };
 
                 historyDataList.unshift({
@@ -1983,7 +2014,7 @@
 
         function updateHistoryDates() {
             const select = document.getElementById('historyDateSelect');
-            const uniqueDates = [...new Set(historyDataList.map(h => h.date).filter(Boolean))].sort((a,b) => b.localeCompare(a));
+            const uniqueDates = [...new Set(historyDataList.map(h => h.date))].sort((a,b) => b.localeCompare(a));
             const todayStr = new Date().toISOString().split('T')[0];
             const currentVal = select.value;
 
@@ -2026,7 +2057,7 @@
                 const selectedDate = document.getElementById('historyDateSelect').value;
                 if(selectedDate) visibleItems = visibleItems.filter(i => i.date === selectedDate);
             } else {
-                visibleItems.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+                visibleItems.sort((a, b) => b.date.localeCompare(a.date));
             }
 
             if(visibleItems.length === 0) {
