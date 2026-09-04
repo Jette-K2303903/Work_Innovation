@@ -610,6 +610,8 @@
                 <li draggable="true" data-id="menuMap" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_map"> 배차 내역</label></li>
                 <li draggable="true" data-id="menuReserve1" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_reserve1"> 파렛트 입고현황</label></li>
                 <li draggable="true" data-id="menuReserve2" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_reserve2"> 화면전환</label></li>
+                <li draggable="true" data-id="menuBaechaData" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_baecha"> 배차 데이터 관리</label></li>
+                <li draggable="true" data-id="menuTempSave" class="sortable-item"><span class="drag-handle">☰</span> <label><input type="checkbox" id="lm_temp"> 임시 버튼</label></li>
             </ul>
             <button class="modal-btn" onclick="saveListManage()">저장</button>
             <button class="modal-btn modal-btn-close" onclick="closeListManageModal()">취소</button>
@@ -701,8 +703,8 @@
         let palletDeleteTargetIds = []; 
 
         let reasonsList = [];
-        let menuOrder = ['menuHome', 'menuOffice', 'menuField', 'menuDriver', 'menuHistory', 'menuMap', 'menuReserve1', 'menuReserve2'];
-        let nonUserVisibility = { home: true, office: true, field: false, driver: true, history: true, map: false, reserve1: false, reserve2: false };
+        let menuOrder = ['menuHome', 'menuOffice', 'menuField', 'menuDriver', 'menuHistory', 'menuMap', 'menuReserve1', 'menuReserve2', 'menuBaechaData', 'menuTempSave'];
+        let nonUserVisibility = { home: true, office: true, field: false, driver: true, history: true, map: false, reserve1: false, reserve2: false, baecha: true, temp: true };
         let autoDeleteDays = 7;
         let savePopupTimer;
 
@@ -975,8 +977,12 @@
                     if(set_data.menu_order_json) {
                         try {
                             const parsed = JSON.parse(set_data.menu_order_json);
-                            if(parsed.vis) nonUserVisibility = parsed.vis;
-                            if(parsed.order) menuOrder = parsed.order;
+                            if(parsed.vis) nonUserVisibility = { ...nonUserVisibility, ...parsed.vis };
+                            if(parsed.order) {
+                                menuOrder = parsed.order;
+                                if (!menuOrder.includes('menuBaechaData')) menuOrder.push('menuBaechaData');
+                                if (!menuOrder.includes('menuTempSave')) menuOrder.push('menuTempSave');
+                            }
                         } catch(e){}
                     }
                     if(set_data.reasons_json) {
@@ -1395,6 +1401,8 @@
 
             document.getElementById('menuReserve1').style.display = (isLoggedIn || nonUserVisibility.reserve1) ? 'block' : 'none';
             document.getElementById('menuReserve2').style.display = isLoggedIn ? 'block' : (nonUserVisibility.reserve2 ? 'block' : 'none');
+            document.getElementById('menuBaechaData').style.display = (isLoggedIn || nonUserVisibility.baecha) ? 'block' : 'none';
+            document.getElementById('menuTempSave').style.display = (isLoggedIn || nonUserVisibility.temp) ? 'block' : 'none';
 
             menuOrder.forEach((id, idx) => {
                 const el = document.getElementById(id);
@@ -1569,6 +1577,8 @@
             document.getElementById('lm_map').checked = nonUserVisibility.map;
             document.getElementById('lm_reserve1').checked = nonUserVisibility.reserve1;
             document.getElementById('lm_reserve2').checked = nonUserVisibility.reserve2;
+            document.getElementById('lm_baecha').checked = nonUserVisibility.baecha;
+            document.getElementById('lm_temp').checked = nonUserVisibility.temp;
 
             const ul = document.getElementById('menuSortList');
             menuOrder.forEach(id => {
@@ -1589,6 +1599,8 @@
             nonUserVisibility.map = document.getElementById('lm_map').checked;
             nonUserVisibility.reserve1 = document.getElementById('lm_reserve1').checked;
             nonUserVisibility.reserve2 = document.getElementById('lm_reserve2').checked;
+            nonUserVisibility.baecha = document.getElementById('lm_baecha').checked;
+            nonUserVisibility.temp = document.getElementById('lm_temp').checked;
 
             const items = document.querySelectorAll('#menuSortList .sortable-item');
             menuOrder = Array.from(items).map(li => li.getAttribute('data-id'));
