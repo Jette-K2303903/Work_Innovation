@@ -833,6 +833,22 @@
             document.addEventListener('keydown', handlePopupZoomKey);
         }
 
+        function openAdminPopupZoomModal(startIdx) {
+            if(!popupImgSrcs || popupImgSrcs.length === 0) return;
+
+            currentPopupZoomImages = popupImgSrcs;
+            popupZoomIndex = startIdx;
+
+            const carousel = document.getElementById('popupZoomCarousel');
+            carousel.innerHTML = currentPopupZoomImages.map(src => `<img src="${src}" style="width:100%; height:100%; max-width:100%; max-height:100%; object-fit:contain; flex-shrink:0;">`).join('');
+
+            updatePopupZoom();
+            document.getElementById('imgZoomModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden'; 
+            
+            document.addEventListener('keydown', handlePopupZoomKey);
+        }
+
         function closePopupZoomModal() {
             document.getElementById('imgZoomModal').style.display = 'none';
             document.body.style.overflow = '';
@@ -1296,7 +1312,7 @@
                 wrapper.style.position = 'relative';
                 wrapper.style.flexShrink = '0';
                 wrapper.innerHTML = `
-                    <img src="${src}" style="width:60px; height:60px; object-fit:cover; border-radius:8px;">
+                    <img src="${src}" style="width:60px; height:60px; object-fit:cover; border-radius:8px; cursor:pointer;" onclick="openAdminPopupZoomModal(${index})">
                     <button onclick="popupImgSrcs.splice(${index}, 1); renderPopupImgPreview();" style="position:absolute; top:-5px; right:-5px; background:#FF3B30; color:#fff; border:none; border-radius:50%; width:20px; height:20px; font-size:10px; cursor:pointer;">X</button>
                 `;
                 container.appendChild(wrapper);
