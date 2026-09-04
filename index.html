@@ -4,21 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    <!-- 카카오톡 등 SNS 공유용 Open Graph 메타 태그 -->
     <meta property="og:title" content="주·야간 특이사항 관리 시스템">
     <meta property="og:description" content="특이사항 인수인계 전용">
-    <!-- 아래 content 부분에 Supabase에서 복사한 Get URL 주소를 붙여넣으세요 -->
     <meta property="og:image" content="https://whmltqxmramimlwrdkma.supabase.co/storage/v1/object/public/public_assets/kings2.jpg">
     <meta property="og:type" content="website">
-    
+
     <title>밀양센터 야간 특이사항 관리</title>
-    <!-- Supabase 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-    <!-- ExcelJS 및 FileSaver (엑셀 다운로드 및 이미지 시트 생성용) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-    <!-- 지도 구현을 위한 Leaflet 라이브러리 -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
@@ -144,7 +139,7 @@
         .history-list { display: flex; flex-direction: column; gap: 15px; }
         .history-item { display: flex; gap: 15px; padding: 15px; background: #FFF; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); align-items: center; }
         .history-checkbox-wrap { display: none; } 
-        .history-thumb { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; background: #F2F2F7; }
+        .history-thumb { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; background: #F2F2F7; cursor: pointer; }
         .history-info { flex: 1; font-size: 14px; }
         .history-info p { margin: 2px 0; }
         .btn-small { padding: 6px 10px; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; }
@@ -177,7 +172,7 @@
         .sortable-item { cursor: grab; padding: 8px 10px; background: #FAFAFC; border: 1px solid #E5E5EA; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
         .sortable-item:active { cursor: grabbing; }
         .drag-handle { color: #8E8E93; font-size: 18px; }
-        
+
         .p-input { width: 100%; height: 32px; box-sizing: border-box; padding: 6px; border: 1px solid #E5E5EA; border-radius: 6px; font-size: 13px; background: #FAFAFC; }
         .p-input:focus { border-color: var(--primary); outline: none; background:#FFF; }
         .pallet-chk { width: 18px; height: 18px; margin:0; cursor:pointer;}
@@ -196,7 +191,7 @@
         #map { width:100%; height:65vh; border-radius:12px; background: transparent !important; z-index: 1; }
 
         .leaflet-tile { filter: grayscale(100%) brightness(110%) contrast(90%); }
-        
+
         .custom-map-tooltip { opacity: 0 !important; transition: opacity 0.3s; background: rgba(255,255,255,0.9); border: 1px solid var(--primary); border-radius: 8px; color: var(--text-main); font-size: 12px; font-weight: 700; padding: 6px 10px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.15); white-space: nowrap; pointer-events: none; }
         .custom-map-tooltip::before { border-top-color: var(--primary) !important; border-bottom-color: var(--primary) !important; border-left-color: var(--primary) !important; border-right-color: var(--primary) !important; }
         #map.show-labels .custom-map-tooltip { opacity: 1 !important; }
@@ -223,7 +218,7 @@
     </style>
 </head>
 <body>
-    
+
     <div id="globalLoader">
         <div class="spinner"></div>
         <span>데이터 로딩중..</span>
@@ -232,7 +227,6 @@
     <button id="mobileMenuBtn" class="menu-toggle-btn" onclick="toggleMenu()">☰ 메뉴</button>
     <div id="menuOverlay" class="sidebar-overlay" onclick="closeMenu()"></div>
 
-    <!-- 사이드바 -->
     <div id="sideMenu" class="sidebar">
         <button id="authBtn" class="menu-list-btn menu-login-btn" onclick="handleAuthClick()">🔒 로그인</button>
         <button id="menuHome" class="menu-list-btn" onclick="handleHomeMenuClick()">🏠 홈화면</button>
@@ -247,9 +241,7 @@
         <button id="settingsBtn" class="settings-btn" onclick="openSettingsModal()">⚙️</button>
     </div>
 
-    <!-- 메인 콘텐츠 영역 -->
     <div class="main-content">
-        <!-- 뷰 1: 홈 화면 -->
         <div id="formView" class="view-section active">
             <div class="media-actions">
                 <input type="file" id="cameraInput" accept="image/*" capture="environment" multiple style="display:none;" onchange="previewImage(this)">
@@ -330,11 +322,13 @@
                     <label>상세내용</label>
                     <input type="text" id="remarkText" class="input-box" placeholder="상세 내용을 입력하세요." autocomplete="off">
                 </div>
-                <button class="modal-btn" style="margin-top: 10px;" onclick="saveFormData()">작성 완료</button>
+                <div id="formActionButtons" style="display:flex; gap:10px; margin-top: 10px;">
+                    <button id="submitFormBtn" class="modal-btn" style="flex:1; margin-top:0;" onclick="saveFormData()">작성 완료</button>
+                    <button id="cancelEditBtn" class="modal-btn modal-btn-close" style="flex:1; margin-top:0; display:none;" onclick="cancelEditMode()">수정 취소</button>
+                </div>
             </div>
         </div>
 
-        <!-- 뷰 2: 업로드 내역 -->
         <div id="historyView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">
                 📂 업로드 내역 <span id="storageInfo" class="storage-info" onclick="toggleStorageDisplay()"></span>
@@ -348,7 +342,6 @@
             <div id="historyListContainer" class="history-list"></div>
         </div>
 
-        <!-- 뷰 3: 사무실 연락처 -->
         <div id="officeContactView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">📞 사무실 연락처</h2>
             <div id="officeEditForm" style="display:none; background:#FFF; padding:15px; border-radius:12px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
@@ -362,7 +355,6 @@
             <div id="officeListContainer" class="contact-list"></div>
         </div>
 
-        <!-- 뷰 4: 현장 연락처 -->
         <div id="fieldContactView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">👷 현장 연락처</h2>
             <div id="fieldEditForm" style="display:none; background:#FFF; padding:15px; border-radius:12px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
@@ -376,7 +368,6 @@
             <div id="fieldListContainer" class="contact-list"></div>
         </div>
 
-        <!-- 뷰 5: 기사 연락처 -->
         <div id="driverContactView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">📱 기사 연락처</h2>
             <div class="search-bar-fixed">
@@ -391,7 +382,6 @@
             <div id="driverListContainer" class="contact-list"></div>
         </div>
 
-        <!-- 뷰 6: 배차 내역 (지도) -->
         <div id="mapView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">🗺️ 배차 내역 (지도)</h2>
             <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:15px; background:#fff; padding:10px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
@@ -404,7 +394,6 @@
             <div id="map"></div>
         </div>
 
-        <!-- 파렛트 입고현황 뷰 -->
         <div id="palletView" class="view-section">
             <h2 style="font-size:18px; margin-top:0;">📦 파렛트 입고현황</h2>
             <div style="display:flex; justify-content:space-between; margin-bottom:10px; flex-wrap: wrap; gap: 5px;">
@@ -446,12 +435,28 @@
         </div>
     </div>
 
-    <!-- 팝업 이미지 확대 모달 -->
-    <div id="imgZoomModal" class="popup-zoom-modal" onclick="this.style.display='none'">
-        <img id="zoomedImg" src="">
+    <div id="imgZoomModal" class="popup-zoom-modal" style="display:none; flex-direction:column; z-index:99999;" onclick="if(event.target===this) closePopupZoomModal()">
+        <span style="position:absolute; top:20px; right:20px; color:#fff; font-size:30px; cursor:pointer; z-index:100000;" onclick="closePopupZoomModal()">&times;</span>
+        <div style="position:relative; width:100%; max-width:600px; height:80vh; display:flex; align-items:center; overflow:hidden;">
+            <div id="popupZoomCarousel" style="display:flex; height:100%; transition:transform 0.3s ease; width:100%;">
+            </div>
+            <button class="popup-btn-prev" onclick="movePopupZoom(-1, event)">&#10094;</button>
+            <button class="popup-btn-next" onclick="movePopupZoom(1, event)">&#10095;</button>
+        </div>
+        <div id="popupZoomIndicator" style="color:#fff; font-size:16px; margin-top:10px;"></div>
     </div>
 
-    <!-- 팝업 공지 설정 관리 목록 모달 -->
+    <div id="historyZoomModal" class="popup-zoom-modal" style="display:none; flex-direction:column; z-index:99999;" onclick="if(event.target===this) closeHistoryZoomModal()">
+        <span style="position:absolute; top:20px; right:20px; color:#fff; font-size:30px; cursor:pointer; z-index:100000;" onclick="closeHistoryZoomModal()">&times;</span>
+        <div style="position:relative; width:100%; max-width:600px; height:80vh; display:flex; align-items:center; overflow:hidden;">
+            <div id="historyZoomCarousel" style="display:flex; height:100%; transition:transform 0.3s ease; width:100%;">
+            </div>
+            <button class="popup-btn-prev" onclick="moveHistoryZoom(-1, event)">&#10094;</button>
+            <button class="popup-btn-next" onclick="moveHistoryZoom(1, event)">&#10095;</button>
+        </div>
+        <div id="historyZoomIndicator" style="color:#fff; font-size:16px; margin-top:10px;"></div>
+    </div>
+
     <div id="popupManageModal" class="modal-overlay" style="z-index: 2001;" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:500px; padding:20px;">
             <h2 class="modal-title" style="font-size:18px;">팝업 공지 관리 (최대 10개)</h2>
@@ -464,7 +469,6 @@
         </div>
     </div>
 
-    <!-- 팝업 공지 추가/수정 폼 모달 -->
     <div id="popupEditModal" class="modal-overlay" style="z-index: 2002;" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:500px; padding:20px;">
             <h2 class="modal-title" style="font-size:18px;" id="popupEditTitle">팝업 공지 추가</h2>
@@ -500,7 +504,6 @@
         </div>
     </div>
 
-    <!-- 로그인 모달 -->
     <div id="loginModal" class="modal-overlay" onclick="if(event.target===this) closeLoginModal()">
         <div class="modal-box">
             <h2 class="modal-title">시스템 로그인</h2>
@@ -510,7 +513,6 @@
         </div>
     </div>
 
-    <!-- 파렛트 저장 경고 모달 -->
     <div id="unsavedAlertModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:300px; padding:30px 20px;">
             <h2 class="modal-title" style="font-size:18px;">알림</h2>
@@ -522,7 +524,17 @@
         </div>
     </div>
 
-    <!-- 카메라 연속 촬영 팝업 모달 -->
+    <div id="editCancelAlertModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
+        <div class="modal-box" style="max-width:300px; padding:30px 20px;">
+            <h2 class="modal-title" style="font-size:18px;">초기화 안내</h2>
+            <p style="font-size:14px; margin-bottom:20px;">수정을 취소하시겠습니까?<br>입력된 내용은 초기화됩니다.</p>
+            <div style="display:flex; gap:10px;">
+                <button class="modal-btn" style="flex:1; margin-top:0;" onclick="confirmCancelEdit()">예</button>
+                <button class="modal-btn modal-btn-close" style="flex:1; margin-top:0;" onclick="document.getElementById('editCancelAlertModal').style.display='none'">아니요</button>
+            </div>
+        </div>
+    </div>
+
     <div id="cameraPromptModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:300px; padding:30px 20px;">
             <h2 class="modal-title" style="font-size:18px;">사진 촬영 (<span id="cameraPhotoCount"></span>/5)</h2>
@@ -531,7 +543,6 @@
         </div>
     </div>
 
-    <!-- 시스템 관리 (설정) 모달 -->
     <div id="settingsModal" class="modal-overlay" onclick="if(event.target===this) closeSettingsModal()">
         <div class="modal-box" style="max-width:500px;">
             <h2 class="modal-title">시스템 설정</h2>
@@ -540,7 +551,7 @@
             <div style="text-align:left; font-size:14px; margin-top:20px; border-top:1px solid var(--border); padding-top:15px;">
                 <label style="display:block; margin-bottom:10px;">데이터 유지기간(일): <input type="number" id="autoDeleteDaysInput" class="input-box" style="width:60px; padding:6px;" value="7"></label>
                 <label style="display:block; margin-bottom:10px;">작성완료 자동닫힘(초): <input type="number" id="autoCloseSecondsInput" class="input-box" style="width:60px; padding:6px;" value="2"></label>
-                
+
                 <div style="display:flex; gap:10px; margin-top:5px;">
                     <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="openListManageModal()">📋 비로그인 목록 관리</button>
                     <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="document.getElementById('reasonManageModal').style.display='flex'; renderReasonManageList()">📝 사유 목록 관리</button>
@@ -548,14 +559,13 @@
                 <div style="display:flex; gap:10px; margin-top:10px;">
                     <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="openPopupManageModal()">📢 팝업 공지 설정</button>
                 </div>
-                
+
             </div>
             <button class="modal-btn" style="margin-top:25px;" onclick="saveSystemSettings()">설정 저장</button>
             <button class="modal-btn modal-btn-close" onclick="closeSettingsModal()">닫기</button>
         </div>
     </div>
 
-    <!-- 개별 업로드 팝업 -->
     <div id="orderUploadModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box">
             <h2 class="modal-title" style="font-size:18px;">주문업로드 새로 덮어씌우기</h2>
@@ -573,7 +583,6 @@
         </div>
     </div>
 
-    <!-- 사유 목록 관리 팝업 -->
     <div id="reasonManageModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box">
             <h2 class="modal-title" style="font-size:18px;">사유 목록 관리</h2>
@@ -586,7 +595,6 @@
         </div>
     </div>
 
-    <!-- 목록 관리 팝업 -->
     <div id="listManageModal" class="modal-overlay" onclick="if(event.target===this) closeListManageModal()">
         <div class="modal-box" style="max-width:300px;">
             <h2 class="modal-title" style="font-size:18px;">비로그인 목록 노출 설정</h2>
@@ -606,7 +614,6 @@
         </div>
     </div>
 
-    <!-- 삭제 요청 확인 팝업 -->
     <div id="deleteReqModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:300px; padding:30px 20px;">
             <h2 class="modal-title" style="font-size:18px;">업로드 내역 삭제</h2>
@@ -618,7 +625,6 @@
         </div>
     </div>
 
-    <!-- 파렛트 삭제 요청 확인 팝업 -->
     <div id="palletDeleteReqModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:300px; padding:30px 20px;">
             <h2 class="modal-title" style="font-size:18px;">파렛트 입고 삭제</h2>
@@ -630,7 +636,6 @@
         </div>
     </div>
 
-    <!-- 기사 상세 내역 팝업 -->
     <div id="driverDetailModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:350px;">
             <h2 class="modal-title" style="font-size:18px;">기사 배차 상세</h2>
@@ -639,7 +644,6 @@
         </div>
     </div>
 
-    <!-- 파렛트 다운로드 팝업 모달 -->
     <div id="palletDownloadModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width: 350px;">
             <h2 class="modal-title">다운로드 날짜 선택</h2>
@@ -659,7 +663,6 @@
         </div>
     </div>
 
-    <!-- 저장 완료 팝업 -->
     <div id="saveSuccessModal" class="modal-overlay" onclick="if(event.target===this) closeSaveSuccessModal()">
         <div class="modal-box" style="max-width:250px; padding:40px 20px;">
             <h2 class="modal-title">저장완료</h2>
@@ -667,7 +670,6 @@
         </div>
     </div>
 
-    <!-- 화면 전환 알림 팝업 -->
     <div id="switchAlertModal" class="modal-overlay" onclick="if(event.target===this) this.style.display='none'">
         <div class="modal-box" style="max-width:300px; padding:30px 20px;">
             <h2 class="modal-title" style="font-size:18px;" id="switchAlertMsg">화면으로 전환되었습니다.</h2>
@@ -690,7 +692,7 @@
         let orderDataList = []; let dispatchDataList = [];
         let historyDataList = [];
         let officeContacts = []; let fieldContacts = []; let driverContacts = [];
-        
+
         let palletDataList = []; 
         let palletUnsaved = false; 
         let targetView = '';
@@ -702,18 +704,54 @@
         let autoDeleteDays = 7;
         let savePopupTimer;
 
-        const STORAGE_TOTAL = 1100;
+        const DB_TOTAL_MB = 500;
+        const PHOTO_TOTAL_MB = 1024;
+        let cachedPhotoSizeMB = 0;
+        let isFetchingPhotoSize = false;
         let showRemainingStorage = true;
 
         let currentCalDate = new Date();
         let selectedDlDate = '';
         let availableDates = new Set();
-        
+
         // 팝업 공지용 변수
         let adminPopupList = [];
         let popupImgSrcs = [];
+        
+        // 업로드 내역 사진 줌/스와이프용 변수
+        let currentHistoryImages = [];
+        let historyZoomIndex = 0;
+        let hzStartX = 0, hzEndX = 0;
 
-        // ★ 신규 추가: DB에서 이미지 삭제 시 스토리지 파일도 완전 동기화 삭제되도록 하는 함수
+        // 추가: 팝업 공지 사진 줌/스와이프용 변수 및 인터벌
+        let userPopupImages = {};
+        let popupIntervals = {};
+        let currentPopupZoomImages = [];
+        let popupZoomIndex = 0;
+        let pzStartX = 0, pzEndX = 0;
+
+        // 사진 스토리지 용량 가져오는 백그라운드 함수
+        async function fetchPhotoStorageSize() {
+            if(isFetchingPhotoSize) return;
+            isFetchingPhotoSize = true;
+            try {
+                let totalSize = 0;
+                let limit = 1000;
+                let offset = 0;
+                while(true) {
+                    const { data, error } = await supabaseClient.storage.from('photos').list('', { limit, offset });
+                    if(error || !data || data.length === 0) break;
+                    data.forEach(f => { if(f.metadata && f.metadata.size) totalSize += f.metadata.size; });
+                    if(data.length < limit) break;
+                    offset += limit;
+                }
+                cachedPhotoSizeMB = totalSize / (1024 * 1024);
+                renderStorage();
+            } catch(e) { console.error(e); }
+            isFetchingPhotoSize = false;
+        }
+
+        // DB에서 이미지 삭제 시 스토리지 파일도 완전 동기화 삭제되도록 하는 함수
         async function deleteStorageImages(imgJsonStr) {
             if (!imgJsonStr) return;
             try {
@@ -730,6 +768,7 @@
                     }
                     if (fileNames.length > 0) {
                         await supabaseClient.storage.from('photos').remove(fileNames);
+                        fetchPhotoStorageSize(); // 삭제 후 스토리지 용량 갱신
                     }
                 }
             } catch(e) { } // JSON 파싱 에러(단일 문자열 등) 시 무시
@@ -746,9 +785,155 @@
             setInterval(checkAutoDelete, 60000); 
             setupDragAndDrop();
 
+            // 확대된 사진 스와이프 이벤트 설정 (기존 업로드 내역용)
+            const hzCarousel = document.getElementById('historyZoomCarousel');
+            if(hzCarousel) {
+                hzCarousel.addEventListener('touchstart', e => { hzStartX = e.changedTouches[0].screenX; }, {passive: true});
+                hzCarousel.addEventListener('touchend', e => { 
+                    hzEndX = e.changedTouches[0].screenX;
+                    if(hzStartX - hzEndX > 30) moveHistoryZoom(1);
+                    else if(hzEndX - hzStartX > 30) moveHistoryZoom(-1);
+                }, {passive: true});
+            }
+
+            // 추가: 확대된 사진 스와이프 이벤트 설정 (팝업 공지용)
+            const pzCarousel = document.getElementById('popupZoomCarousel');
+            if(pzCarousel) {
+                pzCarousel.addEventListener('touchstart', e => { pzStartX = e.changedTouches[0].screenX; }, {passive: true});
+                pzCarousel.addEventListener('touchend', e => { 
+                    pzEndX = e.changedTouches[0].screenX;
+                    if(pzStartX - pzEndX > 30) movePopupZoom(1);
+                    else if(pzEndX - pzStartX > 30) movePopupZoom(-1);
+                }, {passive: true});
+            }
+
             document.getElementById('globalLoader').style.opacity = '0';
             setTimeout(() => document.getElementById('globalLoader').style.display = 'none', 300);
         });
+
+        // 팝업 공지 확대 사진 줌/스와이프 함수 추가
+        function openPopupZoomModal(popupId, startIdx) {
+            const imgs = userPopupImages[popupId];
+            if(!imgs || imgs.length === 0) return;
+
+            currentPopupZoomImages = imgs;
+            popupZoomIndex = startIdx;
+
+            const carousel = document.getElementById('popupZoomCarousel');
+            carousel.innerHTML = currentPopupZoomImages.map(src => `<img src="${src}" style="width:100%; height:100%; max-width:100%; max-height:100%; object-fit:contain; flex-shrink:0;">`).join('');
+
+            updatePopupZoom();
+            document.getElementById('imgZoomModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden'; 
+            
+            document.addEventListener('keydown', handlePopupZoomKey);
+        }
+
+        function closePopupZoomModal() {
+            document.getElementById('imgZoomModal').style.display = 'none';
+            document.body.style.overflow = '';
+            document.removeEventListener('keydown', handlePopupZoomKey);
+        }
+
+        function movePopupZoom(dir, event) {
+            if (event) event.stopPropagation();
+            popupZoomIndex += dir;
+            if (popupZoomIndex < 0) popupZoomIndex = currentPopupZoomImages.length - 1;
+            if (popupZoomIndex >= currentPopupZoomImages.length) popupZoomIndex = 0;
+            updatePopupZoom();
+        }
+
+        function updatePopupZoom() {
+            const carousel = document.getElementById('popupZoomCarousel');
+            carousel.style.transform = `translateX(-${popupZoomIndex * 100}%)`;
+            document.getElementById('popupZoomIndicator').innerText = `${popupZoomIndex + 1} / ${currentPopupZoomImages.length}`;
+            
+            const btns = document.querySelectorAll('#imgZoomModal .popup-btn-prev, #imgZoomModal .popup-btn-next');
+            if (currentPopupZoomImages.length <= 1) {
+                btns.forEach(btn => btn.style.display = 'none');
+                document.getElementById('popupZoomIndicator').style.display = 'none';
+            } else {
+                btns.forEach(btn => btn.style.display = 'block');
+                document.getElementById('popupZoomIndicator').style.display = 'block';
+            }
+        }
+
+        function handlePopupZoomKey(e) {
+            if (e.key === 'ArrowLeft') movePopupZoom(-1);
+            else if (e.key === 'ArrowRight') movePopupZoom(1);
+            else if (e.key === 'Escape') closePopupZoomModal();
+        }
+
+        // 업로드 내역 사진 확대/이동 관련 함수들
+        function openHistoryImgModal(id) {
+            const item = historyDataList.find(i => i.id === id);
+            if (!item || !item.img) return;
+
+            currentHistoryImages = [];
+            try {
+                let parsed = JSON.parse(item.img);
+                if (Array.isArray(parsed)) currentHistoryImages = parsed;
+                else currentHistoryImages = [item.img];
+            } catch(e) {
+                if (item.img.startsWith('data:image') || item.img.startsWith('http')) currentHistoryImages = [item.img];
+            }
+
+            if (currentHistoryImages.length === 0) return;
+
+            historyZoomIndex = 0;
+            const carousel = document.getElementById('historyZoomCarousel');
+            // max-width: 100%, max-height: 100%를 추가하여 다른 CSS(.popup-zoom-modal img max-width:95%)를 덮어쓰고 꽉 차게 만듭니다.
+            carousel.innerHTML = currentHistoryImages.map(src => `<img src="${src}" style="width:100%; height:100%; max-width:100%; max-height:100%; object-fit:contain; flex-shrink:0;">`).join('');
+
+            updateHistoryZoom();
+            document.getElementById('historyZoomModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // 사진 볼 때 배경 스크롤 고정
+            
+            document.addEventListener('keydown', handleHistoryZoomKey);
+        }
+
+        function closeHistoryZoomModal() {
+            document.getElementById('historyZoomModal').style.display = 'none';
+            document.body.style.overflow = ''; // 모달 닫을 때 원래대로 스크롤 복구
+            document.removeEventListener('keydown', handleHistoryZoomKey);
+        }
+
+        function moveHistoryZoom(dir, event) {
+            if (event) event.stopPropagation();
+            historyZoomIndex += dir;
+            if (historyZoomIndex < 0) historyZoomIndex = currentHistoryImages.length - 1;
+            if (historyZoomIndex >= currentHistoryImages.length) historyZoomIndex = 0;
+            updateHistoryZoom();
+        }
+
+        function updateHistoryZoom() {
+            const carousel = document.getElementById('historyZoomCarousel');
+            carousel.style.transform = `translateX(-${historyZoomIndex * 100}%)`;
+            document.getElementById('historyZoomIndicator').innerText = `${historyZoomIndex + 1} / ${currentHistoryImages.length}`;
+            
+            const btns = document.querySelectorAll('#historyZoomModal .popup-btn-prev, #historyZoomModal .popup-btn-next');
+            if (currentHistoryImages.length <= 1) {
+                btns.forEach(btn => btn.style.display = 'none');
+            } else {
+                btns.forEach(btn => btn.style.display = 'block');
+            }
+        }
+
+        function handleHistoryZoomKey(e) {
+            if (e.key === 'ArrowLeft') moveHistoryZoom(-1);
+            else if (e.key === 'ArrowRight') moveHistoryZoom(1);
+            else if (e.key === 'Escape') closeHistoryZoomModal();
+        }
+
+        function cancelEditMode() {
+            document.getElementById('editCancelAlertModal').style.display = 'flex';
+        }
+
+        function confirmCancelEdit() {
+            document.getElementById('editCancelAlertModal').style.display = 'none';
+            resetFormView();
+            showView('historyView');
+        }
 
         function handleHomeMenuClick() {
             if (currentEditId) {
@@ -769,7 +954,9 @@
             currentFiles = []; // ★ 추가
             currentEditId = null;
             document.getElementById('editReasonGroup').style.display = 'none';
-            document.querySelector('#formView .modal-btn').innerText = "작성 완료";
+            
+            document.getElementById('submitFormBtn').innerText = "작성 완료";
+            document.getElementById('cancelEditBtn').style.display = "none";
         }
 
         async function fetchInitialData() {
@@ -831,7 +1018,6 @@
                     return '';
                 }
 
-                // 🚨 수정된 부분: limit(10000) -> limit(300) 으로 변경하여 서버 부담을 줄이고 500 에러를 해결합니다.
                 const { data: histData, error: histErr } = await supabaseClient.from('upload_history').select('*').order('created_at', { ascending: false }).limit(300);
                 if (histData) {
                     historyDataList = histData.map(d => ({
@@ -851,26 +1037,29 @@
 
                 const { data: drvData } = await supabaseClient.from('driver_contacts').select('*');
                 if (drvData) driverContacts = drvData;
-                
+
                 await fetchPalletData();
                 await fetchUserPopups();
 
             } catch(e) { console.error("데이터 로드 실패", e); }
-            renderStorage();
+            
+            // 사진(Storage) 용량 갱신을 비동기로 실행
+            fetchPhotoStorageSize();
+            renderStorage(); // 일단 DB사이즈 기준으로 먼저 렌더링
         }
-        
+
         async function fetchUserPopups() {
             const todayStr = new Date().toISOString().split('T')[0];
             const { data } = await supabaseClient.from('popup_notices')
                 .select('*')
                 .lte('start_date', todayStr)
                 .gte('end_date', todayStr);
-                
+
             if(data && data.length > 0) {
                 data.forEach((p, index) => {
                     const hideUntil = localStorage.getItem(`popup_hide_until_${p.id}`);
                     if(hideUntil && parseInt(hideUntil) > Date.now()) return;
-                    
+
                     createUserPopupDOM(p, index);
                 });
             }
@@ -882,18 +1071,22 @@
             overlay.style.display = 'flex';
             overlay.style.zIndex = 3000 + index;
             overlay.id = `userPopupOverlay_${p.id}`;
-            
+
             let imgHtml = '';
             let imgs = [];
             try { imgs = JSON.parse(p.images) || []; } catch(e){}
             
+            // 모달용 이미지 저장
+            userPopupImages[p.id] = imgs;
+
             if(imgs.length > 0) {
-                let slidesHtml = imgs.map((img, i) => `<img src="${img}" onclick="zoomPopupImg(this.src)">`).join('');
+                let slidesHtml = imgs.map((img, i) => `<img src="${img}" onclick="openPopupZoomModal(${p.id}, ${i})">`).join('');
                 let btns = imgs.length > 1 ? `
                     <button class="popup-btn-prev" onclick="movePopupSlide(${p.id}, -1)">&#10094;</button>
                     <button class="popup-btn-next" onclick="movePopupSlide(${p.id}, 1)">&#10095;</button>
+                    <div class="popup-indicator" id="popupIndicator_${p.id}" style="position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.6); color:#fff; padding:4px 10px; border-radius:12px; font-size:12px; z-index:10; font-weight:bold;">1/${imgs.length}</div>
                 ` : '';
-                
+
                 imgHtml = `
                     <div class="popup-carousel" id="popupCarousel_${p.id}" data-idx="0" data-count="${imgs.length}">
                         <div class="popup-carousel-inner" id="popupCarouselInner_${p.id}">
@@ -916,38 +1109,49 @@
                     </div>
                 </div>
             `;
-            
+
             document.body.appendChild(overlay);
-            
+
             if(imgs.length > 1) {
                 setupPopupSwipe(p.id);
+                // 5초 자동 스와이프 인터벌 등록
+                popupIntervals[p.id] = setInterval(() => movePopupSlide(p.id, 1), 5000);
             }
-        }
-
-        function zoomPopupImg(src) {
-            document.getElementById('zoomedImg').src = src;
-            document.getElementById('imgZoomModal').style.display = 'flex';
         }
 
         function movePopupSlide(id, dir) {
             const carousel = document.getElementById(`popupCarousel_${id}`);
             const inner = document.getElementById(`popupCarouselInner_${id}`);
+            const indicator = document.getElementById(`popupIndicator_${id}`);
+            if(!carousel || !inner) return;
+
             let idx = parseInt(carousel.getAttribute('data-idx'));
             const count = parseInt(carousel.getAttribute('data-count'));
-            
+
             idx += dir;
             if(idx < 0) idx = count - 1;
             if(idx >= count) idx = 0;
-            
+
             carousel.setAttribute('data-idx', idx);
             inner.style.transform = `translateX(-${idx * 100}%)`;
+            
+            // 인디케이터 업데이트
+            if(indicator) {
+                indicator.innerText = `${idx + 1}/${count}`;
+            }
+
+            // 동작 시마다 인터벌 초기화 (다시 5초 유지)
+            if(popupIntervals[id]) {
+                clearInterval(popupIntervals[id]);
+                popupIntervals[id] = setInterval(() => movePopupSlide(id, 1), 5000);
+            }
         }
 
         function setupPopupSwipe(id) {
             const inner = document.getElementById(`popupCarouselInner_${id}`);
             let startX = 0;
             let endX = 0;
-            
+
             inner.addEventListener('touchstart', e => { startX = e.changedTouches[0].screenX; }, {passive: true});
             inner.addEventListener('touchend', e => { 
                 endX = e.changedTouches[0].screenX;
@@ -957,6 +1161,11 @@
         }
 
         function closeUserPopup(id) {
+            // 팝업 닫을 때 인터벌 해제
+            if(popupIntervals[id]) {
+                clearInterval(popupIntervals[id]);
+                delete popupIntervals[id];
+            }
             const el = document.getElementById(`userPopupOverlay_${id}`);
             if(el) el.remove();
         }
@@ -968,7 +1177,7 @@
             if (now.getHours() >= 18) {
                 target.setDate(target.getDate() + 1);
             }
-            
+
             localStorage.setItem(`popup_hide_until_${id}`, target.getTime());
             closeUserPopup(id);
         }
@@ -1016,14 +1225,14 @@
             document.getElementById('popupEditId').value = "";
             document.getElementById('popupTitleInput').value = "";
             document.getElementById('popupContentInput').value = "";
-            
+
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('popupStartInput').value = today;
             document.getElementById('popupEndInput').value = today;
-            
+
             popupImgSrcs = [];
             renderPopupImgPreview();
-            
+
             document.getElementById('popupEditModal').style.display = 'flex';
         }
 
@@ -1035,7 +1244,7 @@
             document.getElementById('popupContentInput').value = p.content;
             document.getElementById('popupStartInput').value = p.start_date;
             document.getElementById('popupEndInput').value = p.end_date;
-            
+
             try {
                 popupImgSrcs = JSON.parse(p.images) || [];
             } catch(e) {
@@ -1092,23 +1301,23 @@
             const start_date = document.getElementById('popupStartInput').value;
             const end_date = document.getElementById('popupEndInput').value;
             const id = document.getElementById('popupEditId').value;
-            
+
             if(!title || !start_date || !end_date) {
                 alert("제목과 게시 기간을 입력해주세요.");
                 return;
             }
-            
+
             document.getElementById('globalLoader').style.display = 'flex';
             const payload = {
                 title, content, start_date, end_date, images: JSON.stringify(popupImgSrcs)
             };
-            
+
             if(id) {
                 await supabaseClient.from('popup_notices').update(payload).eq('id', id);
             } else {
                 await supabaseClient.from('popup_notices').insert([payload]);
             }
-            
+
             document.getElementById('globalLoader').style.display = 'none';
             document.getElementById('popupEditModal').style.display = 'none';
             alert("저장되었습니다.");
@@ -1488,7 +1697,7 @@
                 cutoff.setDate(cutoff.getDate() - autoDeleteDays); 
                 const targetStr = cutoff.toISOString().split('T')[0];
 
-                // ★ 추가: 유지기간 초과 항목의 Storage 사진 먼저 삭제
+                // 유지기간 초과 항목의 Storage 사진 먼저 삭제
                 const { data: oldItems } = await supabaseClient.from('upload_history').select('id, img').eq('date', targetStr);
                 if (oldItems && oldItems.length > 0) {
                     for (const item of oldItems) {
@@ -1501,7 +1710,7 @@
 
                 updateHistoryDates(); renderHistoryList(); renderStorage();
                 console.log("D-7 데이터 자동 삭제 완료");
-                
+
                 const todayStr2 = new Date().toISOString().split('T')[0];
                 await supabaseClient.from('popup_notices').delete().lt('end_date', todayStr2);
             }
@@ -1518,15 +1727,20 @@
             el.style.display = 'inline';
 
             const payloadString = JSON.stringify(historyDataList) + JSON.stringify(orderDataList) + JSON.stringify(dispatchDataList);
-            const sizeMB = (new Blob([payloadString]).size / (1024 * 1024)).toFixed(1);
+            const dbSizeMB = (new Blob([payloadString]).size / (1024 * 1024));
 
             if(showRemainingStorage) {
-                const remain = (STORAGE_TOTAL - sizeMB).toFixed(1);
-                const pct = Math.floor((remain / STORAGE_TOTAL) * 100);
-                el.innerText = `잔여량 ${pct}% (${Number(remain).toLocaleString()}mb)`;
+                const remainDB = Math.max(0, DB_TOTAL_MB - dbSizeMB).toFixed(1);
+                const pctDB = Math.floor((remainDB / DB_TOTAL_MB) * 100);
+                
+                const remainPhoto = Math.max(0, PHOTO_TOTAL_MB - cachedPhotoSizeMB).toFixed(1);
+                const pctPhoto = Math.floor((remainPhoto / PHOTO_TOTAL_MB) * 100);
+                
+                el.innerText = `잔여량 ${pctDB}% (${Number(remainDB).toLocaleString()}mb) l 사진 잔여량 ${pctPhoto}% (${Number(remainPhoto).toLocaleString()}mb)`;
             } else {
-                const pct = Math.floor((sizeMB / STORAGE_TOTAL) * 100);
-                el.innerText = `사용량 ${pct}% (${Number(sizeMB).toLocaleString()}mb)`;
+                const pctDB = Math.floor((dbSizeMB / DB_TOTAL_MB) * 100);
+                const pctPhoto = Math.floor((cachedPhotoSizeMB / PHOTO_TOTAL_MB) * 100);
+                el.innerText = `사용량 ${pctDB}% (${Number(dbSizeMB.toFixed(1)).toLocaleString()}mb) l 사진 사용량 ${pctPhoto}% (${Number(cachedPhotoSizeMB.toFixed(1)).toLocaleString()}mb)`;
             }
         }
 
@@ -1896,7 +2110,9 @@
 
             document.getElementById('editReasonGroup').style.display = 'flex';
             document.getElementById('editReasonText').value = '';
-            document.querySelector('#formView .modal-btn').innerText = "수정 완료";
+            
+            document.getElementById('submitFormBtn').innerText = "수정 완료";
+            document.getElementById('cancelEditBtn').style.display = "block";
 
             showView('formView');
         }
@@ -1918,7 +2134,7 @@
                     const file = currentFiles[i];
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-                    
+
                     const { error: uploadError, data } = await supabaseClient
                         .storage
                         .from('photos')
@@ -1942,6 +2158,11 @@
                 }
             }
             // =============== Storage 업로드 로직 끝 ===============
+            
+            // 사진 데이터 갱신
+            if(uploadedUrls.length > 0) {
+                fetchPhotoStorageSize();
+            }
 
             if (currentEditId) {
                 const editReason = document.getElementById('editReasonText').value.trim();
@@ -1996,7 +2217,9 @@
                 currentFiles = []; 
                 currentEditId = null;
                 document.getElementById('editReasonGroup').style.display = 'none';
-                document.querySelector('#formView .modal-btn').innerText = "작성 완료";
+                
+                document.getElementById('submitFormBtn').innerText = "작성 완료";
+                document.getElementById('cancelEditBtn').style.display = "none";
                 renderStorage();
 
                 document.getElementById('saveSuccessModal').style.display = 'flex';
@@ -2081,7 +2304,7 @@
         function getDisplayReason(reason, correction) {
             if (!reason) return "";
             let displayReason = reason;
-            
+
             if (correction) {
                 if (!isLoggedIn) {
                     let corrParts = correction.split('\n');
@@ -2098,7 +2321,7 @@
             container.innerHTML = '';
 
             let visibleItems = historyDataList.filter(i => isLoggedIn || i.status !== 'delete_requested');
-            
+
             if (isLoggedIn) {
                 const selectedDate = document.getElementById('historyDateSelect').value;
                 if(selectedDate) visibleItems = visibleItems.filter(i => i.date === selectedDate);
@@ -2161,7 +2384,7 @@
                     <div class="history-checkbox-wrap" style="display:${isLoggedIn?'block':'none'}">
                         <input type="checkbox" class="hist-chk" value="${item.id}" style="width:18px; height:18px;">
                     </div>
-                    <img src="${thumbSrc}" class="history-thumb">
+                    <img src="${thumbSrc}" class="history-thumb" style="cursor:pointer;" onclick="openHistoryImgModal(${item.id})">
                     <div class="history-info">
                         <p><strong>[${item.store}]</strong> ${item.product} (수량: ${item.qty}${item.unit})</p>
                         <p style="color:#8E8E93; font-size:12px;">${item.date} | 기사: ${item.driver}</p>
@@ -2182,13 +2405,12 @@
             checkboxes.forEach(cb => cb.checked = !allChecked);
         }
 
-        // ★ 변경된 부분: 전체 선택 후 삭제 시 Storage 이미지 삭제 로직 포함
         async function deleteSelectedHistory() {
             const checkedIds = Array.from(document.querySelectorAll('.hist-chk:checked')).map(cb => parseInt(cb.value));
             if(checkedIds.length === 0) return alert("삭제할 항목을 선택하세요.");
             if(confirm("선택한 항목을 완전 삭제하시겠습니까?")) {
                 document.getElementById('globalLoader').style.display = 'flex'; // 로딩 표시
-                
+
                 const itemsToDelete = historyDataList.filter(i => checkedIds.includes(i.id));
                 for (const item of itemsToDelete) {
                     await deleteStorageImages(item.img);
@@ -2203,7 +2425,6 @@
             }
         }
 
-        // ★ 변경된 부분: URL 형태의 이미지를 Excel에 포함하기 위해 Fetch 처리 로직 포함
         async function downloadSelectedHistory() {
             const checkedIds = Array.from(document.querySelectorAll('.hist-chk:checked')).map(cb => parseInt(cb.value));
             const dateStr = document.getElementById('historyDateSelect').value;
@@ -2220,7 +2441,7 @@
 
             try {
                 const workbook = new ExcelJS.Workbook();
-                
+
                 const sheet = workbook.addWorksheet('특이사항', {
                     views: [{ showGridLines: false, zoomScale: 80 }]
                 });
@@ -2246,7 +2467,6 @@
                     cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                 });
 
-                // ★ forEach를 for...of로 변경 (내부에서 await를 사용하기 위함)
                 for (const item of itemsToExport) {
                     let orderInfo = orderDataList.find(r => r.length > 11 && cleanNumber(r[10]) === item.pCode && cleanNumber(r[8]) === item.sCode) || [];
                     let safeSheetName = (item.store || '거래처').substring(0, 31).replace(/[\\/?*\[\]]/g, '');
@@ -2263,7 +2483,7 @@
 
                     row.eachCell((cell, colNumber) => {
                         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-                        
+
                         if (colNumber === 8 || colNumber === 9 || colNumber === 15) {
                             cell.alignment = { wrapText: true, shrinkToFit: false, horizontal: 'center', vertical: 'middle' };
                         } else {
@@ -2368,7 +2588,6 @@
             }
         }
 
-        // ★ 변경된 부분: 단일 항목 삭제 시 Storage 이미지 삭제 로직 포함
         async function confirmDelete(id) {
             document.getElementById('globalLoader').style.display = 'flex'; // 로딩 표시
             const item = historyDataList.find(i => i.id === id);
@@ -2377,7 +2596,7 @@
             const { error } = await supabaseClient.from('upload_history').delete().eq('id', id);
             document.getElementById('globalLoader').style.display = 'none'; // 로딩 숨김
             if (error) { alert("삭제 실패: " + error.message); return; }
-            
+
             historyDataList = historyDataList.filter(i => i.id !== id);
             updateHistoryDates(); renderHistoryList(); renderStorage();
         }
@@ -2432,7 +2651,7 @@
 
         function renderOfficeList() {
             let dragHandleHtml = isLoggedIn ? `<div style="width: 20px; color:#C7C7CC; cursor:grab; font-size:18px; display:flex; align-items:center; justify-content:center;">☰</div>` : '';
-            
+
             document.getElementById('officeListContainer').innerHTML = officeContacts.map((c, index) => `
                 <div class="contact-card" 
                      ${isLoggedIn ? 'draggable="true"' : ''} 
@@ -2510,7 +2729,7 @@
 
         function renderFieldList() {
             let dragHandleHtml = isLoggedIn ? `<div style="width: 20px; color:#C7C7CC; cursor:grab; font-size:18px; display:flex; align-items:center; justify-content:center;">☰</div>` : '';
-            
+
             document.getElementById('fieldListContainer').innerHTML = fieldContacts.map((c, index) => `
                 <div class="contact-card"
                      ${isLoggedIn ? 'draggable="true"' : ''} 
@@ -2886,7 +3105,7 @@
             const tbody = document.getElementById('palletTbody');
             const unsavedRows = Array.from(tbody.querySelectorAll('.unsaved-row'));
             tbody.innerHTML = '';
-            
+
             unsavedRows.forEach(row => tbody.appendChild(row));
 
             palletDataList.forEach(item => {
@@ -2896,12 +3115,12 @@
                 const tr = document.createElement('tr');
                 tr.className = 'db-row';
                 tr.dataset.id = item.id;
-                
+
                 if (isDeleteReq) tr.style.backgroundColor = '#FFE5E5';
 
                 let chkBox = isDeleteReq ? '' : `<input type="checkbox" class="pallet-chk" value="${item.id}">`;
                 let actionHtml = '';
-                
+
                 if (isLoggedIn && isDeleteReq) {
                     actionHtml = `<br>
                         <div style="display:flex; gap:5px; justify-content:center; margin-top:4px;">
@@ -2996,7 +3215,7 @@
         function editPalletData() {
             const checkboxes = document.querySelectorAll('#palletTbody .pallet-chk:checked');
             if (checkboxes.length === 0) return alert("수정할 항목을 선택하세요.");
-            
+
             checkboxes.forEach(chk => {
                 const tr = chk.closest('tr');
                 if (tr.classList.contains('db-row')) {
@@ -3037,7 +3256,7 @@
         async function savePalletData() {
             const newRows = document.querySelectorAll('#palletTbody .unsaved-row');
             const editRows = document.querySelectorAll('#palletTbody .edit-row');
-            
+
             if (newRows.length === 0 && editRows.length === 0) {
                 return alert("저장할 내용이 없습니다.");
             }
@@ -3113,7 +3332,7 @@
                 });
                 return;
             }
-            
+
             if (!isLoggedIn) {
                 palletDeleteTargetIds = [];
                 checkboxes.forEach(chk => {
@@ -3138,7 +3357,7 @@
                         idsToDelete.push(parseInt(chk.value));
                     }
                 });
-                
+
                 if (idsToDelete.length > 0) {
                     document.getElementById('globalLoader').style.display = 'flex';
                     const { error } = await supabaseClient.from('pallet_inbound').delete().in('id', idsToDelete);
@@ -3151,7 +3370,7 @@
 
         async function confirmPalletRequestDelete() {
             if (palletDeleteTargetIds.length === 0) return;
-            
+
             document.getElementById('globalLoader').style.display = 'flex';
             const { error } = await supabaseClient.from('pallet_inbound').update({ status: 'delete_requested' }).in('id', palletDeleteTargetIds);
             document.getElementById('globalLoader').style.display = 'none';
@@ -3170,12 +3389,12 @@
 
         async function confirmPalletDelete(id) {
             if(!confirm("해당 파렛트 내역을 완전 삭제하시겠습니까?")) return;
-            
+
             document.getElementById('globalLoader').style.display = 'flex';
             const { error } = await supabaseClient.from('pallet_inbound').delete().eq('id', id);
             document.getElementById('globalLoader').style.display = 'none';
             if (error) { alert("삭제 실패: " + error.message); return; }
-            
+
             palletDataList = palletDataList.filter(i => i.id !== id);
             renderPalletTable();
         }
@@ -3185,7 +3404,7 @@
             const { error } = await supabaseClient.from('pallet_inbound').update({ status: 'active' }).eq('id', id);
             document.getElementById('globalLoader').style.display = 'none';
             if (error) { alert("삭제취소 실패: " + error.message); return; }
-            
+
             const item = palletDataList.find(i => i.id === id);
             if (item) item.status = 'active';
             renderPalletTable();
@@ -3306,7 +3525,7 @@
 
             let itemsToExport = [];
             const allRows = document.querySelectorAll('#palletTbody tr');
-            
+
             if (allRows.length === 0) return alert("다운로드할 데이터가 없습니다.");
 
             allRows.forEach(tr => {
@@ -3354,7 +3573,7 @@
                 { width: 15.00 }, { width: 15.00 }, { width: 12.00 }, { width: 12.00 }, { width: 30.00 }
             ];
 
-            const header = ['구분', '일자', '파렛트 유형', '입출고수량', '상하차지', '차량번호', '차량번호', '차량톤수', '작성인원', '비고'];
+            const header = ['구분', '일자', '파렛트 유형', '입출고수량', '상하차지', '도착시간', '차량번호', '차량톤수', '작성인원', '비고'];
             const headerRow = sheet.addRow(header);
 
             headerRow.eachCell((cell) => {
@@ -3372,7 +3591,7 @@
                             type,
                             qty,
                             rowData.location || '',
-                            rowData.car_number || '',
+                            rowData.arrival_time || '',
                             rowData.car_number || '',
                             rowData.tonnage || '',
                             rowData.author || '',
@@ -3394,20 +3613,20 @@
             const buffer = await workbook.xlsx.writeBuffer();
             const fileNameDate = isAll ? '전체' : selectedDlDate;
             saveAs(new Blob([buffer]), `파렛트_입출고현황_${fileNameDate}.xlsx`);
-            
+
             document.getElementById('palletDownloadModal').style.display = 'none';
         }
 
         function confirmLeavePallet() {
             palletUnsaved = false;
             document.getElementById('unsavedAlertModal').style.display = 'none';
-            
+
             document.querySelectorAll('#palletTbody .unsaved-row').forEach(row => row.remove());
             document.querySelectorAll('#palletTbody .edit-row').forEach(row => row.classList.remove('edit-row'));
             document.getElementById('palletSelectAllChk').checked = false;
 
             renderPalletTable();
-            
+
             if (targetView) {
                 showView(targetView);
                 targetView = '';
