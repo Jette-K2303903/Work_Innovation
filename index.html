@@ -3058,10 +3058,10 @@ try {
             if(!map) {
                 map = L.map('map').setView([35.3, 128.0], 8);
                 
-                // 수정: 병원, 학교 등 불필요한 마크가 최소화된 깔끔한 베이스맵(CartoDB Light)으로 교체
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                // 수정: API key가 필요 없는 OpenStreetMap 기본 베이스맵으로 교체
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
-                    attribution: '© OpenStreetMap contributors, © CARTO'
+                    attribution: '© OpenStreetMap contributors'
                 }).addTo(map);
 
                 map.on('zoomend', function() {
