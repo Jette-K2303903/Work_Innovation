@@ -221,7 +221,7 @@
 
     <div id="globalLoader">
         <div class="spinner"></div>
-        <span>데이터 로딩중..</span>
+        <span id="loaderText">데이터 로딩중..</span>
     </div>
 
     <button id="mobileMenuBtn" class="menu-toggle-btn" onclick="toggleMenu()">☰ 메뉴</button>
@@ -780,6 +780,7 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('writeDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('loaderText').innerText = '데이터 로딩중..';
             document.getElementById('globalLoader').style.display = 'flex'; 
             await fetchInitialData();
             updateMenuUI();
@@ -1342,6 +1343,7 @@
                 return;
             }
 
+            document.getElementById('loaderText').innerText = '저장 중..';
             document.getElementById('globalLoader').style.display = 'flex';
             const payload = {
                 title, content, start_date, end_date, images: JSON.stringify(popupImgSrcs)
@@ -1360,6 +1362,7 @@
                 }
 
                 document.getElementById('globalLoader').style.display = 'none';
+                document.getElementById('loaderText').innerText = '데이터 로딩중..';
                 document.getElementById('popupEditModal').style.display = 'none';
                 alert("저장되었습니다.");
                 
@@ -1380,15 +1383,18 @@
 
             } catch (error) {
                 document.getElementById('globalLoader').style.display = 'none';
+                document.getElementById('loaderText').innerText = '데이터 로딩중..';
                 alert("저장 실패: " + (error.message || "알 수 없는 오류가 발생했습니다."));
             }
         }
 
         async function deletePopupNotice(id) {
             if(!confirm("해당 팝업 공지를 삭제하시겠습니까?")) return;
+            document.getElementById('loaderText').innerText = '삭제 중..';
             document.getElementById('globalLoader').style.display = 'flex';
             await supabaseClient.from('popup_notices').delete().eq('id', id);
             document.getElementById('globalLoader').style.display = 'none';
+            document.getElementById('loaderText').innerText = '데이터 로딩중..';
             openPopupManageModal();
         }
 
@@ -1689,6 +1695,7 @@
                 const { error: delError } = await supabaseClient.from('orders').delete().neq('id', 0);
                 if(delError) { alert("기존 데이터 삭제 실패: " + delError.message); return; }
 
+                document.getElementById('loaderText').innerText = '저장 중..';
                 document.getElementById('globalLoader').style.display = 'flex';
 
                 const promises = [];
@@ -1697,10 +1704,16 @@
                 }
                 const results = await Promise.all(promises);
                 for(let res of results) {
-                    if(res.error) { alert("저장 실패: " + res.error.message); document.getElementById('globalLoader').style.display = 'none'; return; }
+                    if(res.error) { 
+                        alert("저장 실패: " + res.error.message); 
+                        document.getElementById('globalLoader').style.display = 'none'; 
+                        document.getElementById('loaderText').innerText = '데이터 로딩중..';
+                        return; 
+                    }
                 }
 
                 document.getElementById('globalLoader').style.display = 'none';
+                document.getElementById('loaderText').innerText = '데이터 로딩중..';
                 orderDataList = parsed;
                 alert("주문업로드가 완료되었습니다.");
                 document.getElementById('newOrderData').value = '';
@@ -1723,6 +1736,7 @@
                 const { error: delError } = await supabaseClient.from('dispatch_list').delete().neq('id', 0);
                 if(delError) { alert("기존 데이터 삭제 실패: " + delError.message); return; }
 
+                document.getElementById('loaderText').innerText = '저장 중..';
                 document.getElementById('globalLoader').style.display = 'flex';
 
                 const promises = [];
@@ -1731,10 +1745,16 @@
                 }
                 const results = await Promise.all(promises);
                 for(let res of results) {
-                    if(res.error) { alert("저장 실패: " + res.error.message); document.getElementById('globalLoader').style.display = 'none'; return; }
+                    if(res.error) { 
+                        alert("저장 실패: " + res.error.message); 
+                        document.getElementById('globalLoader').style.display = 'none'; 
+                        document.getElementById('loaderText').innerText = '데이터 로딩중..';
+                        return; 
+                    }
                 }
 
                 document.getElementById('globalLoader').style.display = 'none';
+                document.getElementById('loaderText').innerText = '데이터 로딩중..';
                 dispatchDataList = parsed;
                 alert("배차업로드가 완료되었습니다.");
                 document.getElementById('newDispatchData').value = '';
@@ -2192,6 +2212,7 @@
             if(!remarkVal) remarkVal = '-';
 
 // =============== ★ Storage 업로드 로직 수정 (병렬 업로드) ===============
+document.getElementById('loaderText').innerText = '저장 중..';
 document.getElementById('globalLoader').style.display = 'flex'; // 로딩 시작
 
 let uploadedUrls = [];
@@ -2231,6 +2252,7 @@ try {
 } catch (error) {
     alert("이미지 업로드 실패: " + error.message);
     document.getElementById('globalLoader').style.display = 'none';
+    document.getElementById('loaderText').innerText = '데이터 로딩중..';
     return;
 }
 // =============== Storage 업로드 로직 끝 ===============
@@ -2245,12 +2267,14 @@ try {
                 if(!editReason) {
                     alert("수정 사유를 입력해주세요."); 
                     document.getElementById('globalLoader').style.display = 'none';
+                    document.getElementById('loaderText').innerText = '데이터 로딩중..';
                     return;
                 }
 
                 let existingItem = historyDataList.find(i => i.id === currentEditId);
                 if(!existingItem) {
                     document.getElementById('globalLoader').style.display = 'none';
+                    document.getElementById('loaderText').innerText = '데이터 로딩중..';
                     return;
                 }
 
@@ -2298,6 +2322,9 @@ try {
                 document.getElementById('cancelEditBtn').style.display = "none";
                 renderStorage();
 
+                document.getElementById('globalLoader').style.display = 'none';
+                document.getElementById('loaderText').innerText = '데이터 로딩중..';
+
                 document.getElementById('saveSuccessModal').style.display = 'flex';
                 clearTimeout(savePopupTimer);
                 const delay = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
@@ -2341,6 +2368,9 @@ try {
                 currentImgSrcs = [];
                 currentFiles = []; 
                 renderStorage(); 
+
+                document.getElementById('globalLoader').style.display = 'none';
+                document.getElementById('loaderText').innerText = '데이터 로딩중..';
 
                 document.getElementById('saveSuccessModal').style.display = 'flex';
                 clearTimeout(savePopupTimer);
@@ -2485,6 +2515,7 @@ try {
             const checkedIds = Array.from(document.querySelectorAll('.hist-chk:checked')).map(cb => parseInt(cb.value));
             if(checkedIds.length === 0) return alert("삭제할 항목을 선택하세요.");
             if(confirm("선택한 항목을 완전 삭제하시겠습니까?")) {
+                document.getElementById('loaderText').innerText = '삭제 중..';
                 document.getElementById('globalLoader').style.display = 'flex'; // 로딩 표시
 
                 const itemsToDelete = historyDataList.filter(i => checkedIds.includes(i.id));
@@ -2494,6 +2525,7 @@ try {
 
                 const { error } = await supabaseClient.from('upload_history').delete().in('id', checkedIds);
                 document.getElementById('globalLoader').style.display = 'none'; // 로딩 숨김
+                document.getElementById('loaderText').innerText = '데이터 로딩중..';
                 if (error) { alert("삭제 실패: " + error.message); return; }
 
                 historyDataList = historyDataList.filter(i => !checkedIds.includes(i.id));
@@ -2665,12 +2697,14 @@ try {
         }
 
         async function confirmDelete(id) {
+            document.getElementById('loaderText').innerText = '삭제 중..';
             document.getElementById('globalLoader').style.display = 'flex'; // 로딩 표시
             const item = historyDataList.find(i => i.id === id);
             if (item) await deleteStorageImages(item.img);
 
             const { error } = await supabaseClient.from('upload_history').delete().eq('id', id);
             document.getElementById('globalLoader').style.display = 'none'; // 로딩 숨김
+            document.getElementById('loaderText').innerText = '데이터 로딩중..';
             if (error) { alert("삭제 실패: " + error.message); return; }
 
             historyDataList = historyDataList.filter(i => i.id !== id);
@@ -3352,6 +3386,7 @@ try {
                 return alert("저장할 내용이 없습니다.");
             }
 
+            document.getElementById('loaderText').innerText = '저장 중..';
             document.getElementById('globalLoader').style.display = 'flex';
 
             const inserts = [];
@@ -3375,7 +3410,7 @@ try {
 
             if (inserts.length > 0) {
                 const { error } = await supabaseClient.from('pallet_inbound').insert(inserts);
-                if (error) { alert("저장 실패: " + error.message); document.getElementById('globalLoader').style.display = 'none'; return; }
+                if (error) { alert("저장 실패: " + error.message); document.getElementById('globalLoader').style.display = 'none'; document.getElementById('loaderText').innerText = '데이터 로딩중..'; return; }
             }
 
             for (let tr of editRows) {
@@ -3403,6 +3438,7 @@ try {
             palletUnsaved = false;
             await fetchPalletData(); 
             document.getElementById('globalLoader').style.display = 'none';
+            document.getElementById('loaderText').innerText = '데이터 로딩중..';
             alert("저장되었습니다.");
         }
 
@@ -3450,9 +3486,11 @@ try {
                 });
 
                 if (idsToDelete.length > 0) {
+                    document.getElementById('loaderText').innerText = '삭제 중..';
                     document.getElementById('globalLoader').style.display = 'flex';
                     const { error } = await supabaseClient.from('pallet_inbound').delete().in('id', idsToDelete);
                     document.getElementById('globalLoader').style.display = 'none';
+                    document.getElementById('loaderText').innerText = '데이터 로딩중..';
                     if (error) { alert("삭제 실패: " + error.message); return; }
                     await fetchPalletData();
                 }
@@ -3462,9 +3500,11 @@ try {
         async function confirmPalletRequestDelete() {
             if (palletDeleteTargetIds.length === 0) return;
 
+            document.getElementById('loaderText').innerText = '요청 중..';
             document.getElementById('globalLoader').style.display = 'flex';
             const { error } = await supabaseClient.from('pallet_inbound').update({ status: 'delete_requested' }).in('id', palletDeleteTargetIds);
             document.getElementById('globalLoader').style.display = 'none';
+            document.getElementById('loaderText').innerText = '데이터 로딩중..';
             if (error) { alert("상태 변경 실패: " + error.message); return; }
 
             palletDataList.forEach(item => {
@@ -3481,9 +3521,11 @@ try {
         async function confirmPalletDelete(id) {
             if(!confirm("해당 파렛트 내역을 완전 삭제하시겠습니까?")) return;
 
+            document.getElementById('loaderText').innerText = '삭제 중..';
             document.getElementById('globalLoader').style.display = 'flex';
             const { error } = await supabaseClient.from('pallet_inbound').delete().eq('id', id);
             document.getElementById('globalLoader').style.display = 'none';
+            document.getElementById('loaderText').innerText = '데이터 로딩중..';
             if (error) { alert("삭제 실패: " + error.message); return; }
 
             palletDataList = palletDataList.filter(i => i.id !== id);
@@ -3491,9 +3533,11 @@ try {
         }
 
         async function cancelPalletDelete(id) {
+            document.getElementById('loaderText').innerText = '취소 중..';
             document.getElementById('globalLoader').style.display = 'flex';
             const { error } = await supabaseClient.from('pallet_inbound').update({ status: 'active' }).eq('id', id);
             document.getElementById('globalLoader').style.display = 'none';
+            document.getElementById('loaderText').innerText = '데이터 로딩중..';
             if (error) { alert("삭제취소 실패: " + error.message); return; }
 
             const item = palletDataList.find(i => i.id === id);
