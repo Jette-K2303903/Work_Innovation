@@ -190,9 +190,22 @@
 
         #map { width:100%; height:65vh; border-radius:12px; background: transparent !important; z-index: 1; }
 
-        .leaflet-tile { filter: grayscale(100%) brightness(110%) contrast(90%); }
-
-        .custom-map-tooltip { opacity: 0 !important; transition: opacity 0.3s; background: transparent; border: none; color: var(--text-main); font-size: 12px; font-weight: 900; padding: 2px 5px; text-align: center; box-shadow: none; white-space: nowrap; pointer-events: none; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 5px #fff; }
+        /* 수정: 확대시 보이는 포인트 라벨 가시성 확 개선 */
+        .custom-map-tooltip { 
+            opacity: 0 !important; 
+            transition: opacity 0.3s; 
+            background: rgba(255, 255, 255, 0.95) !important; 
+            border: 1px solid #C7C7CC !important; 
+            border-radius: 6px !important; 
+            color: #1C1C1E !important; 
+            font-size: 13px !important; 
+            font-weight: 800 !important; 
+            padding: 5px 10px !important; 
+            text-align: center; 
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important; 
+            white-space: nowrap; 
+            pointer-events: none; 
+        }
         .custom-map-tooltip::before { display: none !important; }
         #map.show-labels .custom-map-tooltip { opacity: 1 !important; }
 
@@ -3030,10 +3043,12 @@ try {
         let map;
         let regionLayers = {};
         let mapSearchData = []; 
+        
+        // 수정: 형광색, 가독성 떨어지는 색상 완전히 제외하고 고대비 명확한 색상 위주로 팔레트 재구성
         const MAP_COLORS = [
-            '#e6194B', '#3cb44b', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990',
-            '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9', '#333333',
-            '#000000', '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#204A8E'
+            '#e6194B', '#4363d8', '#3cb44b', '#f58231', '#911eb4', '#800000', '#000075', '#469990', '#9A6324', '#000000',
+            '#8c564b', '#1f77b4', '#d62728', '#2ca02c', '#9467bd', '#ff7f0e', '#808000', '#204A8E', '#6B8E23', '#D2691E',
+            '#483D8B', '#008B8B', '#B8860B', '#A52A2A', '#2F4F4F', '#8B4513', '#6A5ACD', '#CD5C5C', '#0000CD', '#8B0000'
         ];
 
         const MILYANG_LAT = 35.472383;
@@ -3042,9 +3057,11 @@ try {
         function renderMap() {
             if(!map) {
                 map = L.map('map').setView([35.3, 128.0], 8);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                
+                // 수정: 병원, 학교 등 불필요한 마크가 최소화된 깔끔한 베이스맵(CartoDB Light)으로 교체
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                     maxZoom: 19,
-                    attribution: '© OpenStreetMap contributors'
+                    attribution: '© OpenStreetMap contributors, © CARTO'
                 }).addTo(map);
 
                 map.on('zoomend', function() {
@@ -3138,7 +3155,8 @@ try {
 
                 route.points.forEach((pt, idx) => {
                     const storeName = route.storeNames[idx];
-                    const marker = L.circleMarker(pt, { radius: 6, color: '#fff', weight: 1, fillColor: color, fillOpacity: 1, originalColor: color })
+                    // 수정: 겹쳐있을 때 구분이 쉽도록 radius 확대 및 테두리(weight) 강화
+                    const marker = L.circleMarker(pt, { radius: 7, color: '#ffffff', weight: 2, fillColor: color, fillOpacity: 1, originalColor: color })
                          .bindPopup(`<div style='font-size:14px;'><b>${storeName}</b><br><span style='color:var(--primary); font-weight:bold;'>배송기사: ${driver}</span></div>`)
                          .addTo(tLayer);
 
