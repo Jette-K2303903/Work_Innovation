@@ -2547,14 +2547,14 @@ try {
                 });
 
                 sheet.columns = [
-                    { width: 0.77 }, { width: 11.00 }, { width: 9.38 }, { width: 9.38 },
-                    { width: 16.25 }, { width: 9.38 }, { width: 16.25 }, { width: 9.38 },
-                    { width: 49.38 }, { width: 4.38 }, { width: 4.38 }, { width: 6.88 },
-                    { width: 6.88 }, { width: 4.38 }, { width: 26.68 }, { width: 59.50 },
-                    { width: 16.88 }
+                    { width: 0.77 }, { width: 10.38 }, { width: 8.75 }, { width: 8.75 },
+                    { width: 15.63 }, { width: 8.75 }, { width: 15.63 }, { width: 8.75 },
+                    { width: 48.75 }, { width: 3.75 }, { width: 3.75 }, { width: 8.75 },
+                    { width: 8.75 }, { width: 3.75 }, { width: 11.38 }, { width: 26.00 },
+                    { width: 58.88 }, { width: 16.25 }
                 ];
 
-                sheet.addRow(['공란', '배송일자', '메인센터명', '고객사코드', '고객사명', '거래처코드', '거래처명', '제품코드', '제품명', '온도', '단위', '품목지정', '재고타입', '수량', '내용', '상세내용', '수정사유']);
+                sheet.addRow(['공란', '배송일자', '메인센터명', '고객사코드', '고객사명', '거래처코드', '거래처명', '제품코드', '제품명', '온도', '단위', '품목지정', '재고타입', '수량', '전체 발주량', '내용', '상세내용', '수정사유']);
 
                 const headerRow = sheet.getRow(1);
                 headerRow.eachCell((cell) => {
@@ -2578,13 +2578,13 @@ try {
                     const row = sheet.addRow([
                         '', item.date, item.mCenter, item.sCode, (orderInfo[7]||item.store), (orderInfo[8]||''), (orderInfo[9]||item.store),
                         item.pCode, item.product, (orderInfo[15]||''), item.unit, (orderInfo[17]||''), (orderInfo[18]||''),
-                        item.qty, baseReasonText, remarkContent, correctionContent
+                        item.qty, (orderInfo[21] !== undefined && orderInfo[21] !== null ? orderInfo[21] : ''), baseReasonText, remarkContent, correctionContent
                     ]);
 
                     row.eachCell((cell, colNumber) => {
                         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
 
-                        if (colNumber === 8 || colNumber === 9 || colNumber === 15) {
+                        if (colNumber === 8 || colNumber === 9 || colNumber === 16) {
                             cell.alignment = { wrapText: true, shrinkToFit: false, horizontal: 'center', vertical: 'middle' };
                         } else {
                             cell.alignment = { wrapText: false, shrinkToFit: true, horizontal: 'center', vertical: 'middle' };
@@ -2646,9 +2646,9 @@ try {
                         l3Cell.value = { text: '특이사항', hyperlink: `#'특이사항'!A1` };
                         l3Cell.font = { color: { argb: 'FF0000FF' }, underline: true, bold: true };
 
-                        const cellO = row.getCell(15);
-                        cellO.value = { text: baseReasonText, hyperlink: `#'${safeSheetName}'!A1` };
-                        cellO.font = { color: { argb: 'FF0000FF' }, underline: true };
+                        const cellP = row.getCell(16);
+                        cellP.value = { text: baseReasonText, hyperlink: `#'${safeSheetName}'!A1` };
+                        cellP.font = { color: { argb: 'FF0000FF' }, underline: true };
                     }
                 }
 
@@ -3058,10 +3058,10 @@ try {
             if(!map) {
                 map = L.map('map').setView([35.3, 128.0], 8);
                 
-                // 수정: API key가 필요 없는 OpenStreetMap 기본 베이스맵으로 교체
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                // 수정: 병원, 학교 등 불필요한 마크가 최소화된 깔끔한 베이스맵(CartoDB Light)으로 교체
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                     maxZoom: 19,
-                    attribution: '© OpenStreetMap contributors'
+                    attribution: '© OpenStreetMap contributors, © CARTO'
                 }).addTo(map);
 
                 map.on('zoomend', function() {
