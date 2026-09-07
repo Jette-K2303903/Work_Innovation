@@ -2191,39 +2191,49 @@
             let remarkVal = document.getElementById('remarkText').value.trim();
             if(!remarkVal) remarkVal = '-';
 
-            // =============== ★ Storage 업로드 로직 추가 ===============
-            document.getElementById('globalLoader').style.display = 'flex'; // 로딩 시작
+// =============== ★ Storage 업로드 로직 수정 (병렬 업로드) ===============
+document.getElementById('globalLoader').style.display = 'flex'; // 로딩 시작
 
-            let uploadedUrls = [];
-            for (let i = 0; i < currentImgSrcs.length; i++) {
-                if (currentFiles[i]) { // 새로 추가된 파일이 있다면 Storage에 업로드
-                    const file = currentFiles[i];
-                    const fileExt = file.name.split('.').pop();
-                    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+let uploadedUrls = [];
 
-                    const { error: uploadError, data } = await supabaseClient
-                        .storage
-                        .from('photos')
-                        .upload(fileName, file);
+try {
+    // 모든 이미지 업로드 작업을 배열로 생성 (동시 실행 준비)
+    const uploadTasks = currentImgSrcs.map(async (src, i) => {
+        if (currentFiles[i]) {
+            const file = currentFiles[i];
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-                    if (uploadError) {
-                        alert("이미지 업로드 실패: " + uploadError.message);
-                        document.getElementById('globalLoader').style.display = 'none';
-                        return;
-                    }
+            // 이미지 업로드
+            const { error: uploadError } = await supabaseClient
+                .storage
+                .from('photos')
+                .upload(fileName, file);
 
-                    const { data: publicUrlData } = supabaseClient
-                        .storage
-                        .from('photos')
-                        .getPublicUrl(fileName);
+            if (uploadError) throw uploadError;
 
-                    uploadedUrls.push(publicUrlData.publicUrl);
-                } else {
-                    // 이미 업로드된 기존 URL인 경우 그대로 유지
-                    uploadedUrls.push(currentImgSrcs[i]);
-                }
-            }
-            // =============== Storage 업로드 로직 끝 ===============
+            // Public URL 가져오기
+            const { data: publicUrlData } = supabaseClient
+                .storage
+                .from('photos')
+                .getPublicUrl(fileName);
+
+            return publicUrlData.publicUrl;
+        } else {
+            // 기존 URL 유지
+            return currentImgSrcs[i];
+        }
+    });
+
+    // Promise.all을 사용하여 여러 장의 사진을 동시에 업로드
+    uploadedUrls = await Promise.all(uploadTasks);
+
+} catch (error) {
+    alert("이미지 업로드 실패: " + error.message);
+    document.getElementById('globalLoader').style.display = 'none';
+    return;
+}
+// =============== Storage 업로드 로직 끝 ===============
             
             // 사진 데이터 갱신
             if(uploadedUrls.length > 0) {
