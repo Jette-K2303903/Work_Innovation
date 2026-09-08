@@ -16,6 +16,11 @@
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- OpenFreeMap 벡터 타일 렌더링을 위한 MapLibre GL 스크립트 추가 -->
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" crossorigin=""/>
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js" crossorigin=""></script>
+    <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.20/leaflet-maplibre-gl.js" crossorigin=""></script>
 
     <style>
         :root {
@@ -3058,11 +3063,23 @@ try {
             if(!map) {
                 map = L.map('map').setView([35.3, 128.0], 8);
                 
-                // 수정: 병원, 학교 등 불필요한 마크가 최소화된 깔끔한 베이스맵(CartoDB Light)으로 교체
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                    maxZoom: 19,
-                    attribution: '© OpenStreetMap contributors, © CARTO'
-                }).addTo(map);
+                // OpenFreeMap 스타일 가져와서 도로명/교통수단 이름 심볼 레이어 숨김 처리
+                fetch('https://tiles.openfreemap.org/styles/positron')
+                    .then(response => response.json())
+                    .then(style => {
+                        style.layers = style.layers.filter(layer => {
+                            // symbol 타입이면서 source-layer가 transportation_name인 경우 삭제(숨김)
+                            if (layer.type === 'symbol' && layer['source-layer'] === 'transportation_name') {
+                                return false; 
+                            }
+                            return true;
+                        });
+                        L.maplibreGL({
+                            style: style,
+                            attribution: '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> <a href="https://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> Data from <a href="https://openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+                        }).addTo(map);
+                    })
+                    .catch(err => console.error("Map Style Load Error:", err));
 
                 map.on('zoomend', function() {
                     if (map.getZoom() >= 14) {
