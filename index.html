@@ -3684,6 +3684,8 @@ try {
             }
 
             const workbook = new ExcelJS.Workbook();
+            
+            // 1. 파렛트 입고 시트
             const sheet = workbook.addWorksheet('파렛트 입고', {
                 views: [{ showGridLines: false }]
             });
@@ -3702,7 +3704,26 @@ try {
                 cell.alignment = { horizontal: 'center', vertical: 'middle' };
             });
 
+            // 2. 간선현황 파일 시트 추가
+            const sheet2 = workbook.addWorksheet('간선현황 파일', {
+                views: [{ showGridLines: false }]
+            });
+            
+            sheet2.columns = [
+                { width: 15.00 }, { width: 15.00 }, { width: 10.00 }, { width: 15.00 },
+                { width: 10.00 }, { width: 15.00 }, { width: 12.00 }, { width: 12.00 }
+            ];
+            
+            const header2 = ['상차지', '하차지', '소속', '차량번호', '톤수', '도착시간', 'KPP 전표', '아주전표'];
+            const headerRow2 = sheet2.addRow(header2);
+            headerRow2.eachCell((cell) => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            });
+
             itemsToExport.forEach(rowData => {
+                // 파렛트 입고 시트 행 추가
                 const addExcelRow = (type, qty) => {
                     if (qty > 0) {
                         const row = sheet.addRow([
@@ -3724,10 +3745,36 @@ try {
                     }
                 };
 
-                addExcelRow('KPP N11', rowData.kpp_n11);
-                addExcelRow('KPP N12', rowData.kpp_n12);
-                addExcelRow('AJ 11A', rowData.aj_11a);
-                addExcelRow('AJ 12A', rowData.aj_12a);
+                // 유형 변경 반영 (KPP N11 -> N11 등)
+                addExcelRow('N11', rowData.kpp_n11);
+                addExcelRow('N12', rowData.kpp_n12);
+                addExcelRow('11A', rowData.aj_11a);
+                addExcelRow('12A', rowData.aj_12a);
+
+                // 간선현황 파일 시트 행 추가
+                let loc = rowData.location || '';
+                if (loc === '이천') loc = '이천센터';
+                else if (loc === '오산') loc = '오산2센터';
+                else if (loc === '천안') loc = '천안(원앤원)';
+
+                const kppTotal = (rowData.kpp_n11 || 0) + (rowData.kpp_n12 || 0);
+                const ajTotal = (rowData.aj_11a || 0) + (rowData.aj_12a || 0);
+
+                const row2 = sheet2.addRow([
+                    loc,
+                    '밀양센터',
+                    '구간',
+                    rowData.car_number || '',
+                    rowData.tonnage || '',
+                    rowData.arrival_time || '',
+                    kppTotal,
+                    ajTotal
+                ]);
+
+                row2.eachCell(cell => {
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                });
             });
 
             const buffer = await workbook.xlsx.writeBuffer();
