@@ -577,11 +577,32 @@
                 </div>
                 <div style="display:flex; gap:10px; margin-top:10px;">
                     <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="openPopupManageModal()">📢 팝업 공지 설정</button>
+                    <button class="btn-small" style="background:#F2F2F7; color:var(--text-main); flex:1; padding:10px;" onclick="openFieldListManageModal()">👷 현장 목록 관리</button>
                 </div>
 
             </div>
             <button class="modal-btn" style="margin-top:25px;" onclick="saveSystemSettings()">설정 저장</button>
             <button class="modal-btn modal-btn-close" onclick="closeSettingsModal()">닫기</button>
+        </div>
+    </div>
+
+    <div id="fieldListManageModal" class="modal-overlay" onclick="if(event.target===this) closeFieldListManageModal()">
+        <div class="modal-box" style="max-width:300px;">
+            <h2 class="modal-title" style="font-size:18px;">현장 목록 노출 설정</h2>
+            <ul style="list-style:none; padding:0; text-align:left; margin-bottom:20px;">
+                <li style="padding:8px 10px;"><label><input type="checkbox" id="flm_home"> 홈화면</label></li>
+                <li style="padding:8px 10px;"><label><input type="checkbox" id="flm_office"> 사무실 연락처</label></li>
+                <li style="padding:8px 10px;"><label><input type="checkbox" id="flm_field"> 현장 연락처</label></li>
+                <li style="padding:8px 10px;"><label><input type="checkbox" id="flm_driver"> 기사 연락처</label></li>
+                <li style="padding:8px 10px;"><label><input type="checkbox" id="flm_history"> 업로드 내역</label></li>
+                <li style="padding:8px 10px;"><label><input type="checkbox" id="flm_map"> 배차 내역</label></li>
+                <li style="padding:8px 10px;"><label><input type="checkbox" id="flm_reserve1"> 파렛트 입고현황</label></li>
+                <li style="padding:8px 10px;"><label><input type="checkbox" id="flm_reserve2"> 화면전환</label></li>
+                <li style="padding:8px 10px;"><label><input type="checkbox" id="flm_baecha"> 배차 데이터 관리</label></li>
+                <li style="padding:8px 10px;"><label><input type="checkbox" id="flm_temp"> 임시 버튼</label></li>
+            </ul>
+            <button class="modal-btn" onclick="saveFieldListManage()">저장</button>
+            <button class="modal-btn modal-btn-close" onclick="closeFieldListManageModal()">취소</button>
         </div>
     </div>
 
@@ -703,8 +724,9 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobWx0cXhtcmFtaW1sd3Jka21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4MjczMzAsImV4cCI6MjEwMTQwMzMzMH0.W60TYb4NIRR7lXpbgQlj1h7yGGPcXRSh3Ui3IuFH-j0';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let isMenuOpen = false; let menuInactivityTimer; let isLoggedIn = false;
+let isMenuOpen = false; let menuInactivityTimer; let isLoggedIn = false; let isFieldLoggedIn = false;
         const ADMIN_PWD = "alfdid13579!!";
+        const FIELD_PWD = "a13579!!"; // 현장 전용 로그인 비밀번호
 
         let currentImgSrcs = []; 
         let currentFiles = []; // ★ 추가: 실제 파일 객체 배열
@@ -722,8 +744,8 @@
         let reasonsList = [];
         let menuOrder = ['menuHome', 'menuOffice', 'menuField', 'menuDriver', 'menuHistory', 'menuMap', 'menuReserve1', 'menuReserve2', 'menuBaechaData', 'menuTempSave'];
         let nonUserVisibility = { home: true, office: true, field: false, driver: true, history: true, map: false, reserve1: false, reserve2: false, baecha: true, temp: true };
+        let fieldVisibility = { home: false, office: false, field: true, driver: false, history: false, map: false, reserve1: false, reserve2: true, baecha: false, temp: false }; // 현장 로그인 기본값
         let autoDeleteDays = 7;
-        let savePopupTimer;
 
         const DB_TOTAL_MB = 500;
         const PHOTO_TOTAL_MB = 1024;
@@ -798,26 +820,30 @@
         document.addEventListener('DOMContentLoaded', async () => {
             // 새로고침 시 로그인 유지 확인 (60분=3600000ms 제한)
             const savedLoginTs = sessionStorage.getItem('loggedInTimestamp');
+            const savedRole = sessionStorage.getItem('loggedInRole');
             if (savedLoginTs) {
                 if (Date.now() - parseInt(savedLoginTs) < 60 * 60 * 1000) {
-                    isLoggedIn = true;
+                    if (savedRole === 'admin') isLoggedIn = true;
+                    else if (savedRole === 'field') isFieldLoggedIn = true;
                     document.body.classList.add('pc-mode');
                     document.getElementById('authBtn').innerHTML = "🔓 로그아웃";
-                    document.getElementById('settingsBtn').style.display = "block";
+                    if(isLoggedIn) document.getElementById('settingsBtn').style.display = "block";
                 } else {
                     sessionStorage.removeItem('loggedInTimestamp');
+                    sessionStorage.removeItem('loggedInRole');
                 }
             }
 
             // 화면 어딘가를 클릭했을 때 60분이 넘었으면 차단 후 새로고침 (인터셉터)
             document.addEventListener('click', (e) => {
-                if (isLoggedIn) {
+                if (isLoggedIn || isFieldLoggedIn) {
                     const checkTs = sessionStorage.getItem('loggedInTimestamp');
                     if (checkTs && Date.now() - parseInt(checkTs) > 60 * 60 * 1000) {
                         e.preventDefault();
                         e.stopPropagation();
                         alert("로그인이 필요합니다.");
                         sessionStorage.removeItem('loggedInTimestamp');
+                        sessionStorage.removeItem('loggedInRole');
                         location.reload();
                     }
                 }
@@ -1038,6 +1064,7 @@
                         try {
                             const parsed = JSON.parse(set_data.menu_order_json);
                             if(parsed.vis) nonUserVisibility = { ...nonUserVisibility, ...parsed.vis };
+                            if(parsed.fieldVis) fieldVisibility = { ...fieldVisibility, ...parsed.fieldVis };
                             if(parsed.order) {
                                 menuOrder = parsed.order;
                                 if (!menuOrder.includes('menuBaechaData')) menuOrder.push('menuBaechaData');
@@ -1468,8 +1495,8 @@
         window.addEventListener('touchstart', resetInactivityTimer, {passive: true});
         window.addEventListener('keydown', resetInactivityTimer);
 
-        function toggleScreenMode() {
-            if(!isLoggedIn) {
+    function toggleScreenMode() {
+            if(!isLoggedIn && !isFieldLoggedIn) {
                 alert("로그인 후 이용 가능합니다.");
                 return;
             }
@@ -1494,18 +1521,23 @@
             }, 300);
         }
 
-        function updateMenuUI() {
-            document.getElementById('menuHome').style.display = (isLoggedIn || nonUserVisibility.home) ? 'block' : 'none';
-            document.getElementById('menuOffice').style.display = (isLoggedIn || nonUserVisibility.office) ? 'block' : 'none';
-            document.getElementById('menuField').style.display = (isLoggedIn || nonUserVisibility.field) ? 'block' : 'none';
-            document.getElementById('menuDriver').style.display = (isLoggedIn || nonUserVisibility.driver) ? 'block' : 'none';
-            document.getElementById('menuHistory').style.display = (isLoggedIn || nonUserVisibility.history) ? 'block' : 'none';
-            document.getElementById('menuMap').style.display = (isLoggedIn || nonUserVisibility.map) ? 'block' : 'none';
+    function updateMenuUI() {
+            function checkVis(key) {
+                if (isLoggedIn) return true;
+                if (isFieldLoggedIn) return fieldVisibility[key];
+                return nonUserVisibility[key];
+            }
+            document.getElementById('menuHome').style.display = checkVis('home') ? 'block' : 'none';
+            document.getElementById('menuOffice').style.display = checkVis('office') ? 'block' : 'none';
+            document.getElementById('menuField').style.display = checkVis('field') ? 'block' : 'none';
+            document.getElementById('menuDriver').style.display = checkVis('driver') ? 'block' : 'none';
+            document.getElementById('menuHistory').style.display = checkVis('history') ? 'block' : 'none';
+            document.getElementById('menuMap').style.display = checkVis('map') ? 'block' : 'none';
 
-            document.getElementById('menuReserve1').style.display = (isLoggedIn || nonUserVisibility.reserve1) ? 'block' : 'none';
-            document.getElementById('menuReserve2').style.display = isLoggedIn ? 'block' : (nonUserVisibility.reserve2 ? 'block' : 'none');
-            document.getElementById('menuBaechaData').style.display = (isLoggedIn || nonUserVisibility.baecha) ? 'block' : 'none';
-            document.getElementById('menuTempSave').style.display = (isLoggedIn || nonUserVisibility.temp) ? 'block' : 'none';
+            document.getElementById('menuReserve1').style.display = checkVis('reserve1') ? 'block' : 'none';
+            document.getElementById('menuReserve2').style.display = checkVis('reserve2') ? 'block' : 'none';
+            document.getElementById('menuBaechaData').style.display = checkVis('baecha') ? 'block' : 'none';
+            document.getElementById('menuTempSave').style.display = checkVis('temp') ? 'block' : 'none';
 
             menuOrder.forEach((id, idx) => {
                 const el = document.getElementById(id);
@@ -1513,11 +1545,11 @@
             });
 
             document.getElementById('menuOffice').innerText = isLoggedIn ? "📞 사무실 연락처 편집" : "📞 사무실 연락처";
-            document.getElementById('menuField').innerText = isLoggedIn ? "👷 현장 연락처 편집" : "👷 현장 연락처";
+            document.getElementById('menuField').innerText = (isLoggedIn || isFieldLoggedIn) ? "👷 현장 연락처 편집" : "👷 현장 연락처";
             document.getElementById('menuDriver').innerText = isLoggedIn ? "📱 기사 연락처 편집" : "📱 기사 연락처";
 
             document.getElementById('officeEditForm').style.display = isLoggedIn ? 'block' : 'none';
-            document.getElementById('fieldEditForm').style.display = isLoggedIn ? 'block' : 'none';
+            document.getElementById('fieldEditForm').style.display = (isLoggedIn || isFieldLoggedIn) ? 'block' : 'none';
             document.getElementById('driverEditForm').style.display = isLoggedIn ? 'block' : 'none';
 
             renderOfficeList();
@@ -1549,10 +1581,11 @@
             if(!document.body.classList.contains('pc-mode')) closeMenu();
         }
 
-        function handleAuthClick() {
-            if (isLoggedIn) {
-                isLoggedIn = false; document.body.classList.remove('pc-mode');
+    function handleAuthClick() {
+            if (isLoggedIn || isFieldLoggedIn) {
+                isLoggedIn = false; isFieldLoggedIn = false; document.body.classList.remove('pc-mode');
                 sessionStorage.removeItem('loggedInTimestamp'); // 로그아웃 시 세션 초기화
+                sessionStorage.removeItem('loggedInRole');
                 document.getElementById('authBtn').innerHTML = "🔒 로그인";
                 document.getElementById('settingsBtn').style.display = "none";
                 updateMenuUI(); showView('formView'); closeMenu();
@@ -1566,13 +1599,18 @@
         function closeLoginModal() { document.getElementById('loginModal').style.display = 'none'; }
 
         function processLogin() {
-            if (document.getElementById('loginPassword').value === ADMIN_PWD) {
-                isLoggedIn = true; closeLoginModal();
+            const pwd = document.getElementById('loginPassword').value;
+            if (pwd === ADMIN_PWD || pwd === FIELD_PWD) {
+                if(pwd === ADMIN_PWD) isLoggedIn = true;
+                else isFieldLoggedIn = true;
+                
+                closeLoginModal();
                 sessionStorage.setItem('loggedInTimestamp', Date.now()); // 로그인 성공 시 시간 저장
+                sessionStorage.setItem('loggedInRole', isLoggedIn ? 'admin' : 'field');
                 document.body.classList.add('pc-mode');
                 document.getElementById('authBtn').innerHTML = "🔓 로그아웃";
                 document.getElementById('menuOverlay').classList.remove('active');
-                document.getElementById('settingsBtn').style.display = "block";
+                if(isLoggedIn) document.getElementById('settingsBtn').style.display = "block";
 
                 updateMenuUI();
                 if(document.getElementById('historyView').classList.contains('active')) showView('historyView');
@@ -1580,7 +1618,7 @@
                 renderDriverList(); 
                 isMenuOpen = true; 
             } else { 
-                alert("❌ 비밀번호 오류"); 
+                alert("❌ 비밀번호 오류");
                 document.getElementById('loginPassword').value = "";
                 document.getElementById('loginPassword').focus();
             }
@@ -1620,19 +1658,20 @@
 
         let dragSrcIndex = null;
         function handleContactDragStart(e, type) {
-            if(!isLoggedIn) return;
+            if(!isLoggedIn && !(isFieldLoggedIn && type === 'field')) return;
             dragSrcIndex = parseInt(e.currentTarget.getAttribute('data-index'));
             e.dataTransfer.effectAllowed = 'move';
             e.currentTarget.style.opacity = '0.5';
         }
         function handleContactDragOver(e) {
-            if(!isLoggedIn) return;
+            // 여기서는 type 검사가 어려우므로 드롭 시점에 최종 방어합니다
+            if(!isLoggedIn && !isFieldLoggedIn) return;
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
             return false;
         }
         async function handleContactDrop(e, type) {
-            if(!isLoggedIn) return;
+            if(!isLoggedIn && !(isFieldLoggedIn && type === 'field')) return;
             e.stopPropagation();
             const dropTarget = e.currentTarget;
             const dropIndex = parseInt(dropTarget.getAttribute('data-index'));
@@ -1710,10 +1749,44 @@
             const items = document.querySelectorAll('#menuSortList .sortable-item');
             menuOrder = Array.from(items).map(li => li.getAttribute('data-id'));
 
-            const payload = { id: 1, menu_order_json: JSON.stringify({ vis: nonUserVisibility, order: menuOrder }) };
+            const payload = { id: 1, menu_order_json: JSON.stringify({ vis: nonUserVisibility, fieldVis: fieldVisibility, order: menuOrder }) };
             const { error } = await supabaseClient.from('app_settings').upsert([payload]);
             if(!error) {
                 updateMenuUI(); closeListManageModal(); alert('목록 설정이 확정되었습니다.');
+            } else alert('저장 실패: ' + error.message);
+        }
+
+        function openFieldListManageModal() {
+            document.getElementById('flm_home').checked = fieldVisibility.home;
+            document.getElementById('flm_office').checked = fieldVisibility.office;
+            document.getElementById('flm_field').checked = fieldVisibility.field;
+            document.getElementById('flm_driver').checked = fieldVisibility.driver;
+            document.getElementById('flm_history').checked = fieldVisibility.history;
+            document.getElementById('flm_map').checked = fieldVisibility.map;
+            document.getElementById('flm_reserve1').checked = fieldVisibility.reserve1;
+            document.getElementById('flm_reserve2').checked = fieldVisibility.reserve2;
+            document.getElementById('flm_baecha').checked = fieldVisibility.baecha;
+            document.getElementById('flm_temp').checked = fieldVisibility.temp;
+            document.getElementById('fieldListManageModal').style.display = 'flex';
+        }
+        function closeFieldListManageModal() { document.getElementById('fieldListManageModal').style.display = 'none'; }
+
+        async function saveFieldListManage() {
+            fieldVisibility.home = document.getElementById('flm_home').checked;
+            fieldVisibility.office = document.getElementById('flm_office').checked;
+            fieldVisibility.field = document.getElementById('flm_field').checked;
+            fieldVisibility.driver = document.getElementById('flm_driver').checked;
+            fieldVisibility.history = document.getElementById('flm_history').checked;
+            fieldVisibility.map = document.getElementById('flm_map').checked;
+            fieldVisibility.reserve1 = document.getElementById('flm_reserve1').checked;
+            fieldVisibility.reserve2 = document.getElementById('flm_reserve2').checked;
+            fieldVisibility.baecha = document.getElementById('flm_baecha').checked;
+            fieldVisibility.temp = document.getElementById('flm_temp').checked;
+
+            const payload = { id: 1, menu_order_json: JSON.stringify({ vis: nonUserVisibility, fieldVis: fieldVisibility, order: menuOrder }) };
+            const { error } = await supabaseClient.from('app_settings').upsert([payload]);
+            if(!error) {
+                updateMenuUI(); closeFieldListManageModal(); alert('현장 목록 설정이 확정되었습니다.');
             } else alert('저장 실패: ' + error.message);
         }
 
@@ -2886,17 +2959,18 @@ try {
         }
 
         function renderFieldList() {
-            let dragHandleHtml = isLoggedIn ? `<div style="width: 20px; color:#C7C7CC; cursor:grab; font-size:18px; display:flex; align-items:center; justify-content:center;">☰</div>` : '';
+            let canEdit = isLoggedIn || isFieldLoggedIn;
+            let dragHandleHtml = canEdit ? `<div style="width: 20px; color:#C7C7CC; cursor:grab; font-size:18px; display:flex; align-items:center; justify-content:center;">☰</div>` : '';
 
             document.getElementById('fieldListContainer').innerHTML = fieldContacts.map((c, index) => `
                 <div class="contact-card"
-                     ${isLoggedIn ? 'draggable="true"' : ''} 
+                     ${canEdit ? 'draggable="true"' : ''} 
                      data-index="${index}"
                      ondragstart="handleContactDragStart(event, 'field')"
                      ondragover="handleContactDragOver(event)"
                      ondrop="handleContactDrop(event, 'field')"
                      ondragend="handleContactDragEnd(event)"
-                     style="flex-direction: column; align-items: stretch; gap: 10px; cursor: ${isLoggedIn ? 'grab' : 'default'};">
+                     style="flex-direction: column; align-items: stretch; gap: 10px; cursor: ${canEdit ? 'grab' : 'default'};">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div style="display:flex; align-items:center; gap:10px;">
                             ${dragHandleHtml}
@@ -2907,7 +2981,7 @@ try {
                         </div>
                         <a href="tel:${c.tel || c.tell}" class="call-btn">통화버튼</a>
                     </div>
-                    <div style="display:${isLoggedIn ? 'flex' : 'none'}; gap: 8px; justify-content: flex-end; border-top: 1px solid #F0F2F7; padding-top: 10px;">
+                    <div style="display:${canEdit ? 'flex' : 'none'}; gap: 8px; justify-content: flex-end; border-top: 1px solid #F0F2F7; padding-top: 10px;">
                         <button class="btn-small" style="background:#E0EFFF; color:var(--primary); flex: 1; padding: 8px;" onclick="editFieldContact(${index})">수정</button>
                         <button class="btn-small btn-delete" style="flex: 1; padding: 8px;" onclick="deleteFieldContact(${index})">삭제</button>
                     </div>
