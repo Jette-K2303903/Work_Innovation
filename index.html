@@ -1458,6 +1458,13 @@
                 msgEl.innerText = 'PC 화면으로 전환되었습니다.';
             }
             document.getElementById('switchAlertModal').style.display = 'flex';
+
+            // 4. 화면 전환 애니메이션(0.3초)이 끝난 후 지도 사이즈를 재계산하여 잘림 현상 방지
+            setTimeout(() => {
+                if (typeof map !== 'undefined' && map !== null) {
+                    map.invalidateSize();
+                }
+            }, 300);
         }
 
         function updateMenuUI() {
