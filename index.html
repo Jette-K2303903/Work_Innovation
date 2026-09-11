@@ -796,6 +796,33 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
+            // 새로고침 시 로그인 유지 확인 (60분=3600000ms 제한)
+            const savedLoginTs = sessionStorage.getItem('loggedInTimestamp');
+            if (savedLoginTs) {
+                if (Date.now() - parseInt(savedLoginTs) < 60 * 60 * 1000) {
+                    isLoggedIn = true;
+                    document.body.classList.add('pc-mode');
+                    document.getElementById('authBtn').innerHTML = "🔓 로그아웃";
+                    document.getElementById('settingsBtn').style.display = "block";
+                } else {
+                    sessionStorage.removeItem('loggedInTimestamp');
+                }
+            }
+
+            // 화면 어딘가를 클릭했을 때 60분이 넘었으면 차단 후 새로고침 (인터셉터)
+            document.addEventListener('click', (e) => {
+                if (isLoggedIn) {
+                    const checkTs = sessionStorage.getItem('loggedInTimestamp');
+                    if (checkTs && Date.now() - parseInt(checkTs) > 60 * 60 * 1000) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        alert("로그인이 필요합니다.");
+                        sessionStorage.removeItem('loggedInTimestamp');
+                        location.reload();
+                    }
+                }
+            }, true);
+
             document.getElementById('writeDate').value = new Date().toISOString().split('T')[0];
             document.getElementById('globalLoader').style.display = 'flex'; 
             await fetchInitialData();
@@ -1525,6 +1552,7 @@
         function handleAuthClick() {
             if (isLoggedIn) {
                 isLoggedIn = false; document.body.classList.remove('pc-mode');
+                sessionStorage.removeItem('loggedInTimestamp'); // 로그아웃 시 세션 초기화
                 document.getElementById('authBtn').innerHTML = "🔒 로그인";
                 document.getElementById('settingsBtn').style.display = "none";
                 updateMenuUI(); showView('formView'); closeMenu();
@@ -1540,6 +1568,7 @@
         function processLogin() {
             if (document.getElementById('loginPassword').value === ADMIN_PWD) {
                 isLoggedIn = true; closeLoginModal();
+                sessionStorage.setItem('loggedInTimestamp', Date.now()); // 로그인 성공 시 시간 저장
                 document.body.classList.add('pc-mode');
                 document.getElementById('authBtn').innerHTML = "🔓 로그아웃";
                 document.getElementById('menuOverlay').classList.remove('active');
