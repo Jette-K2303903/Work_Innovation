@@ -1725,11 +1725,12 @@
                 }
 
                 document.getElementById('globalLoader').style.display = 'none';
-                orderDataList = parsed;
-                alert("주문업로드가 완료되었습니다.");
-                document.getElementById('newOrderData').value = '';
-                document.getElementById('orderUploadModal').style.display = 'none';
-                checkOrderMatches(); renderStorage();
+                dispatchDataList = parsed;
+                isMapDataDrawn = false; // 새로운 배차 데이터가 들어오면 지도를 다시 계산하도록 초기화
+                alert("배차업로드가 완료되었습니다.");
+                document.getElementById('newDispatchData').value = '';
+                document.getElementById('dispatchUploadModal').style.display = 'none';
+                renderDriverList(); renderStorage();
             }
         }
 
@@ -3071,6 +3072,7 @@ try {
         let map;
         let regionLayers = {};
         let mapSearchData = []; 
+        let isMapDataDrawn = false; // 추가: 지도 중복 렌더링 및 연산 방지용
         
         // 수정: 형광색, 가독성 떨어지는 색상 완전히 제외하고 고대비 명확한 색상 위주로 팔레트 재구성
         const MAP_COLORS = [
@@ -3084,7 +3086,8 @@ try {
 
         function renderMap() {
             if(!map) {
-                map = L.map('map').setView([35.3, 128.0], 8);
+                // preferCanvas: true 를 설정하여 브라우저 과부하를 막고 렌더링 속도를 대폭 향상시킵니다.
+                map = L.map('map', { preferCanvas: true }).setView([35.3, 128.0], 8);
                 
                 fetch('https://tiles.openfreemap.org/styles/positron')
                     .then(response => response.json())
@@ -3110,13 +3113,19 @@ try {
                     })
                     .catch(err => console.error("OpenFreeMap 스타일 로드 실패:", err));
 
-                map.on('zoomend', function() {
+        map.on('zoomend', function() {
                     if (map.getZoom() >= 14) {
                         document.getElementById('map').classList.add('show-labels');
                     } else {
                         document.getElementById('map').classList.remove('show-labels');
                     }
                 });
+            }
+
+            // 데이터 로드 후 이미 최단거리 계산 및 그리기가 끝났다면, 탭 이동시 재계산하지 않고 크기만 맞춘 후 즉시 리턴
+            if(isMapDataDrawn) {
+                setTimeout(() => { map.invalidateSize(); }, 300);
+                return;
             }
 
             map.eachLayer(layer => {
@@ -3223,7 +3232,7 @@ try {
                     marker.on('popupopen', function() {
                         this.setStyle({ fillColor: '#FF3B30', color: '#FF3B30' });
                     });
-                    marker.on('popupclose', function() {
+                        marker.on('popupclose', function() {
                         this.setStyle({ fillColor: this.options.originalColor, color: '#fff' });
                     });
 
