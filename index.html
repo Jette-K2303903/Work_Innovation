@@ -1770,32 +1770,49 @@
             const { error } = await supabaseClient.from('app_settings').upsert([updatePayload]);
             if(error) { alert("설정 저장 실패: " + error.message); return; }
             alert("시스템 설정이 DB에 저장되었습니다.");
-            closeSettingsModal();
+closeSettingsModal();
         }
 
         async function checkAutoDelete() {
             const now = new Date();
-            if(now.getHours() === 20 && now.getMinutes() === 30) {
+            const todayStr = now.toISOString().split('T')[0];
+            
+            // 오늘 해당 기기(브라우저)에서 자동삭제 로직이 돌았는지 확인
+            const lastRunDate = localStorage.getItem('lastAutoDeleteDate');
+
+            // 하루에 한 번만 체크 (시간 조건 제거, 최초 접속 시 실행)
+            if(lastRunDate !== todayStr) {
                 const cutoff = new Date();
-                cutoff.setDate(cutoff.getDate() - autoDeleteDays); 
+                cutoff.setDate(cutoff.getDate() - autoDeleteDays); // 설정창에 입력된 데이터 유지기간 값을 따름
                 const targetStr = cutoff.toISOString().split('T')[0];
 
-                // 유지기간 초과 항목의 Storage 사진 먼저 삭제
-                const { data: oldItems } = await supabaseClient.from('upload_history').select('id, img').eq('date', targetStr);
-                if (oldItems && oldItems.length > 0) {
-                    for (const item of oldItems) {
-                        await deleteStorageImages(item.img);
+                try {
+                    // 설정한 유지기간 이전(lte)의 모든 오래된 데이터 조회
+                    const { data: oldItems } = await supabaseClient.from('upload_history').select('id, img').lte('date', targetStr);
+                    if (oldItems && oldItems.length > 0) {
+                        // 1. 스토리지의 이미지 파일 먼저 삭제
+                        for (const item of oldItems) {
+                            await deleteStorageImages(item.img);
+                        }
                     }
+
+                    // 2. DB에서 이전 데이터 일괄 삭제
+                    await supabaseClient.from('upload_history').delete().lte('date', targetStr);
+                    
+                    // 3. 현재 화면 리스트 갱신 (유지기간 이내의 데이터만 남김)
+                    historyDataList = historyDataList.filter(item => item.date > targetStr);
+
+                    updateHistoryDates(); renderHistoryList(); renderStorage();
+                    console.log(`오래된 데이터(${targetStr} 이하) 자동 삭제 완료`);
+                } catch (error) {
+                    console.error("자동 삭제 처리 중 오류:", error);
                 }
 
-                await supabaseClient.from('upload_history').delete().eq('date', targetStr);
-                historyDataList = historyDataList.filter(item => item.date !== targetStr);
-
-                updateHistoryDates(); renderHistoryList(); renderStorage();
-                console.log("D-7 데이터 자동 삭제 완료");
-
-                const todayStr2 = new Date().toISOString().split('T')[0];
-                await supabaseClient.from('popup_notices').delete().lt('end_date', todayStr2);
+                // 팝업 공지 삭제 로직
+                await supabaseClient.from('popup_notices').delete().lt('end_date', todayStr);
+                
+                // 실행 완료 기록
+                localStorage.setItem('lastAutoDeleteDate', todayStr);
             }
         }
 
