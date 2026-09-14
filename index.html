@@ -2403,7 +2403,7 @@ try {
                     return;
                 }
 
-                let editCount = (existingItem.correction ? (existingItem.correction.match(/수정 내역/g) || []).length : 0) + 1;
+let editCount = (existingItem.correction ? (existingItem.correction.match(/수정 내역/g) || []).length : 0) + 1;
                 let newCorrection = (existingItem.correction ? existingItem.correction + '\n' : '') + `수정 내역 ${editCount} : ` + editReason;
                 let baseReason = document.getElementById('reasonText').value;
 
@@ -2425,6 +2425,17 @@ try {
                     img_url: JSON.stringify(uploadedUrls)
                 };
 
+                // ★ 1. DB에 먼저 업데이트를 요청하고 기다립니다 (await)
+                const { error } = await supabaseClient.from('upload_history').update(updatedData).eq('id', existingItem.id);
+                
+                // 에러가 났다면 경고창을 띄우고 작업을 중단합니다
+                if (error) {
+                    document.getElementById('globalLoader').style.display = 'none';
+                    alert("DB 수정 실패: " + error.message);
+                    return;
+                }
+
+                // ★ 2. DB 업데이트가 성공했을 때만 로컬 화면(UI)을 갱신합니다.
                 Object.assign(existingItem, {
                     ...updatedData,
                     sCode: updatedData.store_code,
@@ -2455,12 +2466,9 @@ try {
                 const delay = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
                 savePopupTimer = setTimeout(closeSaveSuccessModal, delay * 1000);
 
-                supabaseClient.from('upload_history').update(updatedData).eq('id', existingItem.id).then(({error}) => {
-                    if (error) console.error("DB 수정 저장 실패", error);
-                });
             } else {
                 const insertData = {
-                    id: Date.now(),
+                    // id: Date.now() <--- 삭제합니다. DB가 자체적으로 충돌없는 고유 ID를 부여하게 만듭니다.
                     status: 'active',
                     reason: document.getElementById('reasonText').value,
                     correction: '', 
@@ -2479,12 +2487,37 @@ try {
                     img_url: JSON.stringify(uploadedUrls) 
                 };
 
+                // ★ 1. DB에 먼저 삽입 요청을 하고 결과를 기다립니다 (select()를 붙여 생성된 진짜 ID를 돌려받습니다)
+                const { data, error } = await supabaseClient.from('upload_history').insert([insertData]).select();
+                
+                // 에러 발생 시 경고창 띄움
+                if (error) {
+                    document.getElementById('globalLoader').style.display = 'none';
+                    alert("DB 신규 저장 실패: " + error.message);
+                    return;
+                }
+
+                // ★ 2. DB 저장이 완벽히 끝난 후, 돌려받은 진짜 데이터(savedItem)를 화면 리스트에 끼워넣습니다.
+                const savedItem = data[0];
+
                 historyDataList.unshift({
-                    id: insertData.id, status: insertData.status, reason: insertData.reason, correction: insertData.correction, 
-                    author: insertData.author, date: insertData.date, driver: insertData.driver, store: insertData.store, 
-                    sCode: insertData.store_code, mCenter: insertData.main_center, product: insertData.product, pCode: insertData.product_code,
-                    iCenter: insertData.inbound_center, qty: insertData.qty, unit: insertData.unit, img: insertData.img_url,
-                    remark: insertData.remark
+                    id: savedItem.id, 
+                    status: savedItem.status, 
+                    reason: savedItem.reason, 
+                    correction: savedItem.correction, 
+                    author: savedItem.author, 
+                    date: savedItem.date, 
+                    driver: savedItem.driver, 
+                    store: savedItem.store, 
+                    sCode: savedItem.store_code, 
+                    mCenter: savedItem.main_center, 
+                    product: savedItem.product, 
+                    pCode: savedItem.product_code,
+                    iCenter: savedItem.inbound_center, 
+                    qty: savedItem.qty, 
+                    unit: savedItem.unit, 
+                    img: savedItem.img_url,
+                    remark: savedItem.remark
                 });
 
                 document.querySelectorAll('#formView .input-box').forEach(el => { if(el.id !== 'writeDate') el.value = ''; });
@@ -2501,10 +2534,6 @@ try {
                 clearTimeout(savePopupTimer);
                 const delay = parseInt(document.getElementById('autoCloseSecondsInput').value) || 2;
                 savePopupTimer = setTimeout(closeSaveSuccessModal, delay * 1000);
-
-                supabaseClient.from('upload_history').insert([insertData]).then(({error}) => {
-                    if (error) console.error("DB 신규 저장 실패", error);
-                });
             }
         }
         function closeSaveSuccessModal() {
