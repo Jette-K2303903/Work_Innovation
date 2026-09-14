@@ -2468,7 +2468,7 @@ let editCount = (existingItem.correction ? (existingItem.correction.match(/수�
 
             } else {
                 const insertData = {
-                    // id: Date.now() <--- 삭제합니다. DB가 자체적으로 충돌없는 고유 ID를 부여하게 만듭니다.
+                    id: Date.now(), // DB 테이블에 자동생성 기능이 없으므로 다시 원래대로 시간을 이용해 ID를 생성하여 보냅니다.
                     status: 'active',
                     reason: document.getElementById('reasonText').value,
                     correction: '', 
