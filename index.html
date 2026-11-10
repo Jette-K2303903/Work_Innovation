@@ -6288,6 +6288,7 @@
     // ---------- 업로드 데이터 검증 / 변환 ----------
     const UPLOAD_CODE_RE = /^[A-Za-z0-9_-]+$/;       // 코드: 영문, 숫자, 영문+숫자 (하이픈/밑줄 허용)
     const UPLOAD_PHONE_RE = /^[0-9\-+\s()]+$/;
+    const UPLOAD_PHONE_NA = '010-0000-0000(사무실 확인필요)';
     function uploadParseDate(v) {
       let t = String(v || '').trim();
       if (!t) return null;
@@ -6400,19 +6401,23 @@
         const obj = { row_no: lineNo };
         let bad = false;
         spec.cols.forEach((c, i) => {
-          const v = cells[i];
+          let v = cells[i];
           const fail = msg => { errors.push({ row: lineNo, col: c.h, msg, val: v }); bad = true; };
           if (v === '') {
             if (c.req) fail('값이 비어 있습니다');
             obj[c.k] = null; if (c.t === 'phones') obj[c.k + '2'] = null; if (c.t === 'address') obj.address_raw = null; return;
           }
+          // 엑셀 오류값 #N/A 는 사무실 확인용 번호로 자동 변환 (연락처 열 전체)
+          let naFixed = false;
+          if ((c.t === 'phone' || c.t === 'phones') && /#N\/A/i.test(v)) { v = v.replace(/#N\/A/gi, UPLOAD_PHONE_NA); naFixed = true; }
           if (c.t === 'date') { const d = uploadParseDate(v); if (!d) fail('날짜 형식이 올바르지 않습니다'); obj[c.k] = d; }
           else if (c.t === 'code') { if (!UPLOAD_CODE_RE.test(v)) fail('코드는 영문/숫자만 가능합니다'); obj[c.k] = v; }
-          else if (c.t === 'phone') { if (!UPLOAD_PHONE_RE.test(v)) fail('전화번호 형식이 올바르지 않습니다'); obj[c.k] = v; }
+          else if (c.t === 'phone') { if (!naFixed && !UPLOAD_PHONE_RE.test(v)) fail('전화번호 형식이 올바르지 않습니다'); obj[c.k] = v; }
           else if (c.t === 'phones') {
             // 번호가 여러 개면 ( / 또는 셀 안 줄바꿈 ) 첫 번째는 연락처, 두 번째부터는 연락처2
             const parts = v.split(/\s*(?:\/|\r\n|\r|\n)\s*/).map(x => x.trim()).filter(Boolean);
-            if (parts.some(x => !UPLOAD_PHONE_RE.test(x))) fail('전화번호 형식이 올바르지 않습니다 (여러 개는 / 또는 줄바꿈으로 구분)');
+            // 번호가 1개뿐이면 형식 검사, 2개 이상이면 설명 문구/특수문자가 있어도 그대로 저장 (사용 방식은 추후 기사 페이지에서 구분)
+            if (parts.length === 1 && !naFixed && !UPLOAD_PHONE_RE.test(parts[0])) fail('전화번호 형식이 올바르지 않습니다 (여러 개는 / 또는 줄바꿈으로 구분)');
             obj[c.k] = parts[0] || null;
             obj[c.k + '2'] = parts.length > 1 ? parts.slice(1).join(' / ') : null;
           }
