@@ -6416,8 +6416,7 @@
           else if (c.t === 'phones') {
             // 번호가 여러 개면 ( / 또는 셀 안 줄바꿈 ) 첫 번째는 연락처, 두 번째부터는 연락처2
             const parts = v.split(/\s*(?:\/|\r\n|\r|\n)\s*/).map(x => x.trim()).filter(Boolean);
-            // 번호가 1개뿐이면 형식 검사, 2개 이상이면 설명 문구/특수문자가 있어도 그대로 저장 (사용 방식은 추후 기사 페이지에서 구분)
-            if (parts.length === 1 && !naFixed && !UPLOAD_PHONE_RE.test(parts[0])) fail('전화번호 형식이 올바르지 않습니다 (여러 개는 / 또는 줄바꿈으로 구분)');
+            // 매장 연락처는 번호 개수와 상관없이 설명 문구/특수문자가 있어도 그대로 저장 (사용 방식은 추후 기사 페이지에서 구분)
             obj[c.k] = parts[0] || null;
             obj[c.k + '2'] = parts.length > 1 ? parts.slice(1).join(' / ') : null;
           }
