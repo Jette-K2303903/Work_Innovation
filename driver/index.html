@@ -1363,18 +1363,34 @@
         return true;
     }
 
+    // 서명 기록을 서버(driver_agreements)에 저장. 서명 이미지를 저장소에 못 올렸으면 이미지 자체를 기록에 담아 저장.
+    async function saveAgreementRecord(name, rec) {
+        if (!S.live || !S.sb) return false;
+        try {
+            const { error } = await withTimeout(S.sb.from('driver_agreements').upsert({
+                driver_name: name, sign_url: rec.url || null, signed_at: rec.signedAt, valid_until: rec.validUntil, last_signed_key: rec.lastSignedKey
+            }, { onConflict: 'driver_name' }), CONFIG.FETCH_TIMEOUT_MS);
+            if (error) throw error;
+            return true;
+        } catch (e) { console.warn('[기사] 서명 기록 서버 저장 실패:', e && (e.message || e)); return false; }
+    }
     async function getSavedAgreement(name) {
-        let rec = null;
+        let server = null, local = null, serverOk = false;
         if (S.live && S.sb) {
             try {
-                const { data } = await withTimeout(S.sb.from('driver_agreements').select('*').eq('driver_name', name).maybeSingle(), CONFIG.FETCH_TIMEOUT_MS);
-                if (data) rec = { url: data.sign_url, signedAt: data.signed_at, validUntil: data.valid_until, lastSignedKey: data.last_signed_key };
+                const { data, error } = await withTimeout(S.sb.from('driver_agreements').select('*').eq('driver_name', name).maybeSingle(), CONFIG.FETCH_TIMEOUT_MS);
+                if (!error) serverOk = true;
+                if (data) server = { url: data.sign_url, signedAt: data.signed_at, validUntil: data.valid_until, lastSignedKey: data.last_signed_key };
             } catch (e) { /* 로컬 백업으로 진행 */ }
         }
-        if (!rec) {
-            try { const raw = localStorage.getItem('agree_' + name); if (raw) rec = JSON.parse(raw); } catch (e) {}
+        try { const raw = localStorage.getItem('agree_' + name); if (raw) local = JSON.parse(raw); } catch (e) {}
+        if (isValidRecord(server)) return server;
+        if (isValidRecord(local)) {
+            // 이 휴대폰에서 이미 서명했는데 서버에 기록이 없는 경우(이전 버전에서 저장 실패) → 서버에 보충 저장
+            if (serverOk && !(S.session && S.session.admin)) saveAgreementRecord(name, local);
+            return local;
         }
-        return rec;
+        return server || local;
     }
 
     async function needsAgreement(name) {
@@ -1553,7 +1569,7 @@
             clear() { ink = 0; fillWhite(); setupCtx(); onChange && onChange(); },
             hasInk() { return ink > 24; },          // 점 한 번 찍기 등 무의미한 서명 방지
             toBlob() { return new Promise(res => canvas.toBlob(b => res(b), 'image/jpeg', 0.85)); },
-            toDataURL() { return canvas.toDataURL('image/jpeg', 0.85); }
+            toDataURL() { const c = document.createElement('canvas'); const k = Math.min(1, 600 / canvas.width); c.width = Math.round(canvas.width * k); c.height = Math.round(canvas.height * k); c.getContext('2d').drawImage(canvas, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.7); }
         };
     }
 
@@ -1678,32 +1694,22 @@
         };
 
         showHUD('서명을 저장하는 중');
+        // 1) 서명 이미지를 저장소(signatures)에 올림 → 실패하면 이미지 자체(data URL)를 기록에 담음
         try {
             if (!S.live || !S.sb) throw new Error('offline');
             const blob = await S.pad.toBlob();
             const stamp = fileStamp(now);
-            // v32 파일명 규칙(YYYYMMDD_HHMM_기사이름) 우선, 한글 키 거부 시 인코딩 파일명으로 재시도
-            let fileName = `${stamp}_${name}.jpg`;
-            let up = await S.sb.storage.from('signatures').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
-            if (up.error) {
-                fileName = `${stamp}_${Array.from(new TextEncoder().encode(name)).map(b => b.toString(16).padStart(2, '0')).join('')}.jpg`;
-                up = await S.sb.storage.from('signatures').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
-            }
+            // 저장소 파일명은 영문·숫자만 (한글 이름은 16진수로 변환)
+            const fileName = `${stamp}_${Array.from(new TextEncoder().encode(name)).map(b => b.toString(16).padStart(2, '0')).join('')}.jpg`;
+            const up = await withTimeout(S.sb.storage.from('signatures').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true }), CONFIG.FETCH_TIMEOUT_MS);
             if (up.error) throw up.error;
             rec.url = S.sb.storage.from('signatures').getPublicUrl(fileName).data.publicUrl;
-
-            const { error } = await S.sb.from('driver_agreements').upsert({
-                driver_name: name,
-                sign_url: rec.url,
-                signed_at: rec.signedAt,
-                valid_until: rec.validUntil,
-                last_signed_key: rec.lastSignedKey
-            }, { onConflict: 'driver_name' });
-            if (error) throw error;
         } catch (e) {
-            console.warn('[기사] 서명 서버 저장 실패 - 로컬 백업으로 진행:', e && e.message);
+            console.warn('[기사] 서명 이미지 저장소 업로드 실패 - 기록에 이미지를 직접 저장:', e && e.message);
             rec.url = S.pad.toDataURL();
         }
+        // 2) 서명 기록은 이미지 업로드 성공 여부와 관계없이 항상 서버에 저장
+        await saveAgreementRecord(name, rec);
         try { localStorage.setItem('agree_' + name, JSON.stringify(rec)); } catch (e) {}
         hideHUD();
 
@@ -3122,7 +3128,9 @@
             const code = err && err.code;
             if (code === 1) {                                   // 권한 차단 : 브라우저가 묻지도 않고 거부한 경우 포함
                 locStop(); locReport('denied');
-                locRender(LOC_HELP.denied + (inAppBrowser() ? ' · 카카오톡 등 앱 안에서 열었다면 오른쪽 위 ⋮ 메뉴의 "다른 브라우저로 열기"를 눌러 주세요' : ''));
+                locRender(/KAKAOTALK/i.test(navigator.userAgent || '')
+                    ? '📍 카카오톡의 위치 권한이 꺼져 있습니다 · 휴대폰 설정 > 애플리케이션(앱) > 카카오톡 > 권한 > 위치를 "허용"으로 바꾼 뒤 링크를 다시 열어 주세요'
+                    : LOC_HELP.denied + (inAppBrowser() ? ' · 앱 안에서 열었다면 메뉴의 "다른 브라우저로 열기"를 눌러 주세요' : ''));
             } else if (code === 3 && !lowAccuracy) {            // 시간 초과 : 정밀 위치 대신 대략 위치로 다시 시도
                 locStop(); locReport('timeout'); locStart(true); locRender(LOC_HELP.timeout);
             } else if (!LOC.gotFix) {
