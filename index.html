@@ -11491,7 +11491,8 @@
     const IB_BRAIN_DEFAULT = 'https://ttaettae-brain.onrender.com';
     const IB_PHOTO_BUCKET = 'issue-photos';
     let ibConn = { url: IB_BRAIN_DEFAULT, key: '' }, ibConnLoaded = false;
-    let IB_LABELS = [['package_tear', '포장 찢어짐'], ['dent', '찌그러짐'], ['wet', '젖음'], ['leak', '새어 나옴'], ['content_damage', '내용물 파손'], ['quality_foreign', '이물질'], ['quality_spoiled', '변질'], ['label_damage', '라벨 손상'], ['weight_short', '중량 부족']];
+    // 때때 유형 (때때 서버 /api/v1/labels 와 같은 이름 · 서버에서 다시 받아 최신으로 맞춤)
+    let IB_LABELS = [['package_tear', '파손 또는 찢어짐'], ['dent', '찌그러짐'], ['wet', '젖음'], ['leak', '내용물 샘'], ['content_damage', '상품 파손'], ['label_damage', '훼손'], ['quality_foreign', '품질불량(이물질)'], ['quality_spoiled', '품질불량(변질)'], ['weight_short', '중량 부족']];
     let ibLabelsLoaded = false;
     const ibLinks = new Map();          // 저장 전 행 id → 사진 기록 id 목록
     async function ibLoadConn(force) {
@@ -11515,8 +11516,9 @@
         if (list.length) IB_LABELS = list;
       } catch (e) {}
     }
-    function ibJosaRo(word) {             // 받침에 맞춰 '으로/로'
-      const ch = String(word || '').trim().slice(-1), code = ch.charCodeAt(0) - 0xAC00;
+    function ibJosaRo(word) {             // 받침에 맞춰 '으로/로' (괄호로 끝나면 괄호 안 마지막 글자 기준)
+      const hangul = String(word || '').match(/[가-힣](?=[^가-힣]*$)/);
+      const ch = hangul ? hangul[0] : '', code = ch.charCodeAt(0) - 0xAC00;
       if (code < 0 || code > 11171) return '(으)로';
       const jong = code % 28;
       return jong === 0 || jong === 8 ? '로' : '으로';
