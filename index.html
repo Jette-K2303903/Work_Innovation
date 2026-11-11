@@ -802,6 +802,26 @@
         </div>
       </div>
 
+      <!-- ============ 구간차량 관리 > 실시간 대시보드 (기사별 카드 : 현재 위치 · 남은 배송 · 도착 예정) ============ -->
+      <div id="svDashPane" class="hidden space-y-3">
+        <section class="bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
+          <div class="flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <h3 class="text-[15px] font-bold text-gray-900 tracking-tight">실시간 대시보드</h3>
+              <p id="svDashMeta" class="text-[11.5px] text-gray-500 truncate">불러오는 중…</p>
+            </div>
+            <div class="flex-none flex items-center gap-1.5">
+              <button type="button" id="svDashOnlySection" onclick="svDashToggleSection()" class="text-[12px] font-bold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600">구간만</button>
+              <button type="button" onclick="svDrvLoad(true)" class="text-[12px] font-bold text-[#007AFF] px-2.5 py-1.5 rounded-lg bg-blue-50">새로고침</button>
+            </div>
+          </div>
+          <div id="svDashSummary" class="grid grid-cols-4 gap-2 mt-3"></div>
+          <div id="svDashNotice" class="hidden mt-3 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[12px] font-semibold text-amber-800 leading-relaxed"></div>
+          <input type="search" oninput="svDashQuery = this.value.trim(); svDashRender()" placeholder="기사명 · 차량번호 · 매장명 검색" class="w-full mt-3 px-3 py-2.5 rounded-xl bg-gray-100 text-[14px] font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-blue-200">
+        </section>
+        <div id="svDashGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-start"></div>
+      </div>
+
       <!-- ============ 구간차량 관리 > 홈화면 ============ -->
       <div id="svHomePane" class="hidden space-y-3">
 
@@ -6936,12 +6956,14 @@
       const isHomeTab = tab === 'home';
       const isSmsTab = tab === 'sms';
       const isDriverTab = tab === 'driver';
+      const isDashTab = tab === 'dashboard';
+      document.getElementById('svDashPane').classList.toggle('hidden', !isDashTab);
       document.getElementById('svHomePane').classList.toggle('hidden', !isHomeTab);
       document.getElementById('svSmsPane').classList.toggle('hidden', !isSmsTab);
       document.getElementById('svDriverPane').classList.toggle('hidden', !isDriverTab);
-      document.getElementById('sectionVehiclePane').classList.toggle('hidden', isHomeTab || isSmsTab || isDriverTab);
+      document.getElementById('sectionVehiclePane').classList.toggle('hidden', isHomeTab || isSmsTab || isDriverTab || isDashTab);
       if (isHomeTab || isSmsTab) svRenderAll();
-      if (isDriverTab) svInitDriverPane();
+      if (isDriverTab || isDashTab) svInitDriverPane();
     }
 
     // ---------- 구간차량 관리 > 기사님 페이지 : 기사 실시간 현황 + 기사 화면 관리자 보기 (driver/index.html) ----------
@@ -6952,8 +6974,8 @@
       document.getElementById('svDriverUrl').textContent = svDriverUrl();
       svDrvLoad(true);
       if (!svDrvTimer) svDrvTimer = setInterval(() => {      // 탭이 보이는 동안 6초마다 현황 갱신
-        const pane = document.getElementById('svDriverPane');
-        if (currentSectionTab === 'driver' && pane && pane.offsetParent !== null && document.visibilityState === 'visible') svDrvLoad(false);
+        const pane = document.getElementById(currentSectionTab === 'dashboard' ? 'svDashPane' : 'svDriverPane');
+        if ((currentSectionTab === 'driver' || currentSectionTab === 'dashboard') && pane && pane.offsetParent !== null && document.visibilityState === 'visible') svDrvLoad(false);
       }, 6000);
     }
     // driver/index.html 이 '관리자 보기'로 열려도 되는지 확인 요청 → 사무실 로그인 상태일 때만 허용
@@ -6991,22 +7013,38 @@
           if (!byDriver.has(name)) byDriver.set(name, { name, vehicleNo: r.vehicle_no || '', phone: r.driver_phone || '', center: r.center_name || r.center_code || '', vehicleType: r.vehicle_type || '', stores: new Map(), started: '' });
           const d = byDriver.get(name);
           if (r.started_at && !d.started) d.started = r.started_at;
+          if (r.started_ts && !d.startedTs) d.startedTs = r.started_ts;
           const key = r.business_code || ('id' + r.id);
-          const st = d.stores.get(key) || { name: r.business_name || key, done: false, arrived: false };
-          if (r.is_completed) st.done = true;
-          if (r.arrived_at || r.arrived_ts) st.arrived = true;
+          const st = d.stores.get(key) || { id: r.id, code: r.business_code || '', name: r.business_name || key, done: false, arrived: false, order: null, eta: null, arrAt: '', doneAt: '' };
+          if (r.is_completed) { st.done = true; st.doneAt = svHm(r.completed_ts, r.completed_at); st.doneTs = r.completed_ts ? Date.parse(r.completed_ts) : 0; }
+          if (r.arrived_at || r.arrived_ts) { st.arrived = true; st.arrAt = svHm(r.arrived_ts, r.arrived_at); }
+          if (r.route_order != null && st.order == null) st.order = +r.route_order;
+          if (r.eta_ts && !st.eta) st.eta = Date.parse(r.eta_ts);
           d.stores.set(key, st);
         });
+        // 위치 공유에 동의한 기사의 마지막 위치 (표가 아직 없으면 건너뜀)
+        const locBy = new Map();
+        svDashHasLocTable = true;
+        try {
+          const loc = await supabaseClient.from('driver_locations').select('*');
+          if (loc.error) throw loc.error;
+          (loc.data || []).forEach(l => { if (l.lat != null && l.lng != null) locBy.set(l.driver_name, { lat: +l.lat, lng: +l.lng, acc: l.accuracy, at: l.device_at ? Date.parse(l.device_at) : 0, date: l.delivery_date }); });
+        } catch (e) { svDashHasLocTable = false; }
+        svDashHasEtaCol = all.length > 0 && ('eta_ts' in all[0]);
         svDrvList = [...byDriver.values()].map(d => {
-          const stores = [...d.stores.values()];
+          // 미완료 : 기사가 정한 순서(route_order) → 업로드 순서 / 완료 : 완료한 순서대로 아래에
+          const stores = [...d.stores.values()].sort((a, b) => (a.done - b.done) || (a.done ? (a.doneTs || 0) - (b.doneTs || 0) : ((a.order ?? 1e9) - (b.order ?? 1e9)) || (a.id - b.id)));
           const done = stores.filter(x => x.done).length;
           const at = stores.find(x => x.arrived && !x.done);
-          return { name: d.name, vehicleNo: d.vehicleNo, phone: d.phone, center: d.center, vehicleType: d.vehicleType, total: stores.length, done, started: d.started, atStore: at ? at.name : '' };
+          const next = at || stores.find(x => !x.done) || null;
+          const loc = locBy.get(d.name);
+          return { name: d.name, vehicleNo: d.vehicleNo, phone: d.phone, center: d.center, vehicleType: d.vehicleType, total: stores.length, done, started: d.started,
+                   startedAt: svHm(d.startedTs, d.started), atStore: at ? at.name : '', stores, next, loc: loc && loc.date === svDrvDate ? loc : null };
         }).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
         const notice = document.getElementById('svDrvNotice');
         const noCols = all.length > 0 && !('is_completed' in all[0]);
         notice.classList.toggle('hidden', !noCols);
-        if (noCols) notice.textContent = '서버에 진행 기록 칸이 아직 없어 실시간 동기화가 꺼져 있습니다. Supabase SQL Editor 에서 기사전용_DB_마이그레이션_v3.sql 을 실행하면 바로 켜집니다.';
+        if (noCols) notice.textContent = '서버에 진행 기록 칸이 아직 없어 실시간 동기화가 꺼져 있습니다. Supabase SQL Editor 에서 기사전용_DB_마이그레이션_v4.sql 을 실행하면 바로 켜집니다.';
         const now = new Date();
         meta.textContent = svDrvDate ? `배송일 ${svDrvDate} · 기사 ${svDrvList.length}명 · ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} 갱신` : '업로드된 배차가 없습니다';
       } catch (err) {
@@ -7014,7 +7052,126 @@
         if (showError) meta.textContent = '현황을 불러오지 못했습니다';
       } finally { svDrvBusy = false; }
       svDrvRender();
+      svDashRender();
     }
+
+    // ---------- 구간차량 관리 > 실시간 대시보드 ----------
+    let svDashQuery = '', svDashSectionOnly = false, svDashHasLocTable = true, svDashHasEtaCol = true;
+    const svDashOpen = new Set();           // 펼친 기사 카드
+    const svDashRegion = new Map();         // 기사명 → { key, name, at } (위치 → 동 이름, 카카오 조회 결과)
+    let svDashRegionOff = false;
+    function svHm(ts, kor) {                // 정확한 시각(ISO) 우선, 없으면 'HH시 MM분 …' 에서 추출
+      if (ts) { const d = new Date(ts); if (!isNaN(d)) return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+      const m = String(kor || '').match(/(\d+)\s*시\s*(\d+)\s*분/);
+      return m ? m[1].padStart(2, '0') + ':' + m[2].padStart(2, '0') : '';
+    }
+    const svHmMs = (ms) => svHm(new Date(ms).toISOString());
+    function svDashToggleSection() {
+      svDashSectionOnly = !svDashSectionOnly;
+      const b = document.getElementById('svDashOnlySection');
+      b.className = 'text-[12px] font-bold px-2.5 py-1.5 rounded-lg ' + (svDashSectionOnly ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600');
+      svDashRender();
+    }
+    // 위치 좌표 → '부산 해운대구 우동' (Edge Function 'kakao' 사용 · 기사당 2분에 1번, 100m 이상 움직였을 때만)
+    async function svDashLookupRegion(d) {
+      if (svDashRegionOff || !d.loc || !supabaseClient || !supabaseClient.functions) return;
+      const key = d.loc.lat.toFixed(3) + ',' + d.loc.lng.toFixed(3);
+      const prev = svDashRegion.get(d.name);
+      if (prev && (prev.key === key || Date.now() - prev.at < 120000)) return;
+      svDashRegion.set(d.name, { key, name: prev ? prev.name : '', at: Date.now() });
+      try {
+        const { data, error } = await supabaseClient.functions.invoke('kakao', { body: { action: 'region', x: d.loc.lng, y: d.loc.lat } });
+        if (error) throw error;
+        if (data && data.name) { svDashRegion.set(d.name, { key, name: data.name, at: Date.now() }); svDashRender(); }
+      } catch (e) { svDashRegionOff = true; console.warn('위치 → 주소 변환 사용 불가 (Edge Function kakao 미배포?)', e); }
+    }
+    function svDashState(d) {
+      const allDone = d.total > 0 && d.done === d.total;
+      if (allDone) return { chip: ['완료', 'bg-emerald-50 text-emerald-700 border-emerald-200'], where: '배송 완료' };
+      if (d.atStore) return { chip: ['하차 중', 'bg-amber-50 text-amber-700 border-amber-200'], where: `${d.atStore} (하차 중)` };
+      if (d.done > 0 || d.started) return { chip: ['이동 중', 'bg-blue-50 text-[#007AFF] border-blue-200'], where: d.next ? `${d.next.name}(으)로 이동 중` : '이동 중' };
+      return { chip: ['대기', 'bg-gray-100 text-gray-500 border-gray-200'], where: d.vehicleType === '구간' ? `${d.center || '센터'} 출발 전` : '배송 시작 전' };
+    }
+    function svDashEta(st, now) {            // 도착 예정 표시 (지났는데 미도착이면 지연)
+      if (!st || st.done || st.arrived || !st.eta) return '';
+      const late = Math.round((now - st.eta) / 60000);
+      return late >= 3 ? `<span class="text-rose-600">도착 예정 ${svHmMs(st.eta)} · ${late}분 지연</span>` : `도착 예정 ${svHmMs(st.eta)}`;
+    }
+    function svDashRender() {
+      const grid = document.getElementById('svDashGrid');
+      if (!grid) return;
+      const now = Date.now();
+      const q = svDashQuery.toLowerCase();
+      const base = svDrvList.filter(d => !svDashSectionOnly || d.vehicleType === '구간');
+      const rows = base.filter(d => !q || d.name.toLowerCase().includes(q) || String(d.vehicleNo).toLowerCase().includes(q) || d.stores.some(s => s.name.toLowerCase().includes(q)));
+      const cnt = { 대기: 0, '이동 중': 0, '하차 중': 0, 완료: 0 };
+      base.forEach(d => { cnt[svDashState(d).chip[0]]++; });
+      document.getElementById('svDashMeta').textContent = document.getElementById('svDrvMeta').textContent;
+      document.getElementById('svDashSummary').innerHTML = Object.keys(cnt).map(k => `<div class="rounded-xl bg-gray-50 border border-gray-100 py-2 text-center"><div class="text-[11px] font-bold text-gray-500">${k}</div><div class="text-[17px] font-black text-gray-900">${cnt[k]}</div></div>`).join('');
+      const notice = document.getElementById('svDashNotice');
+      const miss = [];
+      if (svDrvList.length && !svDashHasEtaCol) miss.push('도착 예정 시각');
+      if (!svDashHasLocTable) miss.push('기사 위치');
+      notice.classList.toggle('hidden', !miss.length);
+      if (miss.length) notice.textContent = `${miss.join(' · ')} 표시에 필요한 칸이 서버에 아직 없습니다. Supabase SQL Editor 에서 기사전용_DB_마이그레이션_v4.sql 을 실행해 주세요.`;
+      if (!rows.length) { grid.innerHTML = `<div class="col-span-full py-10 text-center text-[13px] text-gray-400">${svDrvList.length ? '조건에 맞는 기사님이 없습니다.' : '표시할 기사님이 없습니다.'}</div>`; return; }
+      grid.innerHTML = rows.map(d => {
+        const stt = svDashState(d);
+        const remain = d.total - d.done;
+        const pct = d.total ? Math.round(d.done / d.total * 100) : 0;
+        const open = svDashOpen.has(d.name);
+        let gps = '';
+        if (d.loc) {
+          svDashLookupRegion(d);
+          const reg = (svDashRegion.get(d.name) || {}).name;
+          const ageMin = Math.round((now - d.loc.at) / 60000);
+          const fresh = ageMin <= 3;
+          gps = `<div class="mt-1 flex items-center gap-1.5 text-[11.5px] font-semibold ${fresh ? 'text-emerald-700' : 'text-gray-500'} min-w-0">
+              <i class="ph-bold ph-map-pin flex-none"></i><span class="truncate">${fresh ? '실시간' : '마지막 위치'} · ${svEsc(reg || '위치 수신')} · ${svHmMs(d.loc.at)}${fresh ? '' : ` (${ageMin >= 60 ? Math.floor(ageMin / 60) + '시간 ' : ''}${ageMin % 60}분 전)`}</span>
+              <a href="https://map.kakao.com/link/map/${encodeURIComponent(d.name)},${d.loc.lat},${d.loc.lng}" target="_blank" rel="noopener" class="flex-none text-[#007AFF] underline" onclick="event.stopPropagation()">지도</a></div>`;
+        } else if (svDashHasLocTable) {
+          gps = `<div class="mt-1 text-[11.5px] font-semibold text-gray-400"><i class="ph-bold ph-map-pin-line"></i> 위치 공유 없음 (미동의 또는 화면 꺼짐)</div>`;
+        }
+        const nextEta = d.next && !d.atStore ? svDashEta(d.next, now) : '';
+        const list = !open ? '' : `<div class="mt-3 pt-3 border-t border-gray-100 space-y-1.5">
+            ${d.startedAt ? `<div class="flex items-center justify-between text-[12px]"><span class="font-semibold text-gray-500">🚚 ${svEsc(d.center || '센터')} 출발</span><span class="font-bold text-gray-700">${d.startedAt}</span></div>` : ''}
+            ${d.stores.map((s, i) => {
+              const right = s.done ? `<span class="font-bold text-emerald-700">완료 ${s.doneAt || ''}</span>` : s.arrived ? `<span class="font-bold text-amber-700">도착 ${s.arrAt || ''} · 하차 중</span>` : (svDashEta(s, now) ? `<span class="font-bold text-[#007AFF]">${svDashEta(s, now)}</span>` : '<span class="text-gray-400">-</span>');
+              return `<div class="flex items-center justify-between gap-2 text-[12px]"><span class="min-w-0 truncate ${s.done ? 'text-gray-400' : 'font-semibold text-gray-800'}">${s.done ? '✓' : (i + 1) + '.'} ${svEsc(s.name)}${s.done && s.arrAt ? ` <span class="text-gray-400">(도착 ${s.arrAt})</span>` : ''}</span><span class="flex-none">${right}</span></div>`;
+            }).join('')}
+          </div>`;
+        return `<div data-dash-name="${svEsc(d.name)}" class="cursor-pointer bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4 min-w-0">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="flex-none w-10 h-10 rounded-full bg-blue-50 text-[#007AFF] text-[16px] font-black flex items-center justify-center">${svEsc(d.name.charAt(0))}</span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5 min-w-0"><span class="text-[16px] font-bold text-gray-900 truncate">${svEsc(d.name)}</span>${d.vehicleType === '구간' ? '<span class="flex-none text-[10px] font-bold text-white bg-gray-800 px-1.5 py-0.5 rounded">구간</span>' : ''}</div>
+              <div class="text-[12px] font-semibold text-gray-500 truncate">${svEsc(d.vehicleNo)}</div>
+            </div>
+            <span class="flex-none text-[11px] font-bold border px-2 py-0.5 rounded-full ${stt.chip[1]}">${stt.chip[0]}</span>
+          </div>
+          <div class="mt-3 rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5 min-w-0">
+            <div class="text-[10.5px] font-bold text-gray-400">현재 위치</div>
+            <div class="text-[13.5px] font-bold text-gray-900 truncate">${svEsc(stt.where)}</div>
+            ${nextEta ? `<div class="text-[12px] font-bold text-[#007AFF] mt-0.5">${nextEta}</div>` : ''}
+            ${gps}
+          </div>
+          <div class="mt-3 flex items-end justify-between">
+            <div><span class="text-[10.5px] font-bold text-gray-400">남은 배송</span><div class="text-[18px] font-black text-gray-900 leading-tight">${remain}<span class="text-[12px] font-bold text-gray-500"> 곳</span></div></div>
+            <div class="text-[12px] font-bold text-gray-600">${d.done} / ${d.total} 완료 (${pct}%)</div>
+          </div>
+          <div class="mt-1.5 h-2 rounded-full bg-gray-100 overflow-hidden"><div class="h-full bg-emerald-500 rounded-full" style="width:${pct}%"></div></div>
+          <div class="mt-2 text-center text-[11px] font-bold text-gray-400">${open ? '접기 ▲' : '매장별 시간 보기 ▼'}</div>
+          ${list}
+        </div>`;
+      }).join('');
+    }
+    document.addEventListener('click', (e) => {
+      const c = e.target.closest('#svDashGrid [data-dash-name]');
+      if (!c || e.target.closest('a')) return;
+      const n = c.dataset.dashName;
+      if (svDashOpen.has(n)) svDashOpen.delete(n); else svDashOpen.add(n);
+      svDashRender();
+    });
     function svDrvRender() {
       const box = document.getElementById('svDrvList');
       if (!box) return;

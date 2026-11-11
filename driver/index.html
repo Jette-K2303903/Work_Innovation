@@ -314,6 +314,10 @@
         .drv-slot .drv-slot-ico { font-size: 34px; }
         .drv-slot h3 { margin: 10px 0 6px; font-size: 15px; font-weight: 900; color: #374151; }
         .drv-slot p { margin: 0; font-size: 12px; font-weight: 700; color: var(--drv-sub); line-height: 1.6; }
+        .drv-loc { display: none; margin-top: 10px; padding: 10px 14px; border-radius: var(--drv-btn-radius); background: var(--drv-fill-2); border: 1px solid #F3F4F6; color: #4B5563; font-size: 12px; font-weight: 800; line-height: 1.5; align-items: center; justify-content: space-between; gap: 8px; }
+        .drv-loc.is-show { display: flex; }
+        .drv-loc.is-on { background: #EFF6FF; border-color: #DBEAFE; color: var(--drv-primary); }
+        .drv-loc button { flex: none; padding: 6px 10px; border-radius: 10px; background: #fff; border: 1px solid #E5E7EB; color: #374151; font-size: 11.5px; font-weight: 900; }
         .drv-sync { display: none; margin-top: 10px; padding: 10px 14px; border-radius: var(--drv-btn-radius); background: #FFF7ED; border: 1px solid #FED7AA; color: #C2410C; font-size: 12px; font-weight: 800; line-height: 1.5; }
         .drv-sync.is-show { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .drv-sync button { flex: none; padding: 6px 10px; border-radius: 10px; background: #fff; border: 1px solid #FED7AA; color: #C2410C; font-size: 11.5px; font-weight: 900; }
@@ -622,6 +626,7 @@
                     <div class="drv-stat"><p>배정 매장</p><p id="drv-home-stores">0개 매장</p></div>
                 </div>
                 <div class="drv-signed">✅ 보안서약 완료 <span id="drv-home-signed" style="color:#16A34A;font-weight:700;margin-left:4px"></span></div>
+                <div class="drv-loc" id="drv-loc"><span id="drv-loc-text"></span><button type="button" id="drv-loc-btn">켜기</button></div>
                 <div class="drv-sync" id="drv-sync"><span id="drv-sync-text"></span><button type="button" id="drv-sync-retry">지금 전송</button></div>
             </div>
 
@@ -795,7 +800,9 @@
         SESSION_KEY: 'drv_session_v1',     // sessionStorage (탭 종료 시 자동 소멸)
         SECTION_VALUE: '구간',             // dispatch_data.vehicle_type 이 이 값이면 센터 출발 카드 표시
         FALLBACK_MAP_URL: 'https://map.naver.com/p/search/',   // TMAP 미설치 시 (v32 openCenterLocation 과 동일)
-        // 서버 기록 (기사전용_DB_마이그레이션_v3.sql 적용 시 모두 저장 · 컬럼/테이블이 없으면 해당 항목만 건너뜀)
+        // 서버 기록 (기사전용_DB_마이그레이션_v4.sql 적용 시 모두 저장 · 컬럼/테이블이 없으면 해당 항목만 건너뜀)
+        ETA_FUNCTION: 'kakao',             // Supabase Edge Function 이름 (카카오 길찾기 · 키는 서버에만 보관)
+        LOCATION: { MIN_INTERVAL_MS: 20000, MIN_MOVE_M: 50, TABLE: 'driver_locations' },   // 위치 공유 (동의한 기사만)
         DB: {
             ORDER_COL: 'route_order',          // dispatch_data : 배송 순서 (1부터)
             LOG_TABLE: 'driver_event_logs',    // 배송 시작 · 매장 도착 · 하차 완료 · 순서 변경 이력
@@ -1817,6 +1824,8 @@
                 dbArrTs: d.arrived_ts || null,
                 dbOrder: d[CONFIG.DB.ORDER_COL] != null ? +d[CONFIG.DB.ORDER_COL] : null,
                 code: d.business_code || '-',
+                x: d.coord_x, y: d.coord_y, load: +d.load_minutes || 0,           // 도착 예상시간 계산용 (좌표 · 하차시간)
+                eta: d.eta_ts ? Date.parse(d.eta_ts) : null,
                 name: d.business_name || '이름없음',
                 address: d.address || '주소없음',
                 driver: d.main_driver || '',
@@ -1944,7 +1953,7 @@
         const chev = '<svg class="drv-chev" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7l4.5 4.5L13.5 7"/></svg>';
         let no = 0;
         homeSlot.innerHTML =
-            (S.session && S.session.admin && S.syncOff ? `<div class="drv-syncoff">⚠️ 서버에 진행 기록 칸이 없어 실시간 동기화가 꺼져 있습니다.<br>Supabase 에서 '기사전용_DB_마이그레이션_v3.sql' 을 실행해 주세요.</div>` : '') +
+            (S.session && S.session.admin && S.syncOff ? `<div class="drv-syncoff">⚠️ 서버에 진행 기록 칸이 없어 실시간 동기화가 꺼져 있습니다.<br>Supabase 에서 '기사전용_DB_마이그레이션_v4.sql' 을 실행해 주세요.</div>` : '') +
             `<div class="drv-progress-wrap"><div class="drv-stores-head"><h3>배송지 목록 <b>${S.route.length}</b>곳</h3><span>하차 완료 ${doneN} / ${S.route.length}</span></div>
              <div class="drv-prog-bar"><i style="width:${Math.round(doneN / S.route.length * 100)}%"></i></div></div>` +
             insertCenter(S.route.map(r => {
@@ -2187,7 +2196,7 @@
     function tsToHM(ts) { const d = new Date(ts); return `${p2(d.getHours())}:${p2(d.getMinutes())}`; }
     function outboxLoad() { try { return JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]'); } catch (e) { return []; } }
     function outboxSave(q) { try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(q.slice(-1000))); } catch (e) {} renderSync(q.length); }
-    function outboxPendingIds() { const set = new Set(); outboxLoad().forEach(i => { if (i.kind === 'update' && i.dedupe !== 'start' && !(i.dedupe || '').startsWith('order:')) (i.ids || []).forEach(id => set.add(id)); }); return set; }
+    function outboxPendingIds() { const set = new Set(); outboxLoad().forEach(i => { if (i.kind === 'update' && i.dedupe !== 'start' && !(i.dedupe || '').startsWith('eta:') && !(i.dedupe || '').startsWith('order:')) (i.ids || []).forEach(id => set.add(id)); }); return set; }
 
     function enqueue(item) {
         if (!canWrite() || !item) return;
@@ -2643,6 +2652,7 @@
         const [item] = S.route.splice(from, 1);
         S.route.splice(to, 0, item);
         saveOrder();
+        scheduleEta();
         renderDispatchList();
         renderHomeStores(item.key);          // 홈 화면 즉시 반영
         document.dispatchEvent(new CustomEvent('drv:route', { detail: S.route.slice() }));
@@ -2927,6 +2937,7 @@
         S.lastSig = null;
         renderHomeStores();
         if (dlLayer.classList.contains('is-open')) renderDispatchList();
+        scheduleEta();
         toast(`↩ ${what} 기록을 취소했습니다`);
     }
     // 실시간 구독이 꺼져 있어도 맞춰지도록 주기적으로 서버 상태 확인 (관리자 5초 · 기사 10초)
@@ -2938,6 +2949,128 @@
         if (S.alertOpen || dlList.classList.contains('is-sorting') || flushing || outboxLoad().length) return;
         loadRoute(true);
     }, 5000);
+
+    /* =========================================================
+       10) 도착 예상시간 (화면에는 표시하지 않고 서버에 저장 → 메인 사이트 실시간 대시보드에서 사용)
+           센터 출발 → 1번 매장 도착 예정 → + 하차시간(load_minutes) → 2번 매장 … 반복
+           매장 도착 / 하차 완료 / 순서 변경 / 기록 취소 때마다 실제 시각 기준으로 다시 계산
+       ========================================================= */
+    const isNum = v => v != null && v !== '' && !isNaN(parseFloat(v));
+    let etaTimer = null, etaFails = 0;
+    function scheduleEta() { if (!canWrite()) return; clearTimeout(etaTimer); etaTimer = setTimeout(computeEta, 1500); }
+    ['drv:start', 'drv:arrive', 'drv:unload'].forEach(ev => document.addEventListener(ev, scheduleEta));
+    async function computeEta() {
+        if (!canWrite() || etaFails >= 3) return;
+        const name = S.session.name;
+        const pend = S.route.filter(r => !isDone(r)), done = S.route.filter(isDone);
+        let origin = null, base = 0, list = pend;
+        const cur = pend.find(r => prog(r).a);
+        if (cur) {                                   // 매장에 도착해 하차 중 → 예상 출발 = 도착 + 하차시간 (이미 지났으면 지금)
+            list = pend.filter(r => r !== cur);
+            if (isNum(cur.x) && isNum(cur.y)) origin = { x: +cur.x, y: +cur.y };
+            base = Math.max(Date.now(), (prog(cur).aTs || Date.now()) + cur.load * 60000);
+        } else if (done.length && done.some(r => prog(r).dTs)) {   // 직전 매장 하차 완료 시각 기준
+            const last = done.reduce((a, b) => ((prog(b).dTs || 0) > (prog(a).dTs || 0) ? b : a));
+            if (isNum(last.x) && isNum(last.y)) origin = { x: +last.x, y: +last.y };
+            base = prog(last).dTs;
+        } else if (S.isSection && centerStarted() && S.center) {    // 센터 출발(배송 시작) 시각 기준
+            origin = isNum(S.center.lng) && isNum(S.center.lat) ? { x: +S.center.lng, y: +S.center.lat } : (S.center.address ? { address: S.center.address } : null);
+            base = S.prog[CENTER_KEY].sTs;
+        }
+        const chain = [];
+        if (origin && base) for (const r of list) { if (!isNum(r.x) || !isNum(r.y)) break; chain.push(r); }
+        const result = new Map();
+        if (chain.length) {
+            try {
+                const { data, error } = await withTimeout(S.sb.functions.invoke(CONFIG.ETA_FUNCTION, { body: { action: 'route', points: [origin].concat(chain.map(r => ({ x: +r.x, y: +r.y }))) } }), 15000);
+                if (error) throw error;
+                if (!data || !Array.isArray(data.durations) || data.durations.length < chain.length) throw new Error((data && data.error) || 'bad response');
+                etaFails = 0;
+                if (data.origin && S.center && origin.address) { S.center.lng = data.origin.x; S.center.lat = data.origin.y; }   // 센터 좌표 재사용
+                let t = base;
+                chain.forEach((r, i) => { t += data.durations[i] * 1000; result.set(r.key, t); t += r.load * 60000; });
+            } catch (e) { etaFails++; console.warn('[기사] 도착 예상시간 계산 실패', e && (e.message || e)); return; }
+        }
+        if (!S.session || S.session.name !== name) return;
+        const calcAt = new Date().toISOString();
+        pend.forEach(r => {
+            const v = result.get(r.key) || null;
+            if ((v == null) === (r.eta == null) && (v == null || Math.abs(v - r.eta) < 30000)) return;   // 30초 미만 차이는 저장 생략
+            r.eta = v;
+            enqueue({ kind: 'update', ids: r.ids, patch: { eta_ts: v ? new Date(v).toISOString() : null, eta_calc_ts: calcAt }, dedupe: 'eta:' + r.key });
+        });
+    }
+
+    /* =========================================================
+       11) 위치 공유 (기사 본인이 동의한 경우에만 · 언제든 끌 수 있음)
+           - 이 페이지가 화면에 켜져 있는 동안만 수집됨 (휴대폰을 잠그거나 끄면 마지막 위치가 남음)
+           - 서버에는 기사별 '마지막 위치 1건'만 저장 (이동 경로 이력은 저장하지 않음)
+           - 모든 배송이 끝나거나 로그아웃하면 자동으로 멈춤
+       ========================================================= */
+    const LOC = { watch: null, lastSent: 0, lastPos: null, off: false };
+    const locKey = () => `drv_loc_consent|${S.session ? S.session.name : ''}`;
+    function locConsent() { try { return JSON.parse(localStorage.getItem(locKey()) || 'null'); } catch (e) { return null; } }
+    function locSetConsent(v) { try { localStorage.setItem(locKey(), JSON.stringify({ v, at: new Date().toISOString(), cycle: resetKey() })); } catch (e) {} }
+    function locRender(text) {
+        const el = $('#drv-loc');
+        const usable = !!(S.session && !S.session.admin && !S.session.demo && 'geolocation' in navigator && !LOC.off);
+        el.classList.toggle('is-show', usable);
+        if (!usable) return;
+        const on = LOC.watch != null;
+        el.classList.toggle('is-on', on);
+        $('#drv-loc-text').textContent = text || (on ? '📍 위치 공유 켜짐 · 이 화면이 켜져 있는 동안만 전송됩니다' : '📍 위치 공유 꺼짐');
+        $('#drv-loc-btn').textContent = on ? '끄기' : '켜기';
+    }
+    function distM(a, b) { const R = 6371000, r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r; const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLng / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
+    async function locSend(pos, clear) {
+        if (!canWrite()) return;
+        const c = locConsent() || {};
+        const row = { driver_name: S.session.name, delivery_date: S.latestDate || null, vehicle_no: S.session.carFull || null,
+            lat: clear ? null : pos.lat, lng: clear ? null : pos.lng, accuracy: clear ? null : pos.acc,
+            device_at: new Date().toISOString(), consent_at: clear ? null : (c.at || null), updated_at: new Date().toISOString() };
+        try {
+            const { error } = await withTimeout(S.sb.from(CONFIG.LOCATION.TABLE).upsert(row, { onConflict: 'driver_name' }), CONFIG.FETCH_TIMEOUT_MS);
+            if (error && isMissingTable(error)) { LOC.off = true; locStop(); locRender(); }
+        } catch (e) { /* 다음 위치 때 다시 시도 */ }
+    }
+    function locStart() {
+        if (LOC.watch != null || LOC.off || !S.session || S.session.admin || S.session.demo || !('geolocation' in navigator)) return;
+        if (S.route.length && !S.route.some(r => !isDone(r))) return;       // 이미 전부 완료
+        LOC.watch = navigator.geolocation.watchPosition(p => {
+            const pos = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
+            const now = Date.now();
+            if (LOC.lastPos && now - LOC.lastSent < CONFIG.LOCATION.MIN_INTERVAL_MS) return;
+            if (LOC.lastPos && distM(LOC.lastPos, pos) < CONFIG.LOCATION.MIN_MOVE_M && now - LOC.lastSent < 120000) return;   // 정차 중에는 2분마다
+            LOC.lastPos = pos; LOC.lastSent = now;
+            locSend(pos);
+        }, err => {
+            if (err && err.code === 1) { locStop(); locRender('📍 위치 권한이 꺼져 있습니다 (브라우저 설정에서 허용)'); }
+        }, { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 });
+        locRender();
+    }
+    function locStop() { if (LOC.watch != null) { try { navigator.geolocation.clearWatch(LOC.watch); } catch (e) {} } LOC.watch = null; LOC.lastPos = null; LOC.lastSent = 0; }
+    async function locAsk() {
+        const ok = await iosAlert({ icon: '📍', title: '위치 정보 제공 동의 (선택)',
+            message: '배송 현황 확인과 매장 도착 안내를 위해\n배송 중 현재 위치를 사무실과 공유합니다.\n\n· 수집 항목 : 현재 위치\n· 수집 시점 : 이 화면이 켜져 있는 동안\n· 보관 : 마지막 위치 1건만 (이동 경로 미저장)\n· 배송 완료 또는 로그아웃 시 자동 중지\n\n동의하지 않아도 서비스를 이용할 수 있으며,\n언제든지 끌 수 있습니다.',
+            buttons: [{ text: '동의 안 함', value: false }, { text: '동의', style: 'bold', value: true }] });
+        if (!S.session) return;
+        locSetConsent(ok ? 'yes' : 'no');
+        if (ok) locStart(); else locRender();
+    }
+    async function locInit() {
+        if (!S.session || S.session.admin || S.session.demo || !('geolocation' in navigator)) { locRender(); return; }
+        const c = locConsent();
+        if (c && c.v === 'yes') { locStart(); locRender(); }
+        else if (c && c.v === 'no' && c.cycle === resetKey()) locRender();     // 오늘 이미 거절 → 다시 묻지 않음
+        else { await sleep(900); if (S.session && !S.alertOpen && !agreeLayer.classList.contains('is-open')) locAsk(); else locRender(); }
+    }
+    $('#drv-loc-btn').addEventListener('click', () => {
+        if (LOC.watch != null) { locStop(); locSetConsent('no'); locSend(null, true); locRender(); toast('위치 공유를 껐습니다'); }
+        else locAsk();
+    });
+    document.addEventListener('drv:login', () => { LOC.off = false; locInit(); });
+    document.addEventListener('drv:logout', () => { locStop(); $('#drv-loc').classList.remove('is-show'); });
+    document.addEventListener('drv:unload', () => { if (!S.route.some(r => !isDone(r))) { locStop(); locRender('📍 배송 완료 · 위치 공유가 종료되었습니다'); } });
 
     /* ---------- 로그인 상자 위치 고정 ---------- */
     let frozenW = 0;
