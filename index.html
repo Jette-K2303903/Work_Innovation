@@ -1154,7 +1154,7 @@
           <button type="button" id="isMeBtn" onclick="isOpenUserPicker()" class="ios-btn-tap px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-[12px] font-bold whitespace-nowrap">사용자 선택</button>
           <button type="button" id="isChatBtn" onclick="isTogglePanel('chat')" class="ios-btn-tap relative px-3 py-1.5 rounded-xl text-[12px] font-bold whitespace-nowrap flex items-center gap-1"><i class="ph-bold ph-chats-circle text-sm"></i>채팅<span id="isChatBadge" class="hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#FF3B30] text-white text-[10.5px] font-extrabold leading-[18px] text-center shadow"></span></button>
           <button type="button" id="isLogBtn" onclick="isTogglePanel('log')" class="ios-btn-tap px-3 py-1.5 rounded-xl text-[12px] font-bold whitespace-nowrap flex items-center gap-1"><i class="ph-bold ph-clock-counter-clockwise text-sm"></i>수정 기록</button>
-          <button type="button" id="ibBtn" onclick="ibToggle()" class="ios-btn-tap pl-1.5 pr-3 py-1 rounded-xl text-[12px] font-bold whitespace-nowrap flex items-center gap-1.5 bg-[#FFE7D1] text-[#263553] border border-[#F6C9A3]"><img src="assets/ttaettae-icon.svg" alt="" aria-hidden="true" class="w-6 h-6 rounded-full">때때</button>
+          <button type="button" id="ibBtn" onclick="ibToggle()" class="ios-btn-tap pl-1 pr-3 py-1 rounded-xl text-[12px] font-bold whitespace-nowrap flex items-center gap-1.5 bg-gray-100 text-gray-800"><img src="assets/ttaettae-icon.svg" alt="" aria-hidden="true" class="w-6 h-6 rounded-full">때때</button>
         </div>
       </div>
       <div id="isNotice" class="hidden mb-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[12px] font-semibold text-amber-800 leading-relaxed"></div>
@@ -1229,22 +1229,25 @@
     </main>
 
     <!-- [특이사항 관리 : 등록 도우미 챗봇 (외부 AI 없이 사이트 안에서 동작)] -->
-    <div id="ibPanel" class="hidden fixed right-4 bottom-4 z-[47] w-[370px] h-[560px] max-h-[calc(100vh-32px)] bg-white rounded-[24px] border border-gray-200 shadow-2xl flex flex-col overflow-hidden max-md:inset-0 max-md:w-auto max-md:h-auto max-md:max-h-none max-md:rounded-none">
-      <div class="flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-[#5856D6] to-[#AF52DE] text-white flex-none">
-        <img src="assets/ttaettae-icon.svg" alt="" aria-hidden="true" class="w-9 h-9 rounded-full ring-2 ring-white/40 flex-none">
-        <div class="min-w-0 flex-1"><h4 class="text-[16px] font-bold">때때</h4></div>
-        <button type="button" onclick="ibReset()" class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center" title="처음부터"><i class="ph-bold ph-arrow-counter-clockwise text-xs"></i></button>
-        <button type="button" onclick="ibToggle(false)" class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center" title="닫기"><i class="ph-bold ph-x text-xs"></i></button>
+    <div id="ibPanel" class="hidden fixed right-4 bottom-4 z-[47] w-[380px] h-[620px] max-h-[calc(100vh-32px)] bg-[#F2F2F7] rounded-[28px] border border-gray-200/80 shadow-2xl flex flex-col overflow-hidden max-md:inset-0 max-md:w-auto max-md:h-auto max-md:max-h-none max-md:rounded-none">
+      <div class="flex items-center gap-3 px-4 py-3 bg-[#F2F2F7]/95 border-b border-gray-200/80 flex-none">
+        <button type="button" onclick="ibToggle(false)" class="ios-btn-tap w-10 h-10 rounded-full bg-gray-200/80 text-gray-700 flex items-center justify-center flex-none" title="닫기"><i class="ph-bold ph-caret-down text-lg"></i></button>
+        <img src="assets/ttaettae-icon.svg" alt="" aria-hidden="true" class="w-11 h-11 rounded-full ring-2 ring-white shadow-sm flex-none">
+        <div class="min-w-0 flex-1"><h4 class="text-[17px] font-bold text-gray-900 tracking-tight">때때</h4></div>
+        <button type="button" onclick="ibReset()" class="ios-btn-tap w-10 h-10 rounded-2xl bg-[#007AFF] text-white flex items-center justify-center shadow-md shadow-blue-500/30 flex-none" title="새 대화"><i class="ph-bold ph-note-pencil text-lg"></i></button>
       </div>
-      <div id="ibList" class="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-2.5 bg-[#F7F7FA]"></div>
-      <div class="border-t border-gray-100 p-2.5 flex-none bg-white">
-        <div id="ibChips" class="flex gap-1.5 overflow-x-auto no-scrollbar pb-2"></div>
+      <div id="ibList" class="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-3"></div>
+      <div class="border-t border-gray-200/80 px-3 pt-2.5 pb-2 flex-none bg-white/90">
+        <div id="ibChips" class="flex gap-1.5 overflow-x-auto no-scrollbar pb-2 empty:hidden"></div>
         <input type="file" id="ibFile" accept="image/*" multiple class="hidden">
         <div class="flex items-end gap-2">
-          <button type="button" onclick="ibEl('ibFile').click()" class="ios-btn-tap w-10 h-10 flex-none rounded-xl bg-purple-50 border border-purple-200 text-[#5856D6] flex items-center justify-center" title="사진 넣기 (Ctrl+V 로 붙여넣기도 돼요)"><i class="ph-bold ph-image text-lg"></i></button>
-          <textarea id="ibInput" rows="2" placeholder="제품 사진을 Ctrl+V 로 붙여넣거나, 예: 부산광안 김치 필라프 파손 2개" class="flex-1 resize-none px-3 py-2 rounded-xl bg-gray-100 border border-gray-200 text-[13px] leading-snug outline-none focus:bg-white focus:ring-2 focus:ring-purple-200 max-h-[110px]"></textarea>
-          <button type="button" onclick="ibSend()" class="ios-btn-tap w-10 h-10 flex-none rounded-xl bg-[#5856D6] text-white flex items-center justify-center"><i class="ph-fill ph-paper-plane-right text-lg"></i></button>
+          <button type="button" onclick="ibEl('ibFile').click()" class="ios-btn-tap w-11 h-11 flex-none rounded-full bg-gray-100 text-gray-700 flex items-center justify-center" title="사진 넣기 (Ctrl+V 로 붙여넣기도 돼요)"><i class="ph-bold ph-image text-[22px]"></i></button>
+          <div class="flex-1 min-w-0 flex items-end gap-1 pl-4 pr-1 py-1 rounded-[22px] bg-white border border-gray-200 focus-within:border-[#007AFF]/50">
+            <textarea id="ibInput" rows="1" placeholder="메시지 입력" class="flex-1 min-w-0 resize-none py-2 bg-transparent text-[14px] leading-snug outline-none max-h-[110px]"></textarea>
+            <button type="button" id="ibSendBtn" onclick="ibSend()" class="ios-btn-tap w-9 h-9 flex-none rounded-full bg-gray-300 text-white flex items-center justify-center transition-colors" title="보내기"><i class="ph-bold ph-arrow-up text-lg"></i></button>
+          </div>
         </div>
+        <p class="mt-1.5 text-center text-[11px] text-gray-400">때때는 학습된 AI로 답변을 제공하며, 일부 내용은 확인이 필요할 수 있습니다.</p>
       </div>
     </div>
 
@@ -1252,19 +1255,19 @@
     <div id="ibSetModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
       <div class="bg-white rounded-[28px] w-full max-w-sm p-5 shadow-2xl border border-gray-100">
         <div class="flex items-center gap-2.5 pb-3 border-b border-gray-100">
-          <div class="w-8 h-8 rounded-xl bg-purple-50 text-[#5856D6] flex items-center justify-center"><i class="ph-bold ph-gear-six text-lg"></i></div>
+          <div class="w-8 h-8 rounded-xl bg-blue-50 text-[#007AFF] flex items-center justify-center"><i class="ph-bold ph-gear-six text-lg"></i></div>
           <div class="min-w-0"><h3 class="text-[17px] font-bold text-gray-900 tracking-tight">특이사항 관리 설정</h3><p class="text-[11px] text-gray-500">때때 사진 판단 연결</p></div>
         </div>
         <label class="block mt-3 text-[12px] font-semibold text-gray-600">때때 두뇌 주소</label>
-        <input type="url" id="ibSetUrl" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[13px] font-mono border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-purple-200">
+        <input type="url" id="ibSetUrl" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[13px] font-mono border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
         <label class="block mt-3 text-[12px] font-semibold text-gray-600">봇 키 <span class="text-gray-400 font-normal">(때때 관리자 &gt; 봇 레지스트리에서 발급)</span></label>
-        <input type="text" id="ibSetKey" autocomplete="off" spellcheck="false" placeholder="bk_ 로 시작하는 키" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[13px] font-mono border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-purple-200">
+        <input type="text" id="ibSetKey" autocomplete="off" spellcheck="false" placeholder="bk_ 로 시작하는 키" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[13px] font-mono border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
         <p id="ibSetStatus" class="mt-2 text-[12px] text-gray-500 min-h-[18px]"></p>
         <p class="text-[11px] text-gray-400 leading-relaxed">키는 코드(GitHub)가 아닌 Supabase 설정에 저장됩니다. 키를 바꿀 때는 여기만 고치면 바로 적용돼요.</p>
         <div class="grid grid-cols-3 gap-2 mt-4">
           <button type="button" onclick="ibCloseSettings()" class="ios-btn-tap py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[13.5px]">닫기</button>
           <button type="button" onclick="ibTestConn()" class="ios-btn-tap py-2.5 bg-white border border-gray-200 text-gray-800 font-semibold rounded-xl text-[13.5px]">연결 확인</button>
-          <button type="button" onclick="ibSaveSettings()" class="ios-btn-tap py-2.5 bg-[#5856D6] text-white font-semibold rounded-xl text-[13.5px]">저장</button>
+          <button type="button" onclick="ibSaveSettings()" class="ios-btn-tap py-2.5 bg-[#007AFF] text-white font-semibold rounded-xl text-[13.5px]">저장</button>
         </div>
       </div>
     </div>
@@ -11239,37 +11242,61 @@
     const ibToday = (off = 0) => { const d = new Date(); d.setDate(d.getDate() + off); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
     const ibFmtDate = (v) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ''); return m ? `${+m[2]}/${+m[3]}(${'일월화수목금토'[new Date(+m[1], +m[2] - 1, +m[3]).getDay()]})` : (v || '-'); };
 
+    // 처음 열었을 때 추천 질문 (나중에 문구만 바꾸면 됨)
+    const IB_SUGGESTIONS = [
+      { label: '사진으로 특이사항 등록하기', action: 'photo' },
+      { label: '문장으로 특이사항 등록하기', action: 'text' },
+      { label: '사용 방법 알려주세요', action: 'help' }
+    ];
     function ibToggle(force) {
       ib.open = force === undefined ? !ib.open : force;
       ibEl('ibPanel').classList.toggle('hidden', !ib.open);
       if (ib.open) {
-        if (!ib.msgs.length) ibWelcome();
+        ibRender();
         ibRenderChips();
         setTimeout(() => ibEl('ibInput').focus(), 60);
       }
     }
-    function ibReset() { ib.draft = null; ib.pending = null; ib.msgs = []; ibWelcome(); ibRenderChips(); }
-    function ibWelcome() {
-      ibBot(`안녕하세요${isState.me ? ` ${svEsc(isState.me)}님` : ''}, 때때예요! <b>제품 사진을 복사해서 Ctrl+V</b> 해 주세요. 때때가 문제 유형을 보고, 거래처·제품을 말씀해 주시면 바로 등록해요. 사진 없이 문장으로만 등록해도 돼요.
-        <div class="mt-2 space-y-1 text-[12px] text-gray-600">
-          <div>· <b>부산광안 김치 필라프 파손 2개</b></div>
-          <div>· <b>내일 200577 P1 누락 3박스 귀책 센터</b></div>
-          <div>· <b>11/12 광안 우유 유통기한 임박, 상세: 12일자 입고분</b></div>
+    function ibReset() { ib.draft = null; ib.pending = null; ib.photo = null; ib.guess = null; ib.msgs = []; ibRender(); ibRenderChips(); }
+    function ibWelcome() { ib.msgs = []; ibRender(); ibRenderChips(); }
+    function ibHelp() {
+      ibBot(`<b>이렇게 쓰시면 돼요</b>
+        <div class="mt-1.5 text-[13px] leading-relaxed">① 제품 사진을 복사해서 <b>Ctrl+V</b> → ② 때때가 보여 드린 유형이 맞는지 고르기 → ③ 거래처·제품 말하기 → 자동 등록</div>
+        <div class="mt-2 text-[12px] text-gray-500">사진 없이 문장으로만도 돼요.</div>
+        <div class="mt-1 space-y-0.5 text-[12.5px] text-gray-700">
+          <div>· 부산광안 김치 필라프 파손 2개</div>
+          <div>· 내일 200577 P1 누락 3박스 귀책 센터</div>
+          <div>· 11/12 광안 우유 유통기한, 상세: 12일자 입고분</div>
         </div>
-        <div class="mt-2 text-[11.5px] text-gray-500">배송일을 말하지 않으면 오늘로 넣어요. 초안이 나온 뒤에 "수량 5", "귀책 기사", "날짜 어제"처럼 고칠 수 있어요.</div>`);
+        <div class="mt-2 text-[11.5px] text-gray-500">배송일을 말하지 않으면 오늘로 넣어요. 나중에 "수량 5", "귀책 기사", "날짜 어제"처럼 고칠 수 있어요.</div>`);
+    }
+    function ibSuggest(action, label) {
+      ibPush('me', svEsc(label));
+      if (action === 'photo') { ibBot('제품 사진을 복사해서 이 창에 <b>Ctrl+V</b> 하거나, 왼쪽 사진 버튼으로 골라 주세요. 때때가 어떤 문제인지 먼저 볼게요.'); ibEl('ibFile').click(); }
+      else if (action === 'text') ibBot('거래처 · 제품 · 문제를 한 문장으로 말씀해 주세요.<div class="mt-1 text-[12px] text-gray-500">예: 부산광안 김치 필라프 파손 2개, 귀책 기사</div>');
+      else ibHelp();
+      ibRenderChips();
     }
     function ibPush(who, html) { ib.msgs.push({ who, html }); ibRender(); }
     const ibBot = (html) => ibPush('bot', html);
     function ibRender() {
       const list = ibEl('ibList');
+      if (!ib.msgs.length) {                       // 첫 화면 : 인사 + 추천 질문
+        list.innerHTML = `<div class="min-h-full flex flex-col justify-end pb-2">
+            <h3 class="text-[26px] leading-[1.3] font-extrabold text-gray-900 tracking-tight">안녕하세요! 때때예요.<br>무엇을 도와드릴까요?</h3>
+            <div class="mt-5 mb-2.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-gray-500"><i class="ph-fill ph-sparkle text-[#007AFF]"></i>추천 질문</div>
+            <div class="flex flex-col items-start gap-2">${IB_SUGGESTIONS.map((q, i) => `<button type="button" data-ib-suggest="${i}" class="ios-btn-tap inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-blue-200 text-[14.5px] font-semibold text-[#007AFF] text-left shadow-sm active:bg-blue-50"><i class="ph-fill ph-sparkle text-[13px]"></i>${svEsc(q.label)}</button>`).join('')}</div>
+          </div>`;
+        return;
+      }
       list.innerHTML = ib.msgs.map(m => m.who === 'me'
-        ? `<div class="flex justify-end"><div class="max-w-[82%] px-3 py-2 rounded-2xl rounded-tr-md bg-[#5856D6] text-white text-[13px] leading-snug break-words">${m.html}</div></div>`
-        : `<div class="flex gap-2"><img src="assets/ttaettae-icon.svg" alt="" aria-hidden="true" class="w-7 h-7 flex-none rounded-full"><div class="max-w-[85%] min-w-0 px-3 py-2 rounded-2xl rounded-tl-md bg-white border border-gray-200 text-[13px] text-gray-900 leading-snug break-words">${m.html}</div></div>`).join('');
+        ? `<div class="flex justify-end"><div class="max-w-[80%] px-3.5 py-2.5 rounded-[20px] rounded-br-md bg-[#007AFF] text-white text-[14px] leading-snug break-words">${m.html}</div></div>`
+        : `<div class="flex items-end gap-2"><img src="assets/ttaettae-icon.svg" alt="" aria-hidden="true" class="w-8 h-8 flex-none rounded-full ring-2 ring-white shadow-sm"><div class="max-w-[82%] min-w-0 px-3.5 py-2.5 rounded-[20px] rounded-bl-md bg-white text-[14px] text-gray-900 leading-snug break-words shadow-sm">${m.html}</div></div>`).join('');
       requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
     }
     function ibRenderChips() {
-      const chips = ib.draft && ib.draft._photo ? ['사진 넣기', '수량 ', '귀책 ', '날짜 어제', '취소'] : ib.draft ? ['시트에 추가', '추가하고 저장', '수량 ', '귀책 ', '날짜 어제', '취소'] : ['사진 넣기', '도움말', '오늘 배송일'];
-      ibEl('ibChips').innerHTML = chips.map(c => `<button type="button" data-ib-chip="${svEsc(c)}" class="flex-none px-2.5 py-1 rounded-full bg-purple-50 border border-purple-200 text-[11.5px] font-bold text-[#5856D6] whitespace-nowrap">${svEsc(c.trim())}</button>`).join('');
+      const chips = !ib.msgs.length ? [] : ib.draft && ib.draft._photo ? ['사진 넣기', '수량 ', '귀책 ', '날짜 어제', '취소'] : ib.draft ? ['시트에 추가', '추가하고 저장', '수량 ', '귀책 ', '날짜 어제', '취소'] : ['사진 넣기', '도움말'];
+      ibEl('ibChips').innerHTML = chips.map(c => `<button type="button" data-ib-chip="${svEsc(c)}" class="flex-none px-3 py-1.5 rounded-full bg-white border border-blue-200 text-[12px] font-semibold text-[#007AFF] whitespace-nowrap">${svEsc(c.trim())}</button>`).join('');
     }
 
     // ---------- 문장 해석 ----------
@@ -11376,12 +11403,12 @@
       const el = ibEl('ibInput');
       const text = String(textArg ?? el.value).trim();
       if (!text) return;
-      el.value = '';
+      el.value = ''; el.dispatchEvent(new Event('input'));
       ibPush('me', svEsc(text).replace(/\n/g, '<br>'));
       if (!supabaseClient) { ibBot('서버에 연결되어 있지 않아요.'); return; }
       if (!isState.me) { ibBot('먼저 오른쪽 위 <b>사용자 선택</b>에서 이름을 골라 주세요.'); isOpenUserPicker(); return; }
       const t = text.replace(/\s+/g, ' ');
-      if (/^(도움말|help|\?)$/i.test(t)) { ib.msgs.pop(); ibWelcome(); return; }
+      if (/^(도움말|사용 방법|help|\?)$/i.test(t)) { ibHelp(); ibRenderChips(); return; }
       if (/^(취소|그만|처음|새로|초기화)$/.test(t)) { ib.draft = null; ib.pending = null; ibBot('초안을 지웠어요. 새로 말씀해 주세요.'); ibRenderChips(); return; }
       if (ib.draft && /^(시트에 추가|추가|확인|네|응|ㅇㅇ|좋아|ok|오케이)$/i.test(t)) { await ibCommit(false); return; }
       if (ib.draft && /^(추가하고 저장|저장|바로 저장|등록)$/.test(t)) { await ibCommit(true); return; }
@@ -11437,7 +11464,7 @@
     function ibAskPick(kind, items) {
       ib.pending = { kind, items };
       ibBot(`${kind === 'store' ? '거래처' : '제품'} 후보가 여러 개예요. 골라 주세요${ib.draft && ib.draft.delivery_date ? ` <span class="text-gray-400">(${ibFmtDate(ib.draft.delivery_date)} 자료 기준)</span>` : ''}.
-        <div class="mt-2 space-y-1">${items.map((it, i) => `<button type="button" data-ib-pick="${i}" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-gray-200 bg-gray-50 hover:bg-purple-50 text-left"><span class="w-5 h-5 flex-none rounded-full bg-[#5856D6] text-white text-[10.5px] font-bold flex items-center justify-center">${i + 1}</span><span class="flex-1 min-w-0 truncate font-bold">${svEsc(it.name)}</span><span class="font-mono text-[11px] text-[#007AFF]">${svEsc(it.code)}</span></button>`).join('')}</div>`);
+        <div class="mt-2 space-y-1">${items.map((it, i) => `<button type="button" data-ib-pick="${i}" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-gray-200 bg-gray-50 hover:bg-blue-50 text-left"><span class="w-5 h-5 flex-none rounded-full bg-[#007AFF] text-white text-[10.5px] font-bold flex items-center justify-center">${i + 1}</span><span class="flex-1 min-w-0 truncate font-bold">${svEsc(it.name)}</span><span class="font-mono text-[11px] text-[#007AFF]">${svEsc(it.code)}</span></button>`).join('')}</div>`);
     }
     async function ibApplyPick(kind, it) {
       const d = ib.draft || (ib.draft = { delivery_date: ibToday(0) });
@@ -11478,8 +11505,8 @@
         </div>
         ${missing.length ? `<div class="mt-1.5 text-[11.5px] text-[#FF3B30]">${missing.join(' · ')}을(를) 더 알려 주시면 좋아요. 그대로 추가해도 시트에서 고칠 수 있어요.</div>` : ''}
         <div class="mt-2 grid grid-cols-2 gap-1.5">
-          <button type="button" data-ib-chip="시트에 추가" class="py-1.5 rounded-lg bg-white border border-[#5856D6] text-[#5856D6] text-[12px] font-bold">시트에 추가</button>
-          <button type="button" data-ib-chip="추가하고 저장" class="py-1.5 rounded-lg bg-[#5856D6] text-white text-[12px] font-bold">추가하고 저장</button>
+          <button type="button" data-ib-chip="시트에 추가" class="py-1.5 rounded-lg bg-white border border-[#007AFF] text-[#007AFF] text-[12px] font-bold">시트에 추가</button>
+          <button type="button" data-ib-chip="추가하고 저장" class="py-1.5 rounded-lg bg-[#007AFF] text-white text-[12px] font-bold">추가하고 저장</button>
         </div>
         <div class="mt-1.5 text-[11px] text-gray-400">고칠 게 있으면 "수량 5", "귀책 기사", "상세: …", "거래처 광안"처럼 말씀해 주세요.</div>`);
       ibRenderChips();
@@ -11621,8 +11648,8 @@
           ib.guess = { id: a.issue, ko: a.label_ko };
           ibBot(`<b>${svEsc(a.label_ko)}${ibJosaRo(a.label_ko)} 보여요. 맞나요?</b>
             <div class="mt-2 grid grid-cols-2 gap-1.5">
-              <button type="button" data-ib-type="yes" class="py-1.5 rounded-lg bg-[#5856D6] text-white text-[12px] font-bold">맞아요</button>
-              <button type="button" data-ib-type="other" class="py-1.5 rounded-lg bg-white border border-[#5856D6] text-[#5856D6] text-[12px] font-bold">다른 유형</button>
+              <button type="button" data-ib-type="yes" class="py-1.5 rounded-lg bg-[#007AFF] text-white text-[12px] font-bold">맞아요</button>
+              <button type="button" data-ib-type="other" class="py-1.5 rounded-lg bg-white border border-[#007AFF] text-[#007AFF] text-[12px] font-bold">다른 유형</button>
             </div>`);
         } else {
           ib.guess = null;
@@ -11636,7 +11663,7 @@
       ibRenderChips();
     }
     function ibAskType(msg) {
-      ibBot(`${msg || '어떤 유형인가요?'}<div class="mt-2 flex flex-wrap gap-1.5">${IB_LABELS.map(([id, ko]) => `<button type="button" data-ib-type="${svEsc(id)}" data-ib-ko="${svEsc(ko)}" class="px-2.5 py-1 rounded-full bg-white border border-gray-300 text-[12px] font-bold text-gray-800 hover:border-[#5856D6] hover:text-[#5856D6]">${svEsc(ko)}</button>`).join('')}</div>`);
+      ibBot(`${msg || '어떤 유형인가요?'}<div class="mt-2 flex flex-wrap gap-1.5">${IB_LABELS.map(([id, ko]) => `<button type="button" data-ib-type="${svEsc(id)}" data-ib-ko="${svEsc(ko)}" class="px-2.5 py-1 rounded-full bg-white border border-gray-300 text-[12px] font-bold text-gray-800 hover:border-[#007AFF] hover:text-[#007AFF]">${svEsc(ko)}</button>`).join('')}</div>`);
     }
     async function ibChooseType(id, ko, confirmed) {
       const d = ib.draft || (ib.draft = { delivery_date: ibToday(0), _photo: true, _photos: [] });
@@ -11700,6 +11727,10 @@
       const files = [...((e.clipboardData && e.clipboardData.items) || [])].filter(it => it.kind === 'file' && /^image\//.test(it.type)).map(it => it.getAsFile()).filter(Boolean);
       if (files.length) { e.preventDefault(); ibHandlePhotos(files); }
     });
+    ibEl('ibInput').addEventListener('input', () => {
+      const el = ibEl('ibInput'); el.style.height = 'auto'; el.style.height = Math.min(110, el.scrollHeight) + 'px';
+      ibEl('ibSendBtn').className = 'ios-btn-tap w-9 h-9 flex-none rounded-full text-white flex items-center justify-center transition-colors ' + (el.value.trim() ? 'bg-[#007AFF]' : 'bg-gray-300');
+    });
     ibEl('ibFile').addEventListener('change', (e) => { const f = [...e.target.files]; e.target.value = ''; ibHandlePhotos(f); });
     ibEl('ibPanel').addEventListener('dragover', (e) => { if ([...(e.dataTransfer.items || [])].some(i => i.kind === 'file')) e.preventDefault(); });
     ibEl('ibPanel').addEventListener('drop', (e) => { const f = [...(e.dataTransfer.files || [])]; if (f.length) { e.preventDefault(); ibHandlePhotos(f); } });
@@ -11713,6 +11744,8 @@
     ibEl('ibPanel').addEventListener('click', (e) => {
       const p = e.target.closest('[data-ib-pick]');
       if (p && ib.pending) { const it = ib.pending.items[+p.dataset.ibPick]; const kind = ib.pending.kind; ib.pending = null; if (it) ibApplyPick(kind, it); return; }
+      const sg = e.target.closest('[data-ib-suggest]');
+      if (sg) { const q = IB_SUGGESTIONS[+sg.dataset.ibSuggest]; if (q) ibSuggest(q.action, q.label); return; }
       const ty = e.target.closest('[data-ib-type]');
       if (ty) {
         const tv = ty.dataset.ibType;
