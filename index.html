@@ -7290,10 +7290,13 @@
           svDashLookupRegion(d);
           const reg = (svDashRegion.get(d.name) || {}).name;
           const ageMin = Math.round((now - d.loc.at) / 60000);
-          const fresh = ageMin <= 3;
-          gps = `<div class="mt-1 flex items-center gap-1.5 text-[11.5px] font-semibold ${fresh ? 'text-emerald-700' : 'text-gray-500'} min-w-0">
-              <i class="ph-bold ph-map-pin flex-none"></i><span class="truncate">${fresh ? '실시간' : '마지막 위치'} · ${svEsc(reg || '위치 수신')} · ${svHmMs(d.loc.at)}${fresh ? '' : ` (${ageMin >= 60 ? Math.floor(ageMin / 60) + '시간 ' : ''}${ageMin % 60}분 전)`}</span>
-              <a href="https://map.kakao.com/link/map/${encodeURIComponent(d.name)},${d.loc.lat},${d.loc.lng}" target="_blank" rel="noopener" class="flex-none text-[#007AFF] underline" onclick="event.stopPropagation()">지도</a></div>`;
+          // 온라인(녹색) : 위치 공유가 켜져 있고 최근 3분 안에 위치가 들어옴 / 그 외(휴대폰 꺼짐·화면 꺼짐·공유 종료) : 회색 '마지막 위치'
+          const stOff = /^(declined|denied|unavailable|unsupported)/.test(d.locStatus || '');
+          const fresh = ageMin <= 3 && !stOff;
+          const ago = ageMin >= 60 ? `${Math.floor(ageMin / 60)}시간 ${ageMin % 60}분 전` : `${Math.max(0, ageMin)}분 전`;
+          gps = `<div class="mt-1 flex items-center gap-1.5 text-[11.5px] font-semibold ${fresh ? 'text-emerald-700' : 'text-gray-400'} min-w-0">
+              <span class="flex-none w-1.5 h-1.5 rounded-full ${fresh ? 'bg-emerald-500' : 'bg-gray-300'}"></span><span class="truncate">${fresh ? '실시간 위치 :' : '마지막 위치 :'} ${svEsc(reg || '위치 수신')} · ${svHmMs(d.loc.at)}${fresh ? '' : ` (${ago})`}</span>
+              <a href="https://map.kakao.com/link/map/${encodeURIComponent(d.name)},${d.loc.lat},${d.loc.lng}" target="_blank" rel="noopener" class="flex-none ${fresh ? 'text-[#007AFF]' : 'text-gray-400'} underline" onclick="event.stopPropagation()">지도</a></div>`;
         } else if (svDashHasLocTable) {
           // 위치가 안 보이는 이유 (기사 휴대폰이 알려준 상태)
           const st = d.locStatus, inApp = st.includes('앱 내 브라우저') ? ' · 카카오톡 등 앱 안에서 열어 사용 중' : '';

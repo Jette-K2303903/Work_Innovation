@@ -3088,10 +3088,11 @@
         unsupported: '📍 이 브라우저에서는 위치 공유를 쓸 수 없습니다 · 크롬/사파리로 열어 주세요'
     };
     const inAppBrowser = () => /KAKAOTALK|NAVER\(inapp|Line\/|FBAN|FBAV|Instagram/i.test(navigator.userAgent || '');
-    async function locReport(status) {
+    async function locReport(status, extra) {
         if (!canWrite() || LOC.status === status) return;
         LOC.status = status;
         const row = { driver_name: S.session.name, delivery_date: S.latestDate || null, vehicle_no: S.session.carFull || null, status: status + (inAppBrowser() ? ' (앱 내 브라우저)' : ''), updated_at: new Date().toISOString() };
+        if (extra) Object.assign(row, extra);
         try {
             const { error } = await withTimeout(S.sb.from(CONFIG.LOCATION.TABLE).upsert(row, { onConflict: 'driver_name' }), CONFIG.FETCH_TIMEOUT_MS);
             if (error && isMissingTable(error)) { LOC.off = true; locStop(); locRender(); }
@@ -3121,7 +3122,7 @@
             const now = Date.now();
             if (!LOC.gotFix) { LOC.gotFix = true; locRender(); }
             if (LOC.lastPos && now - LOC.lastSent < CONFIG.LOCATION.MIN_INTERVAL_MS) return;
-            if (LOC.lastPos && distM(LOC.lastPos, pos) < CONFIG.LOCATION.MIN_MOVE_M && now - LOC.lastSent < 120000) return;   // 정차 중에는 2분마다
+            if (LOC.lastPos && distM(LOC.lastPos, pos) < CONFIG.LOCATION.MIN_MOVE_M && now - LOC.lastSent < 60000) return;   // 정차 중에는 1분마다 (온라인 표시용)
             LOC.lastPos = pos; LOC.lastSent = now;
             locSend(pos);
         }, err => {
@@ -3151,17 +3152,30 @@
     }
     async function locInit() {
         if (!S.session || S.session.admin || S.session.demo || !('geolocation' in navigator)) { locRender(); return; }
-        const c = locConsent();
+        let c = locConsent();
+        if (!c && canWrite()) {
+            try {
+                const { data } = await withTimeout(S.sb.from(CONFIG.LOCATION.TABLE).select('consent_at,status,updated_at').eq('driver_name', S.session.name).maybeSingle(), CONFIG.FETCH_TIMEOUT_MS);
+                if (data && data.consent_at && !String(data.status || '').startsWith('declined')) { locSetConsent('yes'); try { const o = locConsent(); o.at = data.consent_at; localStorage.setItem(locKey(), JSON.stringify(o)); } catch (e) {} }
+                else if (data && String(data.status || '').startsWith('declined') && data.updated_at && ymd(new Date(data.updated_at)) === ymd(new Date())) locSetConsent('no');   // 오늘 이미 거절/끔
+                c = locConsent();
+            } catch (e) { /* 서버 확인 실패 → 아래에서 묻기 */ }
+        }
+        if (!S.session) return;
         if (c && c.v === 'yes') { locStart(); locRender(); }
         else if (c && c.v === 'no' && c.cycle === resetKey()) { locReport('declined'); locRender(); }     // 오늘 이미 거절 → 다시 묻지 않음
         else { await sleep(900); if (S.session && !S.alertOpen && !agreeLayer.classList.contains('is-open')) locAsk(); else locRender(); }
     }
     $('#drv-loc-btn').addEventListener('click', () => {
-        if (LOC.watch != null) { locStop(); locSetConsent('no'); locSend(null, true); locRender(); toast('위치 공유를 껐습니다'); }
+        if (LOC.watch != null) { locStop(); locSetConsent('no'); locReport('declined', { consent_at: null }); locRender(); toast('위치 공유를 껐습니다'); }
         else if ((locConsent() || {}).v === 'yes') { LOC.status = ''; locStart(); }
         else locAsk();
     });
     document.addEventListener('drv:login', async () => { LOC.off = false; LOC.status = ''; await ntShowForDriver(); locInit(); });   // 공지 → (닫은 뒤) 위치 동의
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible' || !S.session || S.session.admin || S.session.demo) return;
+        if ((locConsent() || {}).v === 'yes' && !LOC.off) { locStop(); LOC.status = ''; locStart(); }
+    });
     document.addEventListener('drv:logout', () => { ntClose(); locStop(); $('#drv-loc').classList.remove('is-show'); });
     document.addEventListener('drv:unload', () => { if (!S.route.some(r => !isDone(r))) { locStop(); locRender('📍 배송 완료 · 위치 공유가 종료되었습니다'); } });
 
