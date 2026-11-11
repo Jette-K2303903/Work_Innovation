@@ -739,49 +739,45 @@
       <div id="paneUploadStore" class="hidden flex-1 min-h-0 flex flex-col bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
         <div class="flex items-center space-x-2.5 pb-3 mb-3 border-b border-gray-100 min-w-0">
           <div class="w-8 h-8 rounded-xl bg-amber-50 text-[#FF9500] flex items-center justify-center flex-shrink-0"><i class="ph-bold ph-storefront text-lg"></i></div>
-          <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">매장정보 업로드</h3><p class="text-[11px] text-gray-500 whitespace-nowrap overflow-hidden text-ellipsis">임시 화면 · 추후 디자인 예정</p></div>
-          <span class="ml-auto flex-shrink-0 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-full">준비 중</span>
+          <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">매장정보 업로드</h3><p id="muStoreMeta" class="text-[11px] text-gray-500 whitespace-nowrap overflow-hidden text-ellipsis">불러오는 중…</p></div>
         </div>
-        <div class="mb-3 p-3 bg-amber-50 border border-amber-200/70 rounded-2xl flex items-start space-x-2.5">
-          <i class="ph-fill ph-info text-amber-500 text-lg flex-shrink-0 mt-0.5"></i>
-          <div class="text-[12.5px] text-gray-800 font-medium leading-relaxed min-w-0">
-            <span class="font-bold block">임시로 만든 화면입니다</span>
-            <span class="block text-[11.5px] text-gray-600 mt-0.5">붙여넣기와 업로드 버튼은 동작 확인용이며, 내용은 <b>저장되지 않습니다.</b></span>
-          </div>
+        <div class="mb-3 p-3 bg-gray-50 border border-gray-200/80 rounded-2xl text-[12px] text-gray-700 leading-relaxed">
+          <div class="flex flex-wrap gap-1.5 mb-1.5"><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">A</b> 고객사코드</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">B</b> 고객사명</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">C</b> 거래처코드</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">D</b> 거래처명</span></div>
+          <span class="block text-[11.5px] text-gray-500">고객사코드 + 거래처코드가 같으면 덮어쓰고, 다르면 새로 쌓입니다. 첫 줄이 제목이면 자동으로 건너뜁니다. 행이 많으면 엑셀/CSV 파일을 바로 선택하는 것이 빠릅니다.</span>
         </div>
-        <div class="flex-1 flex flex-col min-h-[240px] mb-3">
-          <div class="flex justify-between items-center text-[12px] text-gray-500 mb-1 px-1"><span>복사한 엑셀/TSV 데이터를 붙여넣으세요</span><span id="uploadStoreStats" class="font-mono text-gray-400 whitespace-nowrap">0행 (0자)</span></div>
+        <div class="flex-1 flex flex-col min-h-[220px] mb-3">
+          <div class="flex justify-between items-center text-[12px] text-gray-500 mb-1 px-1 gap-2"><span>엑셀에서 복사해 붙여넣거나 파일을 선택하세요</span><span id="uploadStoreStats" class="font-mono text-gray-400 whitespace-nowrap">0행 (0자)</span></div>
           <div class="flex-1 relative bg-gray-50/90 rounded-2xl border border-gray-200 focus-within:bg-white transition-all overflow-hidden p-3 shadow-inner">
-            <textarea id="uploadStoreTextarea" rows="10" oninput="uploadTempStats('Store')" placeholder="엑셀 데이터를 복사해 여기에 붙여넣으세요..." class="w-full h-full min-h-[200px] text-[13px] font-mono leading-relaxed bg-transparent outline-none resize-none"></textarea>
+            <textarea id="uploadStoreTextarea" rows="10" oninput="uploadTempStats('Store')" placeholder="엑셀 데이터를 복사해 여기에 붙여넣으세요..." class="w-full h-full min-h-[180px] text-[13px] font-mono leading-relaxed bg-transparent outline-none resize-none"></textarea>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-2.5 pt-3 border-t border-gray-100">
-          <button type="button" onclick="clearUploadText('uploadStoreTextarea','uploadStoreStats')" class="ios-btn-tap py-3 bg-gray-100 active:bg-gray-200 text-gray-700 font-semibold rounded-xl text-[14px]">지우기</button>
-          <button type="button" onclick="uploadTempNotice('매장정보 업로드')" class="ios-btn-tap py-3 bg-gray-300 text-white font-semibold rounded-xl text-[14px] flex items-center justify-center space-x-1.5"><i class="ph-bold ph-cloud-arrow-up text-base"></i><span>업로드 (준비 중)</span></button>
+        <input type="file" id="muStoreFile" accept=".xlsx,.xls,.csv,.txt" class="hidden" onchange="muPickFile('Store', this)">
+        <div class="grid grid-cols-3 gap-2.5 pt-3 border-t border-gray-100">
+          <button type="button" onclick="clearUploadText('uploadStoreTextarea','uploadStoreStats'); muFile['Store'] = null" class="ios-btn-tap py-3 bg-gray-100 active:bg-gray-200 text-gray-700 font-semibold rounded-xl text-[14px]">지우기</button>
+          <button type="button" onclick="document.getElementById('muStoreFile').click()" class="ios-btn-tap py-3 bg-white border border-gray-200 text-gray-800 font-semibold rounded-xl text-[14px] flex items-center justify-center gap-1.5"><i class="ph-bold ph-file-xls text-base"></i>파일 선택</button>
+          <button type="button" onclick="muUpload('Store')" class="ios-btn-tap py-3 bg-[#007AFF] active:bg-[#0062CC] text-white font-semibold rounded-xl text-[14px] shadow-md shadow-blue-500/25 flex items-center justify-center gap-1.5"><i class="ph-bold ph-cloud-arrow-up text-base"></i>업로드</button>
         </div>
       </div>
       <div id="paneUploadProduct" class="hidden flex-1 min-h-0 flex flex-col bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
         <div class="flex items-center space-x-2.5 pb-3 mb-3 border-b border-gray-100 min-w-0">
           <div class="w-8 h-8 rounded-xl bg-purple-50 text-[#AF52DE] flex items-center justify-center flex-shrink-0"><i class="ph-bold ph-package text-lg"></i></div>
-          <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">제품정보 업로드</h3><p class="text-[11px] text-gray-500 whitespace-nowrap overflow-hidden text-ellipsis">임시 화면 · 추후 디자인 예정</p></div>
-          <span class="ml-auto flex-shrink-0 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-full">준비 중</span>
+          <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">제품정보 업로드</h3><p id="muProductMeta" class="text-[11px] text-gray-500 whitespace-nowrap overflow-hidden text-ellipsis">불러오는 중…</p></div>
         </div>
-        <div class="mb-3 p-3 bg-amber-50 border border-amber-200/70 rounded-2xl flex items-start space-x-2.5">
-          <i class="ph-fill ph-info text-amber-500 text-lg flex-shrink-0 mt-0.5"></i>
-          <div class="text-[12.5px] text-gray-800 font-medium leading-relaxed min-w-0">
-            <span class="font-bold block">임시로 만든 화면입니다</span>
-            <span class="block text-[11.5px] text-gray-600 mt-0.5">붙여넣기와 업로드 버튼은 동작 확인용이며, 내용은 <b>저장되지 않습니다.</b></span>
-          </div>
+        <div class="mb-3 p-3 bg-gray-50 border border-gray-200/80 rounded-2xl text-[12px] text-gray-700 leading-relaxed">
+          <div class="flex flex-wrap gap-1.5 mb-1.5"><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">A</b> 제품코드</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">B</b> 제품명</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">C</b> 품목지정</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">D</b> 고객사</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">E</b> 온도구분</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">F</b> 재고타입</span></div>
+          <span class="block text-[11.5px] text-gray-500">제품코드 + 고객사가 같으면 덮어쓰고, 다르면 새 제품으로 쌓입니다. 첫 줄이 제목이면 자동으로 건너뜁니다. 행이 많으면 엑셀/CSV 파일을 바로 선택하는 것이 빠릅니다.</span>
         </div>
-        <div class="flex-1 flex flex-col min-h-[240px] mb-3">
-          <div class="flex justify-between items-center text-[12px] text-gray-500 mb-1 px-1"><span>복사한 엑셀/TSV 데이터를 붙여넣으세요</span><span id="uploadProductStats" class="font-mono text-gray-400 whitespace-nowrap">0행 (0자)</span></div>
+        <div class="flex-1 flex flex-col min-h-[220px] mb-3">
+          <div class="flex justify-between items-center text-[12px] text-gray-500 mb-1 px-1 gap-2"><span>엑셀에서 복사해 붙여넣거나 파일을 선택하세요</span><span id="uploadProductStats" class="font-mono text-gray-400 whitespace-nowrap">0행 (0자)</span></div>
           <div class="flex-1 relative bg-gray-50/90 rounded-2xl border border-gray-200 focus-within:bg-white transition-all overflow-hidden p-3 shadow-inner">
-            <textarea id="uploadProductTextarea" rows="10" oninput="uploadTempStats('Product')" placeholder="엑셀 데이터를 복사해 여기에 붙여넣으세요..." class="w-full h-full min-h-[200px] text-[13px] font-mono leading-relaxed bg-transparent outline-none resize-none"></textarea>
+            <textarea id="uploadProductTextarea" rows="10" oninput="uploadTempStats('Product')" placeholder="엑셀 데이터를 복사해 여기에 붙여넣으세요..." class="w-full h-full min-h-[180px] text-[13px] font-mono leading-relaxed bg-transparent outline-none resize-none"></textarea>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-2.5 pt-3 border-t border-gray-100">
-          <button type="button" onclick="clearUploadText('uploadProductTextarea','uploadProductStats')" class="ios-btn-tap py-3 bg-gray-100 active:bg-gray-200 text-gray-700 font-semibold rounded-xl text-[14px]">지우기</button>
-          <button type="button" onclick="uploadTempNotice('제품정보 업로드')" class="ios-btn-tap py-3 bg-gray-300 text-white font-semibold rounded-xl text-[14px] flex items-center justify-center space-x-1.5"><i class="ph-bold ph-cloud-arrow-up text-base"></i><span>업로드 (준비 중)</span></button>
+        <input type="file" id="muProductFile" accept=".xlsx,.xls,.csv,.txt" class="hidden" onchange="muPickFile('Product', this)">
+        <div class="grid grid-cols-3 gap-2.5 pt-3 border-t border-gray-100">
+          <button type="button" onclick="clearUploadText('uploadProductTextarea','uploadProductStats'); muFile['Product'] = null" class="ios-btn-tap py-3 bg-gray-100 active:bg-gray-200 text-gray-700 font-semibold rounded-xl text-[14px]">지우기</button>
+          <button type="button" onclick="document.getElementById('muProductFile').click()" class="ios-btn-tap py-3 bg-white border border-gray-200 text-gray-800 font-semibold rounded-xl text-[14px] flex items-center justify-center gap-1.5"><i class="ph-bold ph-file-xls text-base"></i>파일 선택</button>
+          <button type="button" onclick="muUpload('Product')" class="ios-btn-tap py-3 bg-[#007AFF] active:bg-[#0062CC] text-white font-semibold rounded-xl text-[14px] shadow-md shadow-blue-500/25 flex items-center justify-center gap-1.5"><i class="ph-bold ph-cloud-arrow-up text-base"></i>업로드</button>
         </div>
       </div>
       <div id="paneUploadOrder" class="hidden flex-1 min-h-0 flex flex-col bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
@@ -1045,8 +1041,9 @@
               <div>
                 <div class="flex items-center justify-between px-1 mb-1"><span class="text-[12px] font-semibold text-gray-600">문자 본문 내용</span><span id="svTplBodyCount" class="text-[11px] font-mono text-gray-400">0자</span></div>
                 <div class="bg-gray-100 rounded-xl p-3 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-200 transition-all">
-                  <textarea id="svTplBody" rows="6" oninput="svUpdateTplCount()" placeholder="예: #{매장명} 점장님, #{기사명} 기사님이 #{도착예상시간}경 도착 예정입니다." class="w-full text-[14px] leading-relaxed resize-none bg-transparent"></textarea>
+                  <textarea id="svTplBody" rows="6" oninput="svUpdateTplCount()" placeholder="예: #[매장명] 점장님, #[기사명] 기사님(#[차량정보], #[기사연락처])이 #[예상시간]경 도착 예정입니다." class="w-full text-[14px] leading-relaxed resize-none bg-transparent"></textarea>
                 </div>
+                <div class="flex flex-wrap items-center gap-1.5 pt-1"><span class="text-[11px] font-bold text-gray-400">넣기</span><button type="button" onclick="svInsertTplVar('매장명')" class="px-2 py-1 rounded-lg bg-white border border-gray-200 text-[11.5px] font-bold text-[#FF2D55] active:scale-95">#[매장명]</button><button type="button" onclick="svInsertTplVar('기사명')" class="px-2 py-1 rounded-lg bg-white border border-gray-200 text-[11.5px] font-bold text-[#FF2D55] active:scale-95">#[기사명]</button><button type="button" onclick="svInsertTplVar('차량정보')" class="px-2 py-1 rounded-lg bg-white border border-gray-200 text-[11.5px] font-bold text-[#FF2D55] active:scale-95">#[차량정보]</button><button type="button" onclick="svInsertTplVar('기사연락처')" class="px-2 py-1 rounded-lg bg-white border border-gray-200 text-[11.5px] font-bold text-[#FF2D55] active:scale-95">#[기사연락처]</button><button type="button" onclick="svInsertTplVar('예상시간')" class="px-2 py-1 rounded-lg bg-white border border-gray-200 text-[11.5px] font-bold text-[#FF2D55] active:scale-95">#[예상시간]</button><span class="text-[10.5px] text-gray-400">문자를 만들 때 실제 정보로 바뀝니다</span></div>
               </div>
               <div class="flex gap-2">
                 <button type="button" id="svTplCancelBtn" onclick="svResetTplForm()" class="hidden flex-1 ios-btn-tap py-2.5 bg-gray-100 active:bg-gray-200 text-gray-700 font-semibold rounded-xl text-[14px] items-center justify-center"><span>취소</span></button>
@@ -2022,7 +2019,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.012</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.013</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -7968,7 +7965,7 @@
           dispatchDate: r.delivery_date, centerCode: r.center_code, centerName: r.center_name, regionType: r.region_type,
           coordX: r.coord_x, coordY: r.coord_y, hasKey: r.has_key,
           mainDriver: r.main_driver, mainDriverPhone: r.main_driver_phone, mainCenter: r.main_center,
-          vehicleType: r.vehicle_type, uploadedTemplate: r.sms_template, loadMinutes: r.load_minutes
+          vehicleType: r.vehicle_type, uploadedTemplate: r.sms_template, loadMinutes: r.load_minutes, etaTs: r.eta_ts || null
         };
         row.saved = svSnapshot(row);
         return row;
@@ -10155,12 +10152,17 @@
         };
         const d = date ? await pickD(true) : await pickD(false);      // 배송일이 있으면 그 배송일 자료만
         const o = date ? await pickO(true) : await pickO(false);
+        let m = null;                                                    // 배차에 없으면 매장정보 업로드(store_master)로 보충
+        if (!(d && d.business_name) || !(o && o.client_code)) {
+          const r = await supabaseClient.from('store_master').select('client_code,client_name,store_name').eq('store_code', code).order('updated_at', { ascending: false }).limit(1);
+          m = !r.error && r.data && r.data[0];
+        }
         res = {
-          found: !!(d && d.business_name),
-          store_name: (d && d.business_name) || IS_NODATA,
-          main_center: (d && (d.main_center || d.center_name)) || (o && o.center_name) || '',
-          client_code: (o && o.client_code) || '',
-          client_name: (o && o.client_name) || ''
+          found: !!((d && d.business_name) || (m && m.store_name)),
+          store_name: (d && d.business_name) || (m && m.store_name) || IS_NODATA,
+          client_code: (o && o.client_code) || (m && m.client_code) || '',
+          client_name: (o && o.client_name) || (m && m.client_name) || '',
+          main_center: (d && (d.main_center || d.center_name)) || (o && o.center_name) || ''
         };
       } catch (e) { return null; }
       isState.cache.store.set(key, res);
@@ -10182,7 +10184,13 @@
         };
         const d = date ? ((store && await pick(true, true)) || await pick(false, true))          // 배송일이 있으면 그 배송일 자료만
                        : ((store && await pick(true, false)) || await pick(false, false));
+        let m = null;                                                    // 주문에 없으면 제품정보 업로드(product_master)로 보충
+        if (!d) {
+          const r = await supabaseClient.from('product_master').select('product_name,temperature,stock_type').eq('product_code', code).order('updated_at', { ascending: false }).limit(1);
+          m = !r.error && r.data && r.data[0];
+        }
         res = d ? { found: true, product_name: d.product_name || IS_NODATA, temperature: d.temperature || '', unit: d.unit || '', stock_type: d.stock_type || '' }
+            : m ? { found: true, product_name: m.product_name || IS_NODATA, temperature: m.temperature || '', unit: '', stock_type: m.stock_type || '' }
                 : { found: false, product_name: IS_NODATA, temperature: '', unit: '', stock_type: '' };
       } catch (e) { return null; }
       isState.cache.product.set(key, res);
@@ -10222,7 +10230,11 @@
         let q = supabaseClient.from('dispatch_data').select('business_code,business_name,main_center,center_name').ilike('business_name', like);
         if (row.delivery_date) q = q.eq('delivery_date', row.delivery_date);
         const { data } = await q.order('delivery_date', { ascending: false }).limit(300);
-        const items = (data || []).filter(r => r.business_name).map(r => ({ code: r.business_code || '', name: r.business_name, sub: r.main_center || r.center_name || '' }));
+        let items = (data || []).filter(r => r.business_name).map(r => ({ code: r.business_code || '', name: r.business_name, sub: r.main_center || r.center_name || '' }));
+        if (!items.length) {                                 // 배차에 없으면 매장정보에서 추천
+          const m = await supabaseClient.from('store_master').select('store_code,store_name,client_name').ilike('store_name', like).limit(200);
+          items = (!m.error && m.data || []).filter(r => r.store_name).map(r => ({ code: r.store_code || '', name: r.store_name, sub: r.client_name ? r.client_name + ' (매장정보)' : '매장정보' }));
+        }
         return homeDedupe(items, i => i.code + '|' + i.name, kw, 30);
       }
       const get = async (useStore) => {
@@ -10234,6 +10246,10 @@
       };
       let items = row.store_code ? await get(true) : [];         // 거래처가 정해져 있으면 그 거래처 주문 제품 먼저
       if (!items.length) items = await get(false);
+      if (!items.length) {                                   // 주문에 없으면 제품정보에서 추천
+        const m = await supabaseClient.from('product_master').select('product_code,product_name,temperature,client').ilike('product_name', like).limit(200);
+        items = (!m.error && m.data || []).filter(r => r.product_name).map(r => ({ code: r.product_code || '', name: r.product_name, sub: [r.temperature, r.client].filter(Boolean).join(' · ') + ' (제품정보)' }));
+      }
       return homeDedupe(items, i => i.code + '|' + i.name, kw, 30);
     }
     function isSugRender() {
@@ -11345,7 +11361,10 @@
     // ---------- 발송 대기 목록 ----------
     // 기준: 홈화면에서 '출발'이 등록(저장)된 배차만 대상. 수신 번호 = 저장된 매장 연락처.
     // TODO: 도착예상시간 데이터가 생기면 svEta()를 교체하세요. (현재는 출발 시간을 사용)
-    function svEta(r) { return (r.saved && r.saved.departTime) || ''; }
+    function svEta(r) {
+      if (r.etaTs) { const d = new Date(r.etaTs); if (!isNaN(d)) return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; }
+      return (r.saved && r.saved.departTime) || '';
+    }
     function svStorePhone(r) { return (r.saved && r.saved.storePhone) || ''; }
     function svNowHHMM() {
       const d = new Date();
@@ -11407,13 +11426,20 @@
     }
 
     // ---------- 다운로드 ----------
-    // 템플릿 변수 치환: #{매장명} #{기사명} #{도착예상시간} #{센터명}  (양식 구성은 추후 수정 예정)
+    // 템플릿 변수 치환 : #[매장명] #[기사명] #[차량정보] #[기사연락처] #[예상시간] (+ #[센터명])
+    //  예전 표기 #{매장명} #{기사명} #{도착예상시간} #{센터명} 도 그대로 사용 가능
+    const SV_TPL_VARS = [['매장명', r => r.storeName], ['기사명', r => r.driver], ['차량정보', r => r.vehicleNo], ['기사연락처', r => (r.saved && r.saved.driverPhone) || r.driverPhone], ['예상시간', r => svEta(r)], ['센터명', r => r.center], ['도착예상시간', r => svEta(r)]];
     function svFillTemplate(text, r) {
-      return String(text || '')
-        .replace(/#\{매장명\}/g, r.storeName || '')
-        .replace(/#\{기사명\}/g, r.driver || '')
-        .replace(/#\{도착예상시간\}/g, svEta(r))
-        .replace(/#\{센터명\}/g, r.center || '');
+      let out = String(text || '');
+      SV_TPL_VARS.forEach(([k, fn]) => { const v = String(fn(r) || ''); out = out.split('#[' + k + ']').join(v).split('#{' + k + '}').join(v); });
+      return out;
+    }
+    function svInsertTplVar(name) {
+      const ta = document.getElementById('svTplBody'); if (!ta) return;
+      const tag = '#[' + name + ']', a = ta.selectionStart ?? ta.value.length, b = ta.selectionEnd ?? a;
+      ta.value = ta.value.slice(0, a) + tag + ta.value.slice(b);
+      ta.focus(); ta.setSelectionRange(a + tag.length, a + tag.length);
+      svUpdateTplCount();
     }
     function svDownloadArrivalSms() {
       if (typeof XLSX === 'undefined') {
@@ -11625,15 +11651,95 @@
         document.getElementById('tabUpload' + id).classList.toggle('active', tab === k);
         document.getElementById('paneUpload' + id).classList.toggle('hidden', tab !== k);
       });
+      if (tab === 'store') muRefreshMeta('Store');
+      if (tab === 'product') muRefreshMeta('Product');
     }
     // 매장정보 / 제품정보 업로드 : 임시 화면 (저장하지 않음 · 추후 디자인 예정)
     function uploadTempStats(key) {
+      muFile[key] = null;
       const t = document.getElementById('upload' + key + 'Textarea').value;
       const n = t.trim() ? t.trim().split(/\r?\n/).length : 0;
       document.getElementById('upload' + key + 'Stats').textContent = `${n.toLocaleString()}행 (${t.length.toLocaleString()}자)`;
     }
-    function uploadTempNotice(title) {
-      showToastNotification(title, '임시 화면입니다. 업로드 내용은 저장되지 않습니다. (추후 디자인 예정)', 'warning');
+    // ===== 매장정보 / 제품정보 업로드 (Supabase store_master · product_master · 누적 + 같은 키는 덮어쓰기) =====
+    const MU_SPECS = {
+      Store: { label: '매장정보', table: 'store_master', conflict: 'client_code,store_code', first: '고객사코드',
+        cols: ['client_code', 'client_name', 'store_code', 'store_name'], req: ['store_code'], key: r => r.client_code + '|' + r.store_code },
+      Product: { label: '제품정보', table: 'product_master', conflict: 'product_code,client', first: '제품코드',
+        cols: ['product_code', 'product_name', 'item_designation', 'client', 'temperature', 'stock_type'], req: ['product_code'], key: r => r.product_code + '|' + r.client }
+    };
+    const muFile = { Store: null, Product: null };      // 파일로 읽은 행 (붙여넣기 대신)
+    async function muRefreshMeta(key) {
+      const el = document.getElementById('mu' + key + 'Meta'); if (!el || !supabaseClient) return;
+      const { count, error } = await supabaseClient.from(MU_SPECS[key].table).select('id', { count: 'exact', head: true });
+      el.textContent = error ? "서버에 표가 없습니다 · '제품_매장정보_DB.sql' 실행 필요" : `현재 등록 ${Number(count || 0).toLocaleString()}건 · 누적 관리`;
+    }
+    function muPickFile(key, input) {
+      const f = input.files && input.files[0]; input.value = '';
+      if (!f) return;
+      if (typeof XLSX === 'undefined') { showToastNotification('파일 오류', '엑셀 기능을 불러오지 못했습니다.', 'warning'); return; }
+      showBusy('파일 읽는 중...');
+      const rd = new FileReader();
+      rd.onload = () => {
+        try {
+          const wb = /\.(csv|txt)$/i.test(f.name) ? XLSX.read(new TextDecoder('utf-8').decode(new Uint8Array(rd.result)), { type: 'string', raw: true }) : XLSX.read(rd.result, { type: 'array' });
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
+          muFile[key] = rows;
+          document.getElementById('upload' + key + 'Textarea').value = `[파일] ${f.name}\n${rows.length.toLocaleString()}행을 읽었습니다. '업로드'를 누르세요.\n\n` + rows.slice(0, 8).map(r => r.join('\t')).join('\n') + (rows.length > 8 ? '\n…' : '');
+          document.getElementById('upload' + key + 'Stats').textContent = `${rows.length.toLocaleString()}행 (파일)`;
+        } catch (e) { showToastNotification('파일 오류', '파일을 읽지 못했습니다: ' + (e.message || e), 'warning'); }
+        hideBusy();
+      };
+      rd.onerror = () => { hideBusy(); showToastNotification('파일 오류', '파일을 읽지 못했습니다.', 'warning'); };
+      rd.readAsArrayBuffer(f);
+    }
+    async function muUpload(key) {
+      const spec = MU_SPECS[key];
+      if (!supabaseClient) { showToastNotification('연결 필요', 'Supabase에 연결되어 있지 않습니다.', 'warning'); return; }
+      let grid = muFile[key];
+      if (!grid) {
+        const text = document.getElementById('upload' + key + 'Textarea').value;
+        grid = text.replace(/\r/g, '').split('\n').filter(l => l.trim()).map(l => l.split('\t'));
+      }
+      if (!grid.length) { showModal('입력 확인', `${spec.label} 데이터를 붙여넣거나 파일을 선택해 주세요.`); return; }
+      if (String(grid[0][0] || '').trim() === spec.first) grid = grid.slice(1);           // 제목 행 건너뜀
+      const byKey = new Map(), errors = [];
+      grid.forEach((cells, i) => {
+        if (!cells.some(c => String(c ?? '').trim())) return;
+        const r = {};
+        spec.cols.forEach((k, j) => { r[k] = String(cells[j] ?? '').trim(); });
+        const miss = spec.req.filter(k => !r[k]);
+        if (miss.length) { errors.push(i + 1); return; }
+        byKey.set(spec.key(r), r);                       // 같은 파일 안에서 키가 겹치면 아래쪽 행 사용
+      });
+      const rows = [...byKey.values()];
+      if (!rows.length) { showModal('입력 확인', `업로드할 행이 없습니다.${errors.length ? ` (${spec.label === '제품정보' ? '제품코드' : '거래처코드'}가 빈 행 ${errors.length}개)` : ''}`); return; }
+      const before = await supabaseClient.from(spec.table).select('id', { count: 'exact', head: true });
+      if (before.error) { showModal('업로드 실패', { html: `서버에 ${spec.label} 표가 없습니다. Supabase SQL Editor에서 <b>제품_매장정보_DB.sql</b> 을 먼저 실행해 주세요.<div style="margin-top:6px;font-size:12px;color:#D70015">${svEsc(dbErrorMessage(before.error))}</div>` }); return; }
+      const CH = 1000, now = new Date().toISOString();
+      let done = 0;
+      showBusy(`${spec.label} 업로드 중... 0 / ${rows.length.toLocaleString()}`);
+      try {
+        for (let i = 0; i < rows.length; i += CH) {
+          const slice = rows.slice(i, i + CH).map(r => ({ ...r, updated_at: now }));
+          const { error } = await supabaseClient.from(spec.table).upsert(slice, { onConflict: spec.conflict });
+          if (error) throw error;
+          done += slice.length;
+          document.getElementById('busyOverlayText').textContent = `${spec.label} 업로드 중... ${done.toLocaleString()} / ${rows.length.toLocaleString()}`;
+        }
+      } catch (e) {
+        hideBusy();
+        showModal('업로드 실패', { html: `${done.toLocaleString()}행까지 저장된 뒤 오류가 발생했습니다. 다시 업로드하면 같은 키는 덮어쓰므로 중복되지 않습니다.<div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#FFE9E7;color:#D70015;font-size:12px;text-align:left;word-break:break-all">${svEsc(dbErrorMessage(e))}</div>` });
+        muRefreshMeta(key);
+        return;
+      }
+      hideBusy();
+      const after = await supabaseClient.from(spec.table).select('id', { count: 'exact', head: true });
+      const added = Math.max(0, (after.count || 0) - (before.count || 0));
+      clearUploadText('upload' + key + 'Textarea', 'upload' + key + 'Stats'); muFile[key] = null;
+      muRefreshMeta(key);
+      try { isState.cache.store.clear(); isState.cache.product.clear(); } catch (e) {}
+      showModal('저장 완료', { html: `${svEsc(spec.label)} <b>${rows.length.toLocaleString()}건</b>을 반영했습니다.<div style="margin-top:8px;font-size:12.5px;text-align:left;line-height:1.7">· 신규 등록 <b>${added.toLocaleString()}건</b><br>· 기존 정보 덮어쓰기 <b>${(rows.length - added).toLocaleString()}건</b>${errors.length ? `<br>· 코드가 비어 제외 <b>${errors.length}건</b>` : ''}${grid.length - errors.length > rows.length ? `<br>· 같은 파일 안 중복 정리 <b>${(grid.length - errors.length - rows.length).toLocaleString()}건</b>` : ''}</div>` });
     }
     function clearUploadText(taId, statId) {
       document.getElementById(taId).value = '';
