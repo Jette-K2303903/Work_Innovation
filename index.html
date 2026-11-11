@@ -926,13 +926,16 @@
           </div>
         </section>
 
-        <!-- 2. 배차 내역 헤더 -->
-        <section class="bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+        <!-- 2. 배차 및 주문 내역 확인 (누르면 팝업) -->
+        <section onclick="svOpenHist()" class="cursor-pointer active:scale-[0.995] transition-transform bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
           <div class="flex items-center space-x-2.5 min-w-0">
             <div class="w-8 h-8 rounded-xl bg-emerald-50 text-[#34C759] flex items-center justify-center flex-shrink-0"><i class="ph-bold ph-truck text-lg"></i></div>
-            <h3 id="svDispatchTitle" class="text-[15px] font-bold text-gray-900 truncate">배차 내역</h3>
+            <div class="min-w-0">
+              <h3 class="text-[15px] font-bold text-gray-900 truncate flex items-center gap-1">배차 및 주문 내역 확인<i class="ph-bold ph-caret-right text-gray-300 text-sm"></i></h3>
+              <p id="svDispatchTitle" class="text-[11.5px] text-gray-500 truncate">불러오는 중…</p>
+            </div>
           </div>
-          <div class="grid grid-cols-2 sm:flex gap-2 flex-shrink-0">
+          <div class="grid grid-cols-2 sm:flex gap-2 flex-shrink-0" onclick="event.stopPropagation()">
             <button type="button" onclick="svDeleteCenterRows()" class="ios-btn-tap px-3 py-2 bg-[#FF3B30]/10 active:bg-red-200 text-[#FF3B30] font-semibold rounded-xl text-xs flex items-center justify-center space-x-1">
               <i class="ph-bold ph-trash text-sm"></i><span>선택 센터 일괄삭제</span>
             </button>
@@ -2294,7 +2297,7 @@
                   <input type="number" id="retentionUploadInput" min="1" max="365" value="14" oninput="retRefreshSummary()" class="w-24 px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-bold text-center text-[#007AFF]">
                   <span class="text-sm font-semibold text-gray-700">일 후 자동 삭제</span>
                 </div>
-                <p class="text-[11px] text-gray-400 mt-1.5 leading-relaxed">제품 특이사항 접수 내역과 첨부 사진이 삭제됩니다. (기본 14일)</p></div>
+                <p class="text-[11px] text-gray-400 mt-1.5 leading-relaxed">제품 특이사항 접수 내역과 첨부 사진, 그리고 배송일이 이 기간보다 지난 배차·주문 업로드 자료가 삭제됩니다. 기간 안의 자료는 지워지지 않으며, 가장 최근 배송일 자료는 항상 남습니다. (기본 14일)</p></div>
                 </div>
               </div>
               <div class="ret-card bg-white rounded-2xl border border-gray-200/80 overflow-hidden" data-ret="dashboard">
@@ -2376,6 +2379,33 @@
             <span>설정 저장</span>
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- [구간차량 관리 : 배차 및 주문 내역 확인 팝업] -->
+    <div id="svHistModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/45 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
+      <div class="bg-white rounded-[26px] w-full max-w-6xl h-[88vh] p-4 sm:p-5 shadow-2xl border border-gray-100 flex flex-col">
+        <div class="flex items-center gap-2.5 pb-3 border-b border-gray-100 flex-none">
+          <div class="w-8 h-8 rounded-xl bg-emerald-50 text-[#34C759] flex items-center justify-center"><i class="ph-bold ph-list-magnifying-glass text-lg"></i></div>
+          <div class="min-w-0 flex-1"><h3 class="text-[17px] font-bold text-gray-900 tracking-tight">배차 및 주문 내역 확인</h3><p id="svHistMeta" class="text-[11.5px] text-gray-500 truncate"></p></div>
+          <button type="button" onclick="svCloseHist()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500"><i class="ph-bold ph-x text-base"></i></button>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 py-3 flex-none">
+          <div class="flex bg-gray-200/80 p-1 rounded-xl">
+            <button type="button" id="svHistTab_dispatch" onclick="svHistSwitch('dispatch')" class="segment-tab px-4 py-1.5 text-[12.5px] font-bold text-gray-600 rounded-lg flex items-center gap-1"><i class="ph-bold ph-truck"></i>배차</button>
+            <button type="button" id="svHistTab_order" onclick="svHistSwitch('order')" class="segment-tab px-4 py-1.5 text-[12.5px] font-bold text-gray-600 rounded-lg flex items-center gap-1"><i class="ph-bold ph-receipt"></i>주문</button>
+          </div>
+          <select id="svHistDate" onchange="svHistLoadRows()" class="px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px] font-bold text-gray-900 outline-none"></select>
+          <input type="search" id="svHistSearch" oninput="svHistRender()" placeholder="센터 · 거래처 · 제품 · 기사 검색" class="flex-1 min-w-[160px] px-3 py-2 rounded-xl bg-gray-100 border border-gray-200 text-[13px] font-semibold outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
+          <button type="button" onclick="svHistDownload()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-microsoft-excel-logo"></i>엑셀</button>
+        </div>
+        <div id="svHistWrap" class="flex-1 min-h-0 overflow-auto rounded-xl border border-gray-200">
+          <table class="min-w-full text-[12px] border-separate border-spacing-0">
+            <thead id="svHistHead" class="sticky top-0 z-10"></thead>
+            <tbody id="svHistBody"></tbody>
+          </table>
+        </div>
+        <p class="pt-2 text-[11px] text-gray-400 flex-none">같은 배송일을 다시 업로드하면 교체되고, 다른 배송일은 쌓여서 보관됩니다. 데이터 관리 &gt; 유지기간의 '업로드 내역 유지기간'이 지난 배송일 자료는 자동으로 삭제됩니다.</p>
       </div>
     </div>
 
@@ -6534,6 +6564,26 @@
       try {
         await sweep(INCIDENT_TABLE, INCIDENT_BUCKET, retentionSettings.uploadHistoryDays);
         await sweep(COST_RECEIPT_TABLE, COST_RECEIPT_BUCKET, retentionSettings.receiptDays);
+        // 배차 · 주문 업로드 자료 : 배송일이 유지기간보다 오래된 것만 삭제 (가장 최근 배송일은 항상 남김)
+        for (const table of ['dispatch_data', 'order_data']) {
+          try {
+            const t = new Date(Date.now() - retentionSettings.uploadHistoryDays * day);
+            const cutoff = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+            const latest = await supabaseClient.from(table).select('delivery_date').order('delivery_date', { ascending: false }).limit(1);
+            const last = latest.data && latest.data[0] && latest.data[0].delivery_date;
+            if (!last) continue;
+            const until = last < cutoff ? last : cutoff;            // until 보다 이전 배송일만 삭제
+            const olds = await supabaseClient.from(table).select('batch_id').lt('delivery_date', until).limit(100000);
+            if (olds.error || !olds.data || !olds.data.length) continue;
+            const batches = [...new Set(olds.data.map(r => r.batch_id).filter(Boolean))];
+            const del = await supabaseClient.from(table).delete().lt('delivery_date', until);
+            if (del.error) continue;
+            for (const b of batches) {                                // 행이 모두 지워진 업로드 기록 정리
+              const { count } = await supabaseClient.from(table).select('id', { count: 'exact', head: true }).eq('batch_id', b);
+              if (!count) await supabaseClient.from('upload_batches').delete().eq('id', b);
+            }
+          } catch (e) { console.warn(table + ' 유지기간 정리 실패(무시):', e); }
+        }
         // 특이사항 관리 채팅 · 수정 기록 (서버 함수가 지정 일수보다 오래된 것만 삭제)
         await supabaseClient.rpc('purge_issue_sheet_history', { keep_days: retentionSettings.issueChatDays }).then(() => {}, () => {});
       } catch (e) { console.warn('유지기간 정리 실패(무시):', e); }
@@ -8088,6 +8138,98 @@
       return [...map.entries()].map(([name, count]) => ({ name, count }));
     }
 
+    // ==========================================
+    // [구간차량 관리 > 홈화면] 배차 및 주문 내역 확인 (날짜별 · 배차/주문)
+    // ==========================================
+    const svHist = { kind: 'dispatch', rows: [], dates: { dispatch: null, order: null }, shown: 300 };
+    function svOpenHist() {
+      const m = document.getElementById('svHistModal');
+      m.classList.remove('opacity-0', 'pointer-events-none'); m.classList.add('opacity-100');
+      svHist.dates = { dispatch: null, order: null };
+      svHistSwitch(svHist.kind || 'dispatch', true);
+    }
+    function svCloseHist() {
+      const m = document.getElementById('svHistModal');
+      m.classList.remove('opacity-100'); m.classList.add('opacity-0', 'pointer-events-none');
+    }
+    async function svHistSwitch(kind, force) {
+      if (svHist.kind === kind && !force) return;
+      svHist.kind = kind;
+      ['dispatch', 'order'].forEach(k => document.getElementById('svHistTab_' + k).classList.toggle('active', k === kind));
+      document.getElementById('svHistSearch').value = '';
+      const sel = document.getElementById('svHistDate');
+      sel.innerHTML = '<option>불러오는 중…</option>';
+      document.getElementById('svHistBody').innerHTML = '';
+      if (!svHist.dates[kind]) {
+        const set = new Set();
+        try {
+          for (let from = 0; from < 200000; from += 1000) {
+            const { data, error } = await supabaseClient.from(UPLOAD_SPECS[kind].table).select('delivery_date').order('delivery_date', { ascending: false }).range(from, from + 999);
+            if (error) throw error;
+            (data || []).forEach(r => r.delivery_date && set.add(r.delivery_date));
+            if (!data || data.length < 1000) break;
+          }
+        } catch (e) { showToastNotification('내역 불러오기 실패', dbErrorMessage(e), 'warning'); }
+        svHist.dates[kind] = [...set].sort().reverse();
+      }
+      if (svHist.kind !== kind) return;
+      const dates = svHist.dates[kind];
+      const wd = (d) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d); return m ? `${m[1].slice(2)}.${m[2]}.${m[3]}(${'일월화수목금토'[new Date(+m[1], +m[2] - 1, +m[3]).getDay()]})` : d; };
+      sel.innerHTML = dates.length ? dates.map(d => `<option value="${d}">${wd(d)}</option>`).join('') : '<option value="">업로드된 자료 없음</option>';
+      if (kind === 'dispatch' && svDispatchDate && dates.includes(svDispatchDate)) sel.value = svDispatchDate;
+      svHistLoadRows();
+    }
+    async function svHistLoadRows() {
+      const kind = svHist.kind, date = document.getElementById('svHistDate').value;
+      svHist.rows = []; svHist.shown = 300;
+      if (!date) { svHistRender(); return; }
+      document.getElementById('svHistBody').innerHTML = `<tr><td class="p-6 text-center text-gray-400" colspan="40">불러오는 중…</td></tr>`;
+      const all = [];
+      try {
+        for (let from = 0; from < 100000; from += 1000) {
+          const { data, error } = await supabaseClient.from(UPLOAD_SPECS[kind].table).select('*').eq('delivery_date', date).order('id').range(from, from + 999);
+          if (error) throw error;
+          all.push(...(data || []));
+          if (!data || data.length < 1000) break;
+        }
+      } catch (e) { showToastNotification('내역 불러오기 실패', dbErrorMessage(e), 'warning'); }
+      if (svHist.kind !== kind || document.getElementById('svHistDate').value !== date) return;
+      svHist.rows = all;
+      svHistRender();
+    }
+    function svHistView() {
+      const q = document.getElementById('svHistSearch').value.trim().toLowerCase();
+      const cols = UPLOAD_SPECS[svHist.kind].cols;
+      return !q ? svHist.rows : svHist.rows.filter(r => cols.some(c => String(r[c.k] ?? '').toLowerCase().includes(q)));
+    }
+    function svHistRender() {
+      const cols = UPLOAD_SPECS[svHist.kind].cols;
+      const rows = svHistView();
+      document.getElementById('svHistHead').innerHTML = `<tr><th class="bg-gray-50 px-2.5 py-2 text-left font-bold text-gray-500 border-b border-gray-200 whitespace-nowrap">#</th>${cols.map(c => `<th class="bg-gray-50 px-2.5 py-2 text-left font-bold text-gray-600 border-b border-gray-200 whitespace-nowrap">${svEsc(c.h)}</th>`).join('')}</tr>`;
+      const body = document.getElementById('svHistBody');
+      if (!rows.length) {
+        body.innerHTML = `<tr><td class="p-8 text-center text-gray-400" colspan="${cols.length + 1}">${svHist.rows.length ? '검색 결과가 없습니다.' : '자료가 없습니다.'}</td></tr>`;
+      } else {
+        const fmt = (c, v) => v == null ? '' : (c.t === 'num' || c.t === 'int') && typeof v === 'number' ? v.toLocaleString() : String(v);
+        body.innerHTML = rows.slice(0, svHist.shown).map((r, i) => `<tr class="hover:bg-blue-50/40"><td class="px-2.5 py-1.5 border-b border-gray-100 text-gray-400">${i + 1}</td>${cols.map(c => `<td class="px-2.5 py-1.5 border-b border-gray-100 whitespace-nowrap ${c.t === 'num' || c.t === 'int' ? 'text-right' : ''}">${svEsc(fmt(c, r[c.k]))}</td>`).join('')}</tr>`).join('')
+          + (rows.length > svHist.shown ? `<tr><td colspan="${cols.length + 1}" class="p-3 text-center"><button type="button" onclick="svHist.shown += 500; svHistRender()" class="px-4 py-2 rounded-xl bg-gray-100 text-[12.5px] font-bold text-gray-700">더 보기 (${(rows.length - svHist.shown).toLocaleString()}건 남음)</button></td></tr>` : '');
+      }
+      const label = UPLOAD_SPECS[svHist.kind].label;
+      const nDates = (svHist.dates[svHist.kind] || []).length;
+      document.getElementById('svHistMeta').textContent = `${label} · ${rows.length.toLocaleString()}건${rows.length !== svHist.rows.length ? ` (전체 ${svHist.rows.length.toLocaleString()}건)` : ''} · 보관 중인 배송일 ${nDates}일 · 유지기간 ${retentionSettings.uploadHistoryDays}일`;
+    }
+    function svHistDownload() {
+      if (typeof XLSX === 'undefined') { showToastNotification('엑셀 오류', '엑셀 기능을 불러오지 못했습니다.', 'warning'); return; }
+      const rows = svHistView();
+      if (!rows.length) { showToastNotification('엑셀', '내려받을 자료가 없습니다.', 'warning'); return; }
+      const cols = UPLOAD_SPECS[svHist.kind].cols;
+      const ws = XLSX.utils.aoa_to_sheet([cols.map(c => c.h)].concat(rows.map(r => cols.map(c => r[c.k] ?? ''))));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, UPLOAD_SPECS[svHist.kind].label);
+      XLSX.writeFile(wb, `${UPLOAD_SPECS[svHist.kind].label}내역_${document.getElementById('svHistDate').value}.xlsx`);
+    }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('svHistModal').classList.contains('opacity-100')) svCloseHist(); });
+
     // ---------- 2) 배차 내역 헤더 / 삭제 ----------
     function svRenderHeader() {
       const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(svDispatchDate || '');
@@ -8096,7 +8238,7 @@
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
       const wd = '일월화수목금토'[d.getDay()];
-      document.getElementById('svDispatchTitle').textContent = `${yy}.${mm}.${dd}(${wd}) 배차 내역 (총 ${svRows.length}건)`;
+      document.getElementById('svDispatchTitle').textContent = svDispatchDate ? `홈화면 배차 : ${yy}.${mm}.${dd}(${wd}) · 총 ${svRows.length}건 · 눌러서 날짜별 배차/주문 보기` : '업로드된 배차가 없습니다 · 눌러서 지난 내역 보기';
       svRenderSendList();
     }
     function svDeleteCenterRows() {
@@ -9608,12 +9750,13 @@
       { k: 'store_code', h: '거래처코드', w: 74, lookup: 'store' },
       { k: 'store_name', h: '거래처명', w: 96, auto: true },
       { k: 'product_code', h: '제품코드', w: 74, lookup: 'product' },
+      { k: 'product_name', h: '제품명', w: 118, auto: true },
       { k: 'temperature', h: '온도', w: 46, auto: true },
       { k: 'unit', h: '단위', w: 44, auto: true },
       { k: 'stock_type', h: '재고타입', w: 60, auto: true },
       { k: 'qty', h: '수량', w: 48 },
       { k: 'content', h: '내용', w: 90 },
-      { k: 'detail', h: '상세내용', w: 136 },
+      { k: 'detail', h: '상세내용', w: 124 },
       { k: 'subject', h: '주체', w: 56 },
       { k: 'fault', h: '귀책', w: 56 },
       { k: 'inbound', h: '입고', w: 56 },
@@ -9621,7 +9764,8 @@
     ];
     IS_COLS.forEach(c => { if (c.auto) c.ro = true; });
     const IS_EDIT = IS_COLS.filter(c => !c.ro).map(c => c.k);
-    const IS_SAVE_KEYS = IS_COLS.map(c => c.k).concat(['product_name']);
+    const IS_SAVE_KEYS = IS_COLS.map(c => c.k);
+    const IS_NODATA = '데이터 없음';
     const IS_STORE_AUTO = ['main_center', 'client_code', 'client_name', 'store_name'];
     const IS_PRODUCT_AUTO = ['temperature', 'unit', 'stock_type', 'product_name'];
     const IS_GUT_W = 52;
@@ -9699,7 +9843,7 @@
             const mine = r._mine.has(c.k), rem = !mine && r._rem && (r._rem.keys.has(c.k) || r._rem.isNew);
             const cls = [c.ro ? 'is-ro' : '', mine ? 'is-dirty' : '', rem ? 'is-rdirty' : '', isState.miss.has(r.id + '|' + c.k) ? 'is-miss' : '', isState.sel && isState.sel.id === r.id && isState.sel.col === c.k ? 'is-sel' : ''].filter(Boolean).join(' ');
             const v = r[c.k] ?? '';
-            const tip = rem ? remTitle : (c.k === 'product_code' && r.product_name ? `${v} · ${r.product_name}` : String(v));
+            const tip = rem ? remTitle : String(v);
             return `<td data-col="${c.k}" class="${cls}" title="${svEsc(tip)}">${svEsc(v)}</td>`;
           }).join('')}
         </tr>`;
@@ -9844,29 +9988,40 @@
     }
 
     // ---------- 코드 → 자동 채우기 (order_data · 배송일이 같은 주문을 먼저 찾음) ----------
+    // 거래처코드 → 거래처명 : 배차 업로드(dispatch_data) 기준 (같은 배송일 우선)
+    //   메인센터도 배차의 메인센터, 고객사코드·고객사명은 주문 업로드(order_data)에서 찾음
     async function isLookupStore(code, date) {
       if (!code || !supabaseClient) return null;
       const key = code + '|' + (date || '');
       if (isState.cache.store.has(key)) return isState.cache.store.get(key);
       let res = null;
       try {
-        const pick = async (withDate) => {
-          let q = supabaseClient.from('order_data').select('center_name,client_code,client_name,store_name,delivery_date').eq('store_code', code);
+        const pickD = async (withDate) => {
+          let q = supabaseClient.from('dispatch_data').select('business_name,main_center,center_name').eq('business_code', code);
+          if (withDate) q = q.eq('delivery_date', date);
+          const { data } = await q.order('delivery_date', { ascending: false }).order('id', { ascending: false }).limit(1);
+          return data && data[0];
+        };
+        const pickO = async (withDate) => {
+          let q = supabaseClient.from('order_data').select('center_name,client_code,client_name').eq('store_code', code);
           if (withDate) q = q.eq('delivery_date', date);
           const { data } = await q.order('delivery_date', { ascending: false }).limit(1);
           return data && data[0];
         };
-        const d = (date && await pick(true)) || await pick(false);
-        if (d) res = { main_center: d.center_name || '', client_code: d.client_code || '', client_name: d.client_name || '', store_name: d.store_name || '' };
-        else {
-          const b = await supabaseClient.from('dispatch_data').select('business_name,main_center').eq('business_code', code).order('delivery_date', { ascending: false }).limit(1);
-          const x = b.data && b.data[0];
-          if (x) res = { main_center: x.main_center || '', client_code: '', client_name: '', store_name: x.business_name || '' };
-        }
+        const d = (date && await pickD(true)) || await pickD(false);
+        const o = (date && await pickO(true)) || await pickO(false);
+        res = {
+          found: !!(d && d.business_name),
+          store_name: (d && d.business_name) || IS_NODATA,
+          main_center: (d && (d.main_center || d.center_name)) || (o && o.center_name) || '',
+          client_code: (o && o.client_code) || '',
+          client_name: (o && o.client_name) || ''
+        };
       } catch (e) { return null; }
       isState.cache.store.set(key, res);
       return res;
     }
+    // 제품코드 → 제품명 · 온도 · 단위 · 재고타입 : 주문 업로드(order_data) 기준
     async function isLookupProduct(code, store, date) {
       if (!code || !supabaseClient) return null;
       const key = [code, store || '', date || ''].join('|');
@@ -9881,22 +10036,23 @@
           return data && data[0];
         };
         const d = (store && date && await pick(true, true)) || (store && await pick(true, false)) || await pick(false, false);
-        if (d) res = { product_name: d.product_name || '', temperature: d.temperature || '', unit: d.unit || '', stock_type: d.stock_type || '' };
+        res = d ? { found: true, product_name: d.product_name || IS_NODATA, temperature: d.temperature || '', unit: d.unit || '', stock_type: d.stock_type || '' }
+                : { found: false, product_name: IS_NODATA, temperature: '', unit: '', stock_type: '' };
       } catch (e) { return null; }
       isState.cache.product.set(key, res);
       return res;
     }
-    // 바뀐 값(patch)에 따라 자동 칸 계산
-    async function isAutoFill(id, row, patch, quiet) {
+    // 바뀐 값(patch)에 따라 자동 칸 계산 · 못 찾으면 거래처명/제품명 '데이터 없음'
+    async function isAutoFill(id, row, patch) {
       const out = {};
       const blank = (keys) => keys.forEach(k => { out[k] = ''; });
+      const apply = (f, keys) => { keys.forEach(k => { out[k] = f[k] ?? ''; }); };
       if ('store_code' in patch || ('delivery_date' in patch && row.store_code)) {
         isState.miss.delete(id + '|store_code');
         if (!row.store_code) blank(IS_STORE_AUTO);
         else {
           const f = await isLookupStore(row.store_code, row.delivery_date);
-          if (f) Object.assign(out, f);
-          else if ('store_code' in patch) { blank(IS_STORE_AUTO); isState.miss.add(id + '|store_code'); if (!quiet) showToastNotification('코드 확인', `거래처코드 '${row.store_code}' 를 주문 자료에서 찾지 못했습니다.`, 'warning'); }
+          if (f) { apply(f, IS_STORE_AUTO); if (!f.found) isState.miss.add(id + '|store_code'); }
         }
       }
       if ('product_code' in patch || (('store_code' in patch || 'delivery_date' in patch) && row.product_code)) {
@@ -9904,8 +10060,7 @@
         if (!row.product_code) blank(IS_PRODUCT_AUTO);
         else {
           const f = await isLookupProduct(row.product_code, row.store_code, row.delivery_date);
-          if (f) Object.assign(out, f);
-          else if ('product_code' in patch) { blank(IS_PRODUCT_AUTO); isState.miss.add(id + '|product_code'); if (!quiet) showToastNotification('코드 확인', `제품코드 '${row.product_code}' 를 주문 자료에서 찾지 못했습니다.`, 'warning'); }
+          if (f) { apply(f, IS_PRODUCT_AUTO); if (!f.found) isState.miss.add(id + '|product_code'); }
         }
       }
       return out;
@@ -9920,7 +10075,7 @@
       Object.assign(d.patch, patch);
       isState.checked.add(id);
       isRender();
-      const extra = await isAutoFill(id, { ...cur, ...d.patch }, patch, quiet);
+      const extra = await isAutoFill(id, { ...cur, ...d.patch }, patch);
       if (!isState.drafts.has(id)) return;              // 그 사이 취소/저장됨
       Object.assign(d.patch, extra);
       if (!d.isNew) {                                   // 원래 값과 같아진 칸은 변경에서 제외
@@ -9979,7 +10134,7 @@
             Object.assign(base, data);
             isState.drafts.delete(id); isState.checked.delete(id);
             isBroadcast('row', { row: data });
-            IS_SAVE_KEYS.filter(k => k in pick && k !== 'product_name' && String(before[k] ?? '') !== String(data[k] ?? '')).forEach(k =>
+            IS_SAVE_KEYS.filter(k => k in pick && String(before[k] ?? '') !== String(data[k] ?? '')).forEach(k =>
               logs.push({ action: '수정', row_id: id, field_key: k, field: (IS_COLS.find(c => c.k === k) || {}).h || k, old_value: String(before[k] ?? ''), new_value: String(data[k] ?? ''), row_label: isRowLabel(data) }));
             ok++;
           }
@@ -10068,9 +10223,9 @@
     function isDownload() {
       if (typeof XLSX === 'undefined') { showToastNotification('엑셀 오류', '엑셀 기능을 불러오지 못했습니다.', 'warning'); return; }
       const rows = isRowsView().filter(r => !r._new);
-      const aoa = [IS_COLS.map(c => c.h).concat(['제품명', '작성자', '최종 수정'])].concat(rows.map(r => IS_COLS.map(c => r[c.k] ?? '').concat([r.product_name || '', r.created_by || '', isFmtTs(r.updated_at)])));
+      const aoa = [IS_COLS.map(c => c.h).concat(['작성자', '최종 수정'])].concat(rows.map(r => IS_COLS.map(c => r[c.k] ?? '').concat([r.created_by || '', isFmtTs(r.updated_at)])));
       const ws = XLSX.utils.aoa_to_sheet(aoa);
-      ws['!cols'] = IS_COLS.map(c => ({ wch: Math.max(6, Math.round(c.w / 6)) })).concat([{ wch: 24 }, { wch: 8 }, { wch: 12 }]);
+      ws['!cols'] = IS_COLS.map(c => ({ wch: Math.max(6, Math.round(c.w / 6)) })).concat([{ wch: 8 }, { wch: 12 }]);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, '특이사항');
       XLSX.writeFile(wb, `특이사항_${isToday()}.xlsx`);
