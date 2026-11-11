@@ -314,6 +314,35 @@
         .drv-slot .drv-slot-ico { font-size: 34px; }
         .drv-slot h3 { margin: 10px 0 6px; font-size: 15px; font-weight: 900; color: #374151; }
         .drv-slot p { margin: 0; font-size: 12px; font-weight: 700; color: var(--drv-sub); line-height: 1.6; }
+        /* 기사 공지 팝업 : 여러 건이어도 같은 크기 카드 · 사진 앨범(3초 자동 슬라이드) */
+        .drv-nt-layer { position: fixed; inset: 0; z-index: 880; display: flex; align-items: center; justify-content: center; padding: calc(16px + var(--sat)) calc(16px + var(--sar)) calc(16px + var(--sab)) calc(16px + var(--sal)); background: rgba(0,0,0,.5); opacity: 0; visibility: hidden; transition: opacity .28s var(--drv-ease), visibility 0s linear .28s; }
+        .drv-nt-layer.is-open { opacity: 1; visibility: visible; transition: opacity .28s var(--drv-ease), visibility 0s; }
+        .drv-nt { width: 100%; max-width: 380px; height: min(620px, calc(var(--drv-vh) - 32px - var(--sat) - var(--sab))); background: #fff; border-radius: 28px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,.3); transform: scale(.94); transition: transform .35s var(--drv-spring); }
+        .drv-nt-layer.is-open .drv-nt { transform: none; }
+        .drv-nt-head { flex: none; display: flex; align-items: center; gap: 10px; padding: 18px 18px 12px; background: linear-gradient(90deg, #FFFBEB, #FFF7ED); border-bottom: 1px solid #F3F4F6; }
+        .drv-nt-ico { flex: none; width: 34px; height: 34px; border-radius: 50%; background: #F59E0B; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .drv-nt-head small { display: block; font-size: 11px; font-weight: 900; color: #D97706; }
+        .drv-nt-head h3 { margin: 1px 0 0; font-size: 16px; font-weight: 900; color: var(--drv-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .drv-nt-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 16px 18px; }
+        .drv-nt-album { position: relative; width: 100%; aspect-ratio: 4 / 3; border-radius: 16px; overflow: hidden; background: #111; padding: 0; display: block; }
+        .drv-nt-album img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity .3s var(--drv-ease); pointer-events: none; }
+        .drv-nt-album b { position: absolute; left: 8px; bottom: 8px; padding: 4px 9px; border-radius: 999px; background: rgba(255,255,255,.92); color: var(--drv-text); font-size: 10.5px; font-weight: 900; }
+        .drv-nt-album em { position: absolute; right: 8px; bottom: 8px; padding: 3px 8px; border-radius: 999px; background: rgba(0,0,0,.55); color: #fff; font-style: normal; font-size: 10.5px; font-weight: 800; }
+        .drv-nt-thumbs { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0 2px; scrollbar-width: none; }
+        .drv-nt-thumbs::-webkit-scrollbar { display: none; }
+        .drv-nt-thumbs button { flex: none; width: 54px; height: 54px; border-radius: 12px; overflow: hidden; border: 2px solid #E5E7EB; padding: 0; }
+        .drv-nt-thumbs button.is-on { border-color: #F59E0B; }
+        .drv-nt-thumbs img { width: 100%; height: 100%; object-fit: cover; }
+        .drv-nt-text { margin: 12px 0 0; font-size: 14px; font-weight: 700; color: #1F2937; line-height: 1.7; white-space: pre-wrap; word-break: keep-all; }
+        .drv-nt-nav { flex: none; display: none; align-items: center; justify-content: space-between; padding: 8px 14px; border-top: 1px solid #F3F4F6; }
+        .drv-nt-nav.is-show { display: flex; }
+        .drv-nt-nav button { width: 36px; height: 36px; border-radius: 50%; background: var(--drv-fill); color: #4B5563; font-size: 20px; }
+        .drv-nt-dots { display: flex; gap: 6px; }
+        .drv-nt-dots i { width: 6px; height: 6px; border-radius: 3px; background: #D1D5DB; transition: width .3s var(--drv-spring), background-color .3s; }
+        .drv-nt-dots i.is-on { width: 18px; background: #F59E0B; }
+        .drv-nt-foot { flex: none; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #F3F4F6; background: #F9FAFB; }
+        .drv-nt-foot button { height: 50px; font-size: 13px; font-weight: 800; color: #4B5563; }
+        .drv-nt-foot button + button { border-left: 1px solid #F3F4F6; color: var(--drv-primary); font-size: 15px; font-weight: 900; }
         .drv-loc { display: none; margin-top: 10px; padding: 10px 14px; border-radius: var(--drv-btn-radius); background: var(--drv-fill-2); border: 1px solid #F3F4F6; color: #4B5563; font-size: 12px; font-weight: 800; line-height: 1.5; align-items: center; justify-content: space-between; gap: 8px; }
         .drv-loc.is-show { display: flex; }
         .drv-loc.is-on { background: #EFF6FF; border-color: #DBEAFE; color: var(--drv-primary); }
@@ -756,6 +785,22 @@
     </div>
 </div>
 
+<!-- 기사 공지 팝업 (관리자 설정 > 팝업 공지 설정 > 기사 공지) -->
+<div id="drv-nt-layer" class="drv-nt-layer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="drv-nt-title">
+    <div class="drv-nt">
+        <div class="drv-nt-head"><span class="drv-nt-ico">🔔</span><div style="min-width:0;flex:1"><small>공지사항 <span id="drv-nt-pager"></span></small><h3 id="drv-nt-title"></h3></div></div>
+        <div class="drv-nt-body" id="drv-nt-body">
+            <div id="drv-nt-photos">
+                <button type="button" class="drv-nt-album" id="drv-nt-album" aria-label="사진 크게 보기"><img id="drv-nt-img" alt=""><b>🔍 크게 보기</b><em id="drv-nt-count"></em></button>
+                <div class="drv-nt-thumbs" id="drv-nt-thumbs"></div>
+            </div>
+            <p class="drv-nt-text" id="drv-nt-text"></p>
+        </div>
+        <div class="drv-nt-nav" id="drv-nt-nav"><button type="button" id="drv-nt-prev" aria-label="이전 공지">‹</button><div class="drv-nt-dots" id="drv-nt-dots"></div><button type="button" id="drv-nt-next" aria-label="다음 공지">›</button></div>
+        <div class="drv-nt-foot"><button type="button" id="drv-nt-hide">오늘 하루 보지 않기</button><button type="button" id="drv-nt-close">닫기</button></div>
+    </div>
+</div>
+
 <!-- iOS Alert -->
 <div id="drv-alert-layer" class="drv-alert-layer" role="alertdialog" aria-modal="true" aria-hidden="true">
     <div class="drv-alert">
@@ -979,7 +1024,7 @@
     }
 
     function syncLock() {
-        const anyOpen = S.alertOpen || $('#drv-agree-layer').classList.contains('is-open') || $('#drv-dl-layer').classList.contains('is-open') || $('#drv-pv').classList.contains('is-open') || $('#drv-en-layer').classList.contains('is-open');
+        const anyOpen = S.alertOpen || $('#drv-agree-layer').classList.contains('is-open') || $('#drv-dl-layer').classList.contains('is-open') || $('#drv-pv').classList.contains('is-open') || $('#drv-en-layer').classList.contains('is-open') || $('#drv-nt-layer').classList.contains('is-open');
         document.documentElement.classList.toggle('drv-lock', anyOpen);
     }
 
@@ -1720,6 +1765,10 @@
                 e.preventDefault(); e.stopPropagation();
                 if (S.agreeMode === 'forced') forceLogout('esc'); else closeAgreementUI();
             }
+            return;
+        }
+        if ($('#drv-nt-layer').classList.contains('is-open')) {
+            if (e.key === 'Escape') { e.preventDefault(); ntClose(); }
             return;
         }
         if ($('#drv-en-layer').classList.contains('is-open')) {
@@ -3068,9 +3117,87 @@
         if (LOC.watch != null) { locStop(); locSetConsent('no'); locSend(null, true); locRender(); toast('위치 공유를 껐습니다'); }
         else locAsk();
     });
-    document.addEventListener('drv:login', () => { LOC.off = false; locInit(); });
-    document.addEventListener('drv:logout', () => { locStop(); $('#drv-loc').classList.remove('is-show'); });
+    document.addEventListener('drv:login', async () => { LOC.off = false; await ntShowForDriver(); locInit(); });   // 공지 → (닫은 뒤) 위치 동의
+    document.addEventListener('drv:logout', () => { ntClose(); locStop(); $('#drv-loc').classList.remove('is-show'); });
     document.addEventListener('drv:unload', () => { if (!S.route.some(r => !isDone(r))) { locStop(); locRender('📍 배송 완료 · 위치 공유가 종료되었습니다'); } });
+
+    /* =========================================================
+       12) 기사 공지 팝업 : 메인 사이트 '팝업 공지 설정 > 기사 공지' 에 등록된 공지를 로그인 직후 표시
+           (app_settings.popup_notices 중 target = 'driver' · 게시 기간 안의 공지)
+       ========================================================= */
+    const NT = { list: [], idx: 0, photo: 0, timer: null, done: null };
+    const ntLayer = $('#drv-nt-layer');
+    const ntHideKey = () => `drv_notice_hide|${S.session ? S.session.name : ''}`;
+    async function ntShowForDriver() {
+        if (!S.session || S.session.admin || S.session.demo || !S.sb) return;
+        try { if (Date.now() < +(localStorage.getItem(ntHideKey()) || 0)) return; } catch (e) {}
+        let list = [];
+        try {
+            const { data, error } = await withTimeout(S.sb.from('app_settings').select('key,value').eq('key', 'popup_notices').maybeSingle(), CONFIG.FETCH_TIMEOUT_MS);
+            if (error) throw error;
+            list = (data && Array.isArray(data.value)) ? data.value : [];
+        } catch (e) { console.warn('[기사] 공지 불러오기 실패', e && (e.message || e)); return; }
+        const today = ymd(new Date());
+        NT.list = list.filter(n => n && n.target === 'driver' && n.title && n.start_date && n.end_date && today >= n.start_date && today <= n.end_date)
+            .map(n => ({ title: n.title, content: n.content || '', photos: (Array.isArray(n.photos) ? n.photos : []).filter(p => p && p.url).map(p => ({ url: p.url, thumb: p.thumb_url || p.url })) }));
+        if (!NT.list.length || !S.session) return;
+        NT.idx = 0;
+        ntRender();
+        ntLayer.classList.add('is-open');
+        ntLayer.setAttribute('aria-hidden', 'false');
+        syncLock();
+        return new Promise(res => { NT.done = res; });       // 닫을 때까지 대기 (그 뒤 위치 동의 창)
+    }
+    function ntRender() {
+        const n = NT.list[NT.idx];
+        if (!n) return;
+        const many = NT.list.length > 1;
+        $('#drv-nt-title').textContent = n.title;
+        $('#drv-nt-text').textContent = n.content;
+        $('#drv-nt-pager').textContent = many ? `${NT.idx + 1} / ${NT.list.length}` : '';
+        $('#drv-nt-nav').classList.toggle('is-show', many);
+        $('#drv-nt-dots').innerHTML = NT.list.map((_, i) => `<i class="${i === NT.idx ? 'is-on' : ''}"></i>`).join('');
+        $('#drv-nt-body').scrollTop = 0;
+        NT.photo = 0;
+        clearInterval(NT.timer);
+        $('#drv-nt-photos').style.display = n.photos.length ? '' : 'none';
+        $('#drv-nt-thumbs').style.display = n.photos.length > 1 ? '' : 'none';
+        if (n.photos.length) ntPhoto();
+        if (n.photos.length > 1) NT.timer = setInterval(() => {          // 약 3초마다 다음 사진
+            if (!ntLayer.classList.contains('is-open')) { clearInterval(NT.timer); return; }
+            if (PV.el.classList.contains('is-open')) return;              // 크게 보는 중에는 멈춤
+            NT.photo = (NT.photo + 1) % n.photos.length;
+            ntPhoto();
+        }, 3000);
+    }
+    function ntPhoto() {
+        const n = NT.list[NT.idx]; if (!n || !n.photos[NT.photo]) return;
+        const img = $('#drv-nt-img');
+        img.style.opacity = '0';
+        setTimeout(() => { img.onload = () => { img.style.opacity = '1'; }; img.src = n.photos[NT.photo].url; if (img.complete) img.style.opacity = '1'; }, 120);
+        $('#drv-nt-count').textContent = n.photos.length > 1 ? `${NT.photo + 1} / ${n.photos.length}` : '';
+        $('#drv-nt-thumbs').innerHTML = n.photos.map((p, i) => `<button type="button" data-nt-photo="${i}" class="${i === NT.photo ? 'is-on' : ''}"><img src="${esc(p.thumb)}" alt="" draggable="false"></button>`).join('');
+    }
+    function ntClose() {
+        if (!ntLayer.classList.contains('is-open')) { if (NT.done) { NT.done(); NT.done = null; } return; }
+        clearInterval(NT.timer);
+        ntLayer.classList.remove('is-open');
+        ntLayer.setAttribute('aria-hidden', 'true');
+        syncLock();
+        if (NT.done) { const d = NT.done; NT.done = null; d(); }
+    }
+    function ntGo(step) { if (NT.list.length < 2) return; NT.idx = (NT.idx + step + NT.list.length) % NT.list.length; ntRender(); }
+    $('#drv-nt-prev').addEventListener('click', () => ntGo(-1));
+    $('#drv-nt-next').addEventListener('click', () => ntGo(1));
+    $('#drv-nt-close').addEventListener('click', ntClose);
+    $('#drv-nt-hide').addEventListener('click', () => {
+        const t = new Date(); t.setHours(24, 0, 0, 0);
+        try { localStorage.setItem(ntHideKey(), String(t.getTime())); } catch (e) {}
+        ntClose();
+        toast('오늘은 공지가 다시 표시되지 않습니다');
+    });
+    $('#drv-nt-album').addEventListener('click', () => { const n = NT.list[NT.idx]; if (n) openViewer(n.photos.map(p => p.url), NT.photo, n.title); });
+    $('#drv-nt-thumbs').addEventListener('click', e => { const b = e.target.closest('[data-nt-photo]'); if (b) { NT.photo = +b.dataset.ntPhoto; ntPhoto(); } });
 
     /* ---------- 로그인 상자 위치 고정 ---------- */
     let frozenW = 0;

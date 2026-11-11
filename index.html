@@ -905,18 +905,21 @@
 
         <!-- 4. 배차 목록 (센터 선택 + 통합 검색 + 변경사항 저장) -->
         <section class="bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
-          <div class="grid grid-cols-1 md:grid-cols-[200px_1fr_auto] gap-2 mb-3">
+          <div class="grid grid-cols-1 md:grid-cols-[200px_1fr_auto_auto] gap-2 mb-3">
             <select id="svListCenterSelect" onchange="svSetCenter(this.value)" class="w-full bg-gray-100 rounded-xl px-3 py-2.5 text-[14px] font-medium text-gray-800"></select>
             <div class="bg-gray-100 rounded-xl px-3 py-2.5 flex items-center space-x-2 min-w-0"><i class="ph-bold ph-magnifying-glass text-gray-400 text-lg flex-shrink-0"></i>
               <input type="text" id="svListSearch" placeholder="매장코드·매장명·기사명·주소·연락처 통합 검색" autocomplete="off" oninput="svOnListSearch(this.value)" class="flex-1 text-[14px] font-medium"></div>
+            <button type="button" onclick="svOpenDriverChange()" class="ios-btn-tap px-4 py-2.5 bg-[#007AFF] active:bg-[#0062CC] text-white font-semibold rounded-xl text-[14px] shadow-md shadow-blue-500/25 flex items-center justify-center space-x-1.5">
+              <i class="ph-bold ph-user-switch text-base"></i><span id="svDrvChangeLabel">기사 변경</span>
+            </button>
             <button type="button" onclick="svSaveAll()" class="ios-btn-tap px-4 py-2.5 bg-[#34C759] active:bg-[#28A745] text-white font-semibold rounded-xl text-[14px] shadow-md shadow-emerald-500/25 flex items-center justify-center space-x-1.5">
               <i class="ph-bold ph-floppy-disk text-base"></i><span id="svSaveLabel">변경사항 일괄 저장</span>
             </button>
           </div>
           <div id="svAddrWarnBadge" title="현재는 주소 형식 검사 기준입니다. 네이버·카카오·TMAP 지도 검색 일치 확인은 Supabase 연동 시 연결됩니다." class="hidden mb-2 text-[12px] font-bold text-red-700 bg-yellow-100 border border-yellow-300 rounded-xl px-3 py-1.5"></div>
           <div class="ios-horizontal-scroll rounded-2xl border border-gray-200/80">
-            <table class="w-full pallet-table min-w-[1060px]">
-              <thead><tr><th>센터명</th><th>기사명<br>차량번호</th><th>매장코드<br>매장명</th><th>순서</th><th>주소</th><th>시간</th><th>연락처<br>(기사 / 매장)</th><th>양식지정</th></tr></thead>
+            <table class="w-full pallet-table min-w-[1100px]">
+              <thead><tr><th class="w-10"><input type="checkbox" id="svRowCheckAll" onchange="svToggleAllRows(this.checked)" title="전체 선택" class="w-4 h-4 align-middle cursor-pointer"></th><th>센터명</th><th>기사명<br>차량번호</th><th>매장코드<br>매장명</th><th>순서</th><th>주소</th><th>시간</th><th>연락처<br>(기사 / 매장)</th><th>양식지정</th></tr></thead>
               <tbody id="svRowsTableBody"></tbody>
             </table>
           </div>
@@ -1882,7 +1885,7 @@
     </aside>
 
     <!-- [5. 사진 전체화면 뷰어 (라이트박스: 슬라이드/화살표 키/인덱스)] -->
-    <div id="photoViewerModal" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between opacity-0 pointer-events-none transition-opacity duration-300">
+    <div id="photoViewerModal" class="fixed inset-0 z-[80] bg-black/95 backdrop-blur-md flex flex-col justify-between opacity-0 pointer-events-none transition-opacity duration-300">
       <div class="px-5 pt-8 pb-3 flex items-center justify-between text-white z-10">
         <span id="viewerCounterHeader" class="text-sm font-semibold tracking-wider text-white/80">사진 보기</span>
         <button id="viewerCloseBtn" type="button" class="w-9 h-9 rounded-full bg-white/20 active:bg-white/30 flex items-center justify-center transition-colors">
@@ -1900,9 +1903,10 @@
         <img id="viewerImage" src="" alt="확대 사진" class="max-h-[75vh] max-w-full object-contain rounded-lg shadow-2xl transition-transform duration-200">
       </div>
 
-      <div class="px-5 pt-2 pb-10 flex flex-col items-center justify-center text-white">
+      <div class="px-5 pt-2 pb-6 flex flex-col items-center justify-center text-white">
         <div id="viewerPageNumber" class="text-base font-bold bg-white/15 px-4 py-1.5 rounded-full tracking-widest backdrop-blur-md">1 / 1</div>
         <p class="text-[12px] text-white/50 mt-2">좌우 화살표(←, →) 또는 쓸어넘기기로 전환 (ESC 닫기)</p>
+        <button type="button" onclick="closePhotoViewer()" class="mt-3 min-w-[150px] px-7 py-3 rounded-2xl bg-white text-gray-900 text-[15px] font-bold shadow-lg active:scale-95 transition-transform">닫기</button>
       </div>
     </div>
 
@@ -2135,6 +2139,37 @@
       </div>
     </div>
 
+    <!-- [구간차량 관리 > 기사 변경 모달] -->
+    <div id="svDriverChangeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
+      <div class="bg-white rounded-[28px] w-full max-w-md p-5 shadow-2xl border border-gray-100 flex flex-col max-h-[92vh]">
+        <div class="flex items-center justify-between pb-3 border-b border-gray-100 flex-shrink-0">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-8 h-8 rounded-xl bg-blue-50 text-[#007AFF] flex items-center justify-center"><i class="ph-bold ph-user-switch text-lg"></i></div>
+            <div><h3 class="text-[17px] font-bold text-gray-900 tracking-tight">기사 변경</h3><p id="svDcCount" class="text-[11px] text-gray-500"></p></div>
+          </div>
+          <button type="button" onclick="svCloseDriverChange()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500"><i class="ph-bold ph-x text-base"></i></button>
+        </div>
+        <div class="flex-1 overflow-y-auto no-scrollbar py-3 space-y-3">
+          <div>
+            <div class="text-xs font-semibold text-gray-600 mb-1.5">기존 기사</div>
+            <div id="svDcOld" class="space-y-1.5"></div>
+          </div>
+          <div class="flex items-center justify-center text-gray-300"><i class="ph-bold ph-arrow-down text-xl"></i></div>
+          <div class="space-y-2">
+            <div class="text-xs font-semibold text-gray-600">변경할 기사</div>
+            <input type="text" id="svDcName" placeholder="기사 이름*" autocomplete="off" class="w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[14px] font-medium border border-gray-200">
+            <input type="text" id="svDcVehicle" placeholder="차량번호* (예: 12가 3456)" autocomplete="off" class="w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[14px] font-medium border border-gray-200">
+            <input type="tel" id="svDcPhone" placeholder="연락처 (예: 010-1234-5678)" autocomplete="off" class="w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[14px] font-medium border border-gray-200">
+            <p class="text-[11px] text-gray-500 leading-relaxed">저장하면 선택한 배차가 바로 새 기사님으로 바뀌고, 기사 로그인 화면에도 즉시 적용됩니다. 새 기사님의 인증번호는 차량번호 뒤 4자리입니다.</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2.5 pt-3 border-t border-gray-100 flex-shrink-0">
+          <button type="button" onclick="svCloseDriverChange()" class="ios-btn-tap py-2.5 bg-gray-100 active:bg-gray-200 text-gray-700 font-semibold rounded-xl text-[14px]">취소</button>
+          <button type="button" onclick="svApplyDriverChange()" class="ios-btn-tap py-2.5 bg-[#007AFF] active:bg-[#0062CC] text-white font-semibold rounded-xl text-[14px] flex items-center justify-center space-x-1.5"><i class="ph-bold ph-floppy-disk text-base"></i><span>저장</span></button>
+        </div>
+      </div>
+    </div>
+
     <!-- [팝업 공지 설정 모달] -->
     <div id="noticeManageModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
       <div id="noticeManageModalBox" class="bg-white/95 backdrop-blur-xl rounded-[28px] w-full max-w-md p-5 shadow-2xl transform scale-95 transition-all duration-200 border border-gray-100 flex flex-col max-h-[92vh]">
@@ -2151,6 +2186,15 @@
           <button type="button" onclick="closeNoticeManageModal()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500">
             <i class="ph-bold ph-x text-base"></i>
           </button>
+        </div>
+
+        <div class="pt-3 flex-shrink-0 space-y-2">
+          <div class="flex bg-gray-200/80 p-1 rounded-2xl">
+            <button type="button" id="noticeTargetTab_field" onclick="noticeSetTarget('field')" class="segment-tab active flex-1 py-2 text-[13px] font-semibold text-gray-600 rounded-xl transition-all">현장 공지 <span id="noticeTargetCnt_field" class="text-[11px]"></span></button>
+            <button type="button" id="noticeTargetTab_driver" onclick="noticeSetTarget('driver')" class="segment-tab flex-1 py-2 text-[13px] font-semibold text-gray-600 rounded-xl transition-all">기사 공지 <span id="noticeTargetCnt_driver" class="text-[11px]"></span></button>
+          </div>
+          <p id="noticeTargetHelp" class="text-[11px] text-gray-500 px-1"></p>
+          <div id="noticePicker" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1"></div>
         </div>
 
         <form id="noticeCrudForm" class="flex-1 overflow-y-auto no-scrollbar py-2 space-y-3">
@@ -2193,8 +2237,9 @@
           </div>
         </form>
 
-        <div class="grid grid-cols-2 gap-2.5 pt-3 border-t border-gray-100 flex-shrink-0">
-          <button type="button" onclick="closeNoticeManageModal()" class="ios-btn-tap py-2.5 bg-gray-100 active:bg-gray-200 text-gray-700 font-semibold rounded-xl text-[14px]">취소</button>
+        <div class="grid grid-cols-[auto_1fr_1fr] gap-2.5 pt-3 border-t border-gray-100 flex-shrink-0">
+          <button type="button" id="noticeDeleteBtn" onclick="deleteNoticeSetting()" class="ios-btn-tap px-3.5 py-2.5 bg-red-50 active:bg-red-100 text-red-600 font-semibold rounded-xl text-[14px]">삭제</button>
+          <button type="button" onclick="closeNoticeManageModal()" class="ios-btn-tap py-2.5 bg-gray-100 active:bg-gray-200 text-gray-700 font-semibold rounded-xl text-[14px]">닫기</button>
           <button type="button" onclick="saveNoticeSettings()" class="ios-btn-tap py-2.5 bg-[#FF9500] active:bg-[#D97706] text-white font-semibold rounded-xl text-[14px] shadow-sm shadow-amber-500/25 flex items-center justify-center space-x-1.5">
             <i class="ph-bold ph-floppy-disk text-base"></i>
             <span>공지 저장</span>
@@ -2203,27 +2248,36 @@
       </div>
     </div>
 
-    <!-- [사용자 노출용 공지 모달] -->
+    <!-- [사용자 노출용 공지 모달] : 공지가 여러 건이어도 같은 크기의 카드로 넘겨 봄 -->
     <div id="activeNoticePopupModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300">
-      <div id="activeNoticePopupBox" class="bg-white rounded-[28px] w-full max-w-sm overflow-hidden ios-modal-shadow transform scale-95 transition-all duration-300 border border-gray-100 flex flex-col max-h-[85vh]">
-        <div class="px-5 pt-5 pb-3 border-b border-gray-100 flex items-center space-x-2.5 bg-gradient-to-r from-amber-50/80 to-orange-50/80">
-          <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold shadow-sm">
+      <div id="activeNoticePopupBox" class="bg-white rounded-[28px] w-full max-w-sm overflow-hidden ios-modal-shadow transform scale-95 transition-all duration-300 border border-gray-100 flex flex-col" style="height:min(620px, 88vh)">
+        <div class="px-5 pt-5 pb-3 border-b border-gray-100 flex items-center space-x-2.5 bg-gradient-to-r from-amber-50/80 to-orange-50/80 flex-shrink-0">
+          <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold shadow-sm flex-shrink-0">
             <i class="ph-fill ph-bell-ringing text-base"></i>
           </div>
           <div class="flex-1 min-w-0">
-            <span class="text-[11px] font-bold text-amber-600 uppercase tracking-wider block">공지사항</span>
+            <span class="text-[11px] font-bold text-amber-600 uppercase tracking-wider block">공지사항 <span id="popupNoticePager" class="text-amber-500"></span></span>
             <h3 id="popupNoticeTitle" class="text-[16px] font-bold text-gray-900 truncate">물류센터 운영 공지</h3>
           </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto no-scrollbar p-5 space-y-3.5 text-gray-800">
-          <div id="popupNoticeContent" class="text-[14px] leading-relaxed whitespace-pre-wrap font-medium"></div>
-
+        <div id="popupNoticeScroll" class="flex-1 overflow-y-auto no-scrollbar p-5 space-y-3.5 text-gray-800">
           <div id="popupNoticePhotosWrapper" class="hidden">
-            <div class="text-[12px] font-bold text-gray-500 mb-1.5">첨부 사진 (<span id="popupNoticePhotosCount">0</span>장)</div>
-            <div id="popupNoticePhotosList" class="flex space-x-2 overflow-x-auto no-scrollbar py-1"></div>
-            <p class="text-[11px] text-gray-400 mt-1">사진을 탭하면 크게 볼 수 있습니다.</p>
+            <div id="popupNoticeAlbum" onclick="viewActiveNoticePhotoList(popupAlbumIdx)" class="relative w-full rounded-2xl overflow-hidden bg-gray-900 cursor-pointer" style="aspect-ratio:4/3">
+              <img id="popupNoticeAlbumImg" src="" alt="공지 사진" class="absolute inset-0 w-full h-full object-contain transition-opacity duration-300">
+              <span class="absolute left-2 bottom-2 px-2 py-1 rounded-full bg-white/90 text-[10.5px] font-bold text-gray-800"><i class="ph-bold ph-magnifying-glass-plus"></i> 크게 보기</span>
+              <span id="popupNoticeAlbumCount" class="absolute right-2 bottom-2 px-2 py-1 rounded-full bg-black/55 text-[10.5px] font-bold text-white"></span>
+            </div>
+            <div id="popupNoticePhotosList" class="flex space-x-2 overflow-x-auto no-scrollbar py-2"></div>
+            <span id="popupNoticePhotosCount" class="hidden">0</span>
           </div>
+          <div id="popupNoticeContent" class="text-[14px] leading-relaxed whitespace-pre-wrap font-medium"></div>
+        </div>
+
+        <div id="popupNoticeNav" class="hidden items-center justify-between px-4 py-2 border-t border-gray-100 flex-shrink-0">
+          <button type="button" onclick="activeNoticeGo(-1)" class="ios-btn-tap w-9 h-9 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center"><i class="ph-bold ph-caret-left"></i></button>
+          <div id="popupNoticeDots" class="flex items-center gap-1.5"></div>
+          <button type="button" onclick="activeNoticeGo(1)" class="ios-btn-tap w-9 h-9 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center"><i class="ph-bold ph-caret-right"></i></button>
         </div>
 
         <div class="grid grid-cols-2 divide-x divide-gray-100 border-t border-gray-100 bg-gray-50/90 flex-shrink-0">
@@ -2466,13 +2520,12 @@
       const items = (data || []).filter(r => r.store_name).map(r => ({ name: r.store_name, code: r.store_code || '', center: r.center_name || '' }));
       return { items: homeDedupe(items, i => i.code + '|' + i.name, kw), source: 'supabase' };
     }
-    // 입고센터 표시 규칙: order_data.business_area 값 → 표시명 (위에서부터 먼저 일치하는 규칙 적용)
-    // ※ '범용위탁'이 두 규칙에 모두 있어 우선순위상 '웰스토리'로 표시됩니다. (오산센터는 '범용유통'만 해당)
+    // 입고센터 표시 규칙: order_data.item_designation (주문 업로드 M열 · 품목지정) 값 → 표시명
     const INBOUND_CENTER_RULES = [
       { match: ['범용위탁'], label: '웰스토리' },
       { match: ['범용', '전용', '지정'], label: '밀양센터' },
       { match: ['원앤원'], label: '천안센터' },
-      { match: ['범용유통', '범용위탁'], label: '오산센터' },
+      { match: ['범용유통', '위탁'], label: '오산센터' },
       { match: ['이천간선'], label: '이천센터' }
     ];
     function inboundCenterLabel(area) {
@@ -2485,7 +2538,7 @@
       const storeCode = storeCodeInput.value.trim();     // 매장이 매칭된 경우 해당 매장이 주문한 제품만
       if (!supabaseClient) return { items: mockSupabaseProducts.filter(i => i.name.includes(kw)), source: 'mock', scoped: false };
       let q = supabaseClient.from('order_data')
-        .select('product_name,product_code,business_area,unit')
+        .select('product_name,product_code,item_designation,unit')
         .order('delivery_date', { ascending: false }).limit(300);
       if (kw) q = q.ilike('product_name', `%${homeLikeEsc(kw)}%`);
       if (storeCode) q = q.eq('store_code', storeCode);
@@ -2494,7 +2547,7 @@
         if (DEV_OFFLINE_FALLBACK && isNetworkError(error)) return { items: mockSupabaseProducts.filter(i => i.name.includes(kw)), source: 'offline', scoped: false };
         throw error;
       }
-      const items = (data || []).filter(r => r.product_name).map(r => ({ name: r.product_name, code: r.product_code || '', inboundCenter: inboundCenterLabel(r.business_area), unit: r.unit || '' }));
+      const items = (data || []).filter(r => r.product_name).map(r => ({ name: r.product_name, code: r.product_code || '', inboundCenter: inboundCenterLabel(r.item_designation), unit: r.unit || '' }));
       return { items: homeDedupe(items, i => i.code + '|' + i.name, kw), source: 'supabase', scoped: !!storeCode };
     }
     async function fetchDriverForStore(code) {
@@ -3597,7 +3650,7 @@
     const UH_COLS = [['배송일자',12],['메인센터',14],['고객사코드',12],['고객사명',16],['거래처코드',12],['거래처명',18],['제품코드',14],['제품명',22],['온도',8],['단위',12],['품목지정',10],['재고타입',10],['수량',8],['전체 발주량',12],['내용',24],['상세내용',30],['수정사유',40]];
     function uhMainRow(r) {
       return [r.deliveryDate || r.docDate || '', r.mainCenter || '', r.clientCode || '', r.clientName || '', r.storeCode || '', r.storeName || '', r.productCode || '', r.productName || '',
-        r.temperature || '', r.unitDisplay || '', r.itemDesignation || '', r.stockType || '', r.productQuantity ?? '', r.orderQty ?? '', r.reason || '', r.detailContent || '',
+        r.temperature || '', r.unitDisplay || '', inboundCenterLabel(r.itemDesignation), r.stockType || '', r.productQuantity ?? '', r.orderQty ?? '', r.reason || '', r.detailContent || '',
         (r.historyLogs || []).map(l => `${fmtLogLine(l)}${l.reason ? ' ' + l.reason : ''}`).join('\n')];
     }
     function uhBuildExcelPlain(records, tag) {
@@ -3678,7 +3731,7 @@
           const sh = wb.addWorksheet(nameOf.get(r.id));
           sh.columns = [{ width: 14 }, { width: 34 }, { width: 14 }, { width: 14 }, { width: 14 }];
           const info = [['등록일자', r.docDate || ''], ['매장코드', r.storeCode || ''], ['매장명', r.storeName || ''], ['제품코드', r.productCode || ''], ['제품명', r.productName || ''],
-            ['수량', `${r.productQuantity ?? ''} ${r.unitDisplay || ''}`.trim()], ['사유', r.reason || ''], ['작성자', r.author || ''], ['배차기사', r.driver || ''], ['입고센터', r.inboundCenter || ''], ['비고', r.detailContent || '']];
+            ['수량', `${r.productQuantity ?? ''} ${r.unitDisplay || ''}`.trim()], ['사유', r.reason || ''], ['작성자', r.author || ''], ['배차기사', r.driver || ''], ['입고센터', inboundCenterLabel(r.itemDesignation) || r.inboundCenter || ''], ['비고', r.detailContent || '']];
           info.forEach(kv => { const row = sh.addRow(kv); row.getCell(1).font = { bold: true }; row.getCell(2).alignment = { horizontal: 'left', wrapText: true, vertical: 'top' }; });
           sh.getCell('D1').value = { text: '← 목록으로', hyperlink: "#'업로드 내역'!A1" };
           sh.getCell('D1').font = { color: { argb: 'FF0563C1' }, underline: true };
@@ -6171,12 +6224,15 @@
         }
         if (m.has('navigation_menus')) applyNavMenuSetting(m.get('navigation_menus'));
         if (m.has('managed_reasons') && Array.isArray(m.get('managed_reasons'))) managedReasons = m.get('managed_reasons').map(String);
-        if (m.has('popup_notice') && m.get('popup_notice')) {
-          const n = m.get('popup_notice');
-          currentNoticeData = {
+        // 팝업 공지 : popup_notices (대상별 여러 건) · 예전 popup_notice(1건)는 현장 공지로 취급
+        {
+          const parse = (n, fallbackId) => ({
+            id: n.id || fallbackId, target: n.target === 'driver' ? 'driver' : 'field',
             title: n.title || '', content: n.content || '', startDate: n.start_date || '', endDate: n.end_date || '',
             photos: (Array.isArray(n.photos) ? n.photos : []).map(ph => ({ id: ph.path, path: ph.path, thumbPath: ph.thumb_path, dataUrl: ph.url, thumb: ph.thumb_url || ph.url, name: ph.name || '' }))
-          };
+          });
+          if (Array.isArray(m.get('popup_notices'))) noticeList = m.get('popup_notices').map((n, i) => parse(n, 'n' + i));
+          else if (m.get('popup_notice') && m.get('popup_notice').title) noticeList = [parse(m.get('popup_notice'), 'legacy')];
         }
         renderDynamicNavMenus();
         return true;
@@ -6242,8 +6298,12 @@
       runRetentionPurge();
     }
 
-    // 팝업 공지 설정 CRUD
-    let currentNoticeData = { title: '', content: '', startDate: '', endDate: '', photos: [] };   // Supabase(app_settings.popup_notice)
+    // 팝업 공지 설정 CRUD  (Supabase app_settings.popup_notices : 대상(현장/기사)별 여러 건)
+    //  - 현장 공지 : 이 사이트(work-innovation.onrender.com)에 접속하면 표시
+    //  - 기사 공지 : 기사님 페이지(driver/)에서 로그인하면 표시
+    let noticeList = [];                 // { id, target:'field'|'driver', title, content, startDate, endDate, photos }
+    const NOTICE_MAX_PER_TARGET = 5;
+    let noticeEditTarget = 'field', noticeEditId = null;
 
     let noticeTempPhotos = [];
 
@@ -6265,14 +6325,53 @@
     const popupNoticePhotosCount = document.getElementById('popupNoticePhotosCount');
     const popupNoticePhotosList = document.getElementById('popupNoticePhotosList');
 
+    const noticeLocalToday = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+    const noticeOfTarget = (t) => noticeList.filter(n => n.target === t);
+    const noticeEsc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function renderNoticePicker() {
+      ['field', 'driver'].forEach(t => {
+        document.getElementById('noticeTargetTab_' + t).classList.toggle('active', t === noticeEditTarget);
+        document.getElementById('noticeTargetCnt_' + t).textContent = `(${noticeOfTarget(t).length})`;
+      });
+      document.getElementById('noticeTargetHelp').textContent = noticeEditTarget === 'field'
+        ? '현장 공지 : 이 사이트에 접속하면 바로 표시됩니다.'
+        : '기사 공지 : 기사님 페이지에서 로그인하면 바로 표시됩니다.';
+      const today = noticeLocalToday();
+      const list = noticeOfTarget(noticeEditTarget);
+      const pill = (active) => 'flex-shrink-0 max-w-[150px] truncate px-3 py-1.5 rounded-full text-[12px] font-semibold border ' + (active ? 'bg-[#FF9500] text-white border-[#FF9500]' : 'bg-white text-gray-700 border-gray-200');
+      document.getElementById('noticePicker').innerHTML =
+        list.map(n => {
+          const live = n.startDate && n.endDate && today >= n.startDate && today <= n.endDate;
+          return `<button type="button" data-notice-id="${noticeEsc(n.id)}" class="${pill(n.id === noticeEditId)}">${live ? '● ' : ''}${noticeEsc(n.title || '(제목 없음)')}</button>`;
+        }).join('') +
+        (list.length < NOTICE_MAX_PER_TARGET ? `<button type="button" data-notice-id="" class="${pill(noticeEditId === null)}">+ 새 공지</button>` : '');
+      document.getElementById('noticeDeleteBtn').classList.toggle('invisible', noticeEditId === null);
+    }
+    document.getElementById('noticePicker').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-notice-id]');
+      if (b) noticeSelect(b.dataset.noticeId || null);
+    });
+    function noticeSelect(id) {
+      const n = noticeList.find(x => x.id === id && x.target === noticeEditTarget) || null;
+      noticeEditId = n ? n.id : null;
+      noticeTitleInput.value = n ? n.title : '';
+      noticeStartDate.value = n ? n.startDate : noticeLocalToday();
+      noticeEndDate.value = n ? n.endDate : noticeLocalToday();
+      noticeContentInput.value = n ? n.content : '';
+      noticeTempPhotos = n ? [...(n.photos || [])] : [];
+      renderNoticeThumbs();
+      renderNoticePicker();
+    }
+    function noticeSetTarget(t) {
+      noticeEditTarget = t === 'driver' ? 'driver' : 'field';
+      const first = noticeOfTarget(noticeEditTarget)[0];
+      noticeSelect(first ? first.id : null);
+    }
+
     function openNoticeManageModal() {
       if (!noticeManageModal) return;
-      noticeTitleInput.value = currentNoticeData.title;
-      noticeStartDate.value = currentNoticeData.startDate;
-      noticeEndDate.value = currentNoticeData.endDate;
-      noticeContentInput.value = currentNoticeData.content;
-      noticeTempPhotos = [...(currentNoticeData.photos || [])];
-      renderNoticeThumbs();
+      noticeSetTarget('field');
 
       noticeManageModal.classList.remove('pointer-events-none', 'opacity-0');
       noticeManageModal.classList.add('opacity-100');
@@ -6318,7 +6417,7 @@
       noticeThumbsContainer.innerHTML = noticeTempPhotos.map((p, i) => `
         <div class="relative flex-shrink-0 group">
           <div onclick="viewNoticePhotoSingle(${i})" class="w-14 h-14 rounded-xl overflow-hidden border border-gray-200 cursor-pointer shadow-sm">
-            <img src="${p.dataUrl}" alt="첨부" class="w-full h-full object-cover">
+            <img src="${p.thumb || p.dataUrl}" alt="첨부" class="w-full h-full object-cover">
           </div>
           <button type="button" onclick="removeNoticePhoto(${i}, event)" class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-black/70 text-white flex items-center justify-center text-[9px]">
             <i class="ph-bold ph-x"></i>
@@ -6333,6 +6432,11 @@
       renderNoticeThumbs();
     }
 
+    const noticeSerialize = (list) => list.map(n => ({
+      id: n.id, target: n.target, title: n.title, content: n.content, start_date: n.startDate, end_date: n.endDate,
+      photos: (n.photos || []).map(ph => ({ path: ph.path, thumb_path: ph.thumbPath, url: ph.dataUrl, thumb_url: ph.thumb, name: ph.name || '' }))
+    }));
+
     async function saveNoticeSettings() {
       const title = noticeTitleInput.value.trim();
       const content = noticeContentInput.value.trim();
@@ -6344,69 +6448,122 @@
         return;
       }
       if (end < start) { showIosAutoToast('게시 종료일이 시작일보다 빠릅니다.'); return; }
+      const prev = noticeList.find(n => n.id === noticeEditId) || null;
+      if (!prev && noticeOfTarget(noticeEditTarget).length >= NOTICE_MAX_PER_TARGET) { showIosAutoToast(`공지는 대상별 최대 ${NOTICE_MAX_PER_TARGET}건까지 등록할 수 있습니다.`); return; }
+      const id = prev ? prev.id : 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const target = noticeEditTarget;
 
       showBusy('저장 중...');
       const uploaded = [];
       let photos = [];
+      let next = noticeList;
       const res = await dbRun('공지 저장', async () => {
         try {
           photos = await incidentUploadPhotos('notice', noticeTempPhotos, uploaded);
-          await settingsSave([{ key: 'popup_notice', value: {
-            title, content, start_date: start, end_date: end,
-            photos: photos.map(ph => ({ path: ph.path, thumb_path: ph.thumbPath, url: ph.dataUrl, thumb_url: ph.thumb, name: ph.name || '' }))
-          } }]);
+          const item = { id, target, title, content, startDate: start, endDate: end, photos };
+          next = prev ? noticeList.map(n => (n.id === id ? item : n)) : noticeList.concat(item);
+          await settingsSave([{ key: 'popup_notices', value: noticeSerialize(next) }]);
         } catch (e) { await incidentRemoveFiles(uploaded); throw e; }
       });
       hideBusy();
       if (!res.ok) return;
 
       const keep = new Set(photos.flatMap(ph => [ph.path, ph.thumbPath]));
-      const stale = (currentNoticeData.photos || []).flatMap(ph => [ph.path, ph.thumbPath]).filter(x => x && !keep.has(x));
+      const stale = ((prev && prev.photos) || []).flatMap(ph => [ph.path, ph.thumbPath]).filter(x => x && !keep.has(x));
       incidentRemoveFiles(stale);
 
-      currentNoticeData = { title, content, startDate: start, endDate: end, photos };
-      closeNoticeManageModal();
-      showModal('공지 저장 완료', '팝업 공지사항이 성공적으로 저장되었습니다.');
-      checkAndShowActiveNotice();
+      noticeList = next;
+      noticeEditId = id;
+      noticeSelect(id);
+      showModal('공지 저장 완료', target === 'field' ? '현장 공지가 저장되었습니다. 이 사이트에 접속하면 표시됩니다.' : '기사 공지가 저장되었습니다. 기사님이 로그인하면 표시됩니다.');
+      if (target === 'field') { closeNoticeManageModal(); checkAndShowActiveNotice(true); }
     }
 
-    function checkAndShowActiveNotice() {
-      if (!currentNoticeData.title || !currentNoticeData.startDate || !currentNoticeData.endDate) return;
-      const todayStr = new Date().toISOString().split('T')[0];
-      if (todayStr < currentNoticeData.startDate || todayStr > currentNoticeData.endDate) {
-        return;
-      }
+    async function deleteNoticeSetting() {
+      const prev = noticeList.find(n => n.id === noticeEditId);
+      if (!prev) return;
+      if (!confirm(`'${prev.title}' 공지를 삭제하시겠습니까?`)) return;
+      const next = noticeList.filter(n => n.id !== prev.id);
+      showBusy('삭제 중...');
+      const res = await dbRun('공지 삭제', async () => { await settingsSave([{ key: 'popup_notices', value: noticeSerialize(next) }]); });
+      hideBusy();
+      if (!res.ok) return;
+      incidentRemoveFiles((prev.photos || []).flatMap(ph => [ph.path, ph.thumbPath]).filter(Boolean));
+      noticeList = next;
+      noticeSetTarget(noticeEditTarget);
+      showIosAutoToast('공지를 삭제했습니다.');
+    }
+
+    // ---------- 노출용 팝업 : 여러 건이면 같은 크기 카드로 넘겨 보기 · 사진은 앨범 미리보기(3초 자동 슬라이드) ----------
+    let activeNotices = [], activeNoticeIdx = 0, popupAlbumIdx = 0, popupAlbumTimer = null;
+    function checkAndShowActiveNotice(force) {
+      const todayStr = noticeLocalToday();
+      activeNotices = noticeOfTarget('field').filter(n => n.title && n.startDate && n.endDate && todayStr >= n.startDate && todayStr <= n.endDate);
+      if (!activeNotices.length) return;
 
       const hideUntil = localStorage.getItem('hideNoticeUntilTimestamp');
-      const now = Date.now();
+      if (!force && hideUntil && Date.now() < parseInt(hideUntil, 10)) return;
 
-      if (hideUntil && now < parseInt(hideUntil, 10)) {
-        return;
-      }
-
-      popupNoticeTitle.textContent = currentNoticeData.title;
-      popupNoticeContent.textContent = currentNoticeData.content;
-
-      const photos = currentNoticeData.photos || [];
-      if (photos.length > 0) {
-        popupNoticePhotosWrapper.classList.remove('hidden');
-        popupNoticePhotosCount.textContent = photos.length;
-        popupNoticePhotosList.innerHTML = photos.map((p, i) => `
-          <div onclick="viewActiveNoticePhotoList(${i})" class="w-14 h-14 rounded-xl overflow-hidden border border-gray-200 cursor-pointer flex-shrink-0 shadow-sm active:scale-95 transition-transform">
-            <img src="${p.dataUrl}" alt="사진" class="w-full h-full object-cover">
-          </div>
-        `).join('');
-      } else {
-        popupNoticePhotosWrapper.classList.add('hidden');
-      }
-
+      activeNoticeIdx = 0;
+      renderActiveNotice();
       activeNoticePopupModal.classList.remove('pointer-events-none', 'opacity-0');
       activeNoticePopupModal.classList.add('opacity-100');
       activeNoticePopupBox.classList.remove('scale-95');
       activeNoticePopupBox.classList.add('scale-100');
     }
+    function renderActiveNotice() {
+      const n = activeNotices[activeNoticeIdx];
+      if (!n) return;
+      const many = activeNotices.length > 1;
+      popupNoticeTitle.textContent = n.title;
+      popupNoticeContent.textContent = n.content;
+      document.getElementById('popupNoticePager').textContent = many ? `${activeNoticeIdx + 1} / ${activeNotices.length}` : '';
+      const nav = document.getElementById('popupNoticeNav');
+      nav.classList.toggle('hidden', !many); nav.classList.toggle('flex', many);
+      document.getElementById('popupNoticeDots').innerHTML = activeNotices.map((_, i) => `<span class="h-1.5 rounded-full transition-all ${i === activeNoticeIdx ? 'w-5 bg-amber-500' : 'w-1.5 bg-gray-300'}"></span>`).join('');
+      document.getElementById('popupNoticeScroll').scrollTop = 0;
+
+      const photos = n.photos || [];
+      popupAlbumIdx = 0;
+      clearInterval(popupAlbumTimer);
+      if (photos.length > 0) {
+        popupNoticePhotosWrapper.classList.remove('hidden');
+        popupNoticePhotosCount.textContent = photos.length;
+        popupNoticePhotosList.classList.toggle('hidden', photos.length < 2);
+        renderPopupAlbum();
+        if (photos.length > 1) popupAlbumTimer = setInterval(() => {       // 약 3초마다 다음 사진
+          if (!activeNoticePopupModal.classList.contains('opacity-100')) { clearInterval(popupAlbumTimer); return; }
+          if (photoViewerModal && photoViewerModal.classList.contains('opacity-100')) return;   // 크게 보는 중에는 멈춤
+          popupAlbumIdx = (popupAlbumIdx + 1) % photos.length;
+          renderPopupAlbum();
+        }, 3000);
+      } else {
+        popupNoticePhotosWrapper.classList.add('hidden');
+      }
+    }
+    function renderPopupAlbum() {
+      const n = activeNotices[activeNoticeIdx];
+      const photos = (n && n.photos) || [];
+      const p = photos[popupAlbumIdx];
+      if (!p) return;
+      const img = document.getElementById('popupNoticeAlbumImg');
+      img.style.opacity = '0';
+      setTimeout(() => { img.src = p.dataUrl; img.onload = () => { img.style.opacity = '1'; }; if (img.complete) img.style.opacity = '1'; }, 120);
+      document.getElementById('popupNoticeAlbumCount').textContent = photos.length > 1 ? `${popupAlbumIdx + 1} / ${photos.length}` : '';
+      popupNoticePhotosList.innerHTML = photos.map((ph, i) => `
+        <div onclick="popupAlbumPick(${i})" class="w-14 h-14 rounded-xl overflow-hidden border-2 ${i === popupAlbumIdx ? 'border-amber-500' : 'border-gray-200'} cursor-pointer flex-shrink-0 shadow-sm active:scale-95 transition-transform">
+          <img src="${ph.thumb || ph.dataUrl}" alt="사진" class="w-full h-full object-cover">
+        </div>`).join('');
+    }
+    function popupAlbumPick(i) { popupAlbumIdx = i; renderPopupAlbum(); }
+    function activeNoticeGo(step) {
+      if (activeNotices.length < 2) return;
+      activeNoticeIdx = (activeNoticeIdx + step + activeNotices.length) % activeNotices.length;
+      renderActiveNotice();
+    }
 
     function closeActiveNoticeSession() {
+      clearInterval(popupAlbumTimer);
       activeNoticePopupModal.classList.remove('opacity-100');
       activeNoticePopupModal.classList.add('opacity-0', 'pointer-events-none');
       activeNoticePopupBox.classList.remove('scale-100');
@@ -6432,9 +6589,16 @@
     }
 
     function viewActiveNoticePhotoList(index) {
-      if (!currentNoticeData.photos[index]) return;
-      openPhotoViewer(index, currentNoticeData.photos);
+      const n = activeNotices[activeNoticeIdx];
+      if (!n || !n.photos || !n.photos[index]) return;
+      openPhotoViewer(index, n.photos);
     }
+    // ESC : 사진을 크게 보는 중이면 사진만 닫고, 아니면 공지 팝업을 닫음
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !activeNoticePopupModal.classList.contains('opacity-100')) return;
+      if (photoViewerModal && photoViewerModal.classList.contains('opacity-100')) return;
+      closeActiveNoticeSession();
+    }, true);   // capture : 사진 뷰어의 ESC 처리보다 먼저 판단
 
     renderDynamicNavMenus();
     sessionRestore();   // 새로고침 전 로그인 상태 복원
@@ -7383,6 +7547,8 @@
 
     let svInitDone = false;
     let svCenters = [];            // { id, name, address }
+    const svCheckedRows = new Set();   // 기사 변경용 : 선택한 배차 행 id
+    let svVisibleRowIds = [];          // 현재 표에 보이는 행 id
     let svRows = [];               // { id, center, driver, vehicleNo, storeCode, storeName, seq, address, departTime, driverPhone, storePhone, formatType, saved }
     let svSelectedCenter = '';     // '' = 전체
     let svDriverQuery = '';
@@ -7786,12 +7952,14 @@
         return !svCheckAddress(r.address).ok && qNoSpace.length > 0 && '수정필요'.includes(qNoSpace);
       });
       if (rows.length === 0) {
-        body.innerHTML = `<tr><td colspan="8" class="py-10 text-center text-gray-400">
+        svSyncRowChecks([]);
+        body.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-gray-400">
           <i class="ph-bold ph-archive text-3xl mb-1.5 block text-gray-300"></i>표시할 배차 내역이 없습니다.</td></tr>`;
         svUpdateSaveLabel();
         return;
       }
       const txt = (v, fallback = '-') => svEsc(v) || fallback;
+      svSyncRowChecks(rows.map(r => r.id));
       body.innerHTML = rows.map(r => {
         const addrOk = svCheckAddress(r.address).ok;
         const inp = (field, cls, ph, type = 'text') =>
@@ -7801,6 +7969,7 @@
           : `<div class="flex items-center space-x-1"><span class="text-[10px] text-gray-400 w-10 flex-shrink-0">${label}</span>${r[field] ? `<a href="tel:${svEsc(r[field])}" class="font-mono text-[12px] font-semibold text-[#007AFF]">${svEsc(r[field])}</a>` : '<span class="text-gray-400">-</span>'}</div>`;
         return `
           <tr id="svRow_${r.id}" class="${svIsDirty(r) ? 'bg-amber-50/70' : ''} transition-colors align-middle">
+            <td><input type="checkbox" data-row-check="${r.id}" ${svCheckedRows.has(r.id) ? 'checked' : ''} onchange="svToggleRow('${r.id}', this.checked)" class="w-4 h-4 align-middle cursor-pointer"></td>
             <td class="font-semibold text-gray-800">${txt(r.center)}</td>
             <td>${canEdit
               ? `<div class="flex flex-col items-center space-y-1">${inp('driver', 'w-[110px] font-semibold', '기사명')}${inp('vehicleNo', 'w-[110px] font-mono text-xs', '차량번호')}</div>`
@@ -7837,6 +8006,76 @@
       }
       svUpdateSaveLabel();
     }
+    // ---------- 행 선택 + 기사 변경 (선택한 배차 행의 기사명·차량번호·연락처를 한 번에 교체) ----------
+    function svSyncRowChecks(visibleIds) {
+      if (visibleIds) svVisibleRowIds = visibleIds;
+      const all = document.getElementById('svRowCheckAll');
+      const n = svVisibleRowIds.filter(id => svCheckedRows.has(id)).length;
+      if (all) { all.checked = svVisibleRowIds.length > 0 && n === svVisibleRowIds.length; all.indeterminate = n > 0 && n < svVisibleRowIds.length; }
+      const label = document.getElementById('svDrvChangeLabel');
+      if (label) label.textContent = svCheckedRows.size ? `기사 변경 (${svCheckedRows.size})` : '기사 변경';
+    }
+    function svToggleRow(id, checked) { if (checked) svCheckedRows.add(id); else svCheckedRows.delete(id); svSyncRowChecks(); }
+    function svToggleAllRows(checked) {
+      svVisibleRowIds.forEach(id => { if (checked) svCheckedRows.add(id); else svCheckedRows.delete(id); });
+      document.querySelectorAll('#svRowsTableBody [data-row-check]').forEach(el => { el.checked = checked; });
+      svSyncRowChecks();
+    }
+    function svOpenDriverChange() {
+      if (!svRequireLogin()) return;
+      [...svCheckedRows].forEach(id => { if (!svRows.some(r => r.id === id)) svCheckedRows.delete(id); });
+      const rows = svRows.filter(r => svCheckedRows.has(r.id));
+      if (!rows.length) { showToastNotification('선택된 배차 없음', '기사를 변경할 배차 행을 왼쪽 체크박스로 선택해주세요.', 'warning'); return; }
+      const by = new Map();
+      rows.forEach(r => { const s0 = r.saved || r; const k = `${s0.driver || ''}|${s0.vehicleNo || ''}|${s0.driverPhone || ''}`; if (!by.has(k)) by.set(k, { driver: s0.driver || '', vehicleNo: s0.vehicleNo || '', phone: s0.driverPhone || '', n: 0 }); by.get(k).n++; });
+      document.getElementById('svDcCount').textContent = `선택한 배차 ${rows.length}건`;
+      document.getElementById('svDcOld').innerHTML = [...by.values()].map(d => `
+        <div class="flex items-center justify-between gap-2 bg-gray-50 border border-gray-200/80 rounded-xl px-3 py-2">
+          <div class="min-w-0"><div class="text-[14px] font-bold text-gray-900 truncate">${svEsc(d.driver) || '(기사명 없음)'}</div>
+          <div class="text-[12px] font-mono text-gray-500 truncate">${svEsc(d.vehicleNo) || '-'} · ${svEsc(d.phone) || '연락처 없음'}</div></div>
+          <span class="flex-shrink-0 text-[11px] font-bold text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded-full">${d.n}건</span>
+        </div>`).join('');
+      ['svDcName', 'svDcVehicle', 'svDcPhone'].forEach(id => { document.getElementById(id).value = ''; });
+      const m = document.getElementById('svDriverChangeModal');
+      m.classList.remove('pointer-events-none', 'opacity-0'); m.classList.add('opacity-100');
+      setTimeout(() => document.getElementById('svDcName').focus(), 150);
+    }
+    function svCloseDriverChange() {
+      const m = document.getElementById('svDriverChangeModal');
+      m.classList.remove('opacity-100'); m.classList.add('opacity-0', 'pointer-events-none');
+    }
+    async function svApplyDriverChange() {
+      if (!svRequireLogin()) return;
+      const name = document.getElementById('svDcName').value.trim();
+      const vehicleNo = document.getElementById('svDcVehicle').value.trim();
+      const phone = document.getElementById('svDcPhone').value.trim();
+      if (!name || !vehicleNo) { showIosAutoToast('변경할 기사 이름과 차량번호를 입력해주세요.'); return; }
+      if (vehicleNo.replace(/[^0-9]/g, '').length < 4) { showIosAutoToast('차량번호에 숫자 4자리 이상이 필요합니다. (뒤 4자리가 기사 로그인 인증번호)'); return; }
+      const rows = svRows.filter(r => svCheckedRows.has(r.id));
+      if (!rows.length) return;
+      const ids = rows.map(r => r.dbId).filter(v => v != null);
+      if (supabaseClient && ids.length) {
+        showBusy('기사 변경 중...');
+        let err = null;
+        for (let n = 0; n < ids.length && !err; n += 200) {
+          const { error } = await supabaseClient.from('dispatch_data').update({ driver_name: name, vehicle_no: vehicleNo, driver_phone: phone || null }).in('id', ids.slice(n, n + 200));
+          if (error) err = error;
+        }
+        hideBusy();
+        if (err) { console.error('기사 변경 오류', err); showToastNotification('기사 변경 실패', dbErrorMessage(err), 'warning'); return; }
+      }
+      rows.forEach(r => {
+        r.driver = name; r.vehicleNo = vehicleNo; r.driverPhone = phone;
+        if (r.saved) { r.saved.driver = name; r.saved.vehicleNo = vehicleNo; r.saved.driverPhone = phone; }
+      });
+      const seqBy = {};                        // 기사별 순서 다시 매김
+      svRows.forEach(r => { const k = (r.driver || '') + '|' + (r.vehicleNo || ''); seqBy[k] = (seqBy[k] || 0) + 1; r.seq = seqBy[k]; });
+      svCheckedRows.clear();
+      svCloseDriverChange();
+      svRenderAll();
+      showToastNotification('기사 변경 완료', `${rows.length}건이 ${name} 기사님(${vehicleNo})으로 변경되었습니다. 기사 로그인에도 바로 적용됩니다.`, 'success');
+    }
+
     async function svSaveAll() {
       if (!svRequireLogin()) return;
       const dirty = svRows.filter(svIsDirty);
