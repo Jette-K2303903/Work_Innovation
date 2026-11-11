@@ -9608,7 +9608,7 @@
 
     // ---------- 입력 ----------
     function isNeedUser() {
-      if (isState.missing) { showIosAutoToast('서버 준비(SQL 실행) 후 입력할 수 있습니다.'); return true; }
+      if (isState.missing) { showToastNotification('서버 준비 필요', '특이사항 표를 만든 뒤(SQL 실행) 입력할 수 있습니다.', 'warning'); return true; }
       if (!isState.me) { isOpenUserPicker(); return true; }
       return false;
     }
@@ -9704,7 +9704,7 @@
         if (!code) continue;
         const found = c.lookup === 'store' ? await isLookupStore(code) : await isLookupProduct(code);
         if (found) Object.keys(found).forEach(k => { if (!(k in patch) || !patch[k]) patch[k] = found[k]; });
-        else { isState.miss.add(row.id + '|' + c.k); showIosAutoToast(`${c.h} '${code}' 정보를 찾지 못했습니다. 이름을 직접 입력해 주세요.`); }
+        else { isState.miss.add(row.id + '|' + c.k); showToastNotification('코드 확인', `${c.h} '${code}' 정보를 찾지 못했습니다. 이름을 직접 입력해 주세요.`, 'warning'); }
       }
       return patch;
     }
@@ -9745,7 +9745,7 @@
     async function isDeleteChecked() {
       if (isNeedUser()) return;
       const ids = [...isState.checked].filter(id => isState.rows.some(r => r.id === id));
-      if (!ids.length) { showIosAutoToast('삭제할 행을 왼쪽 체크박스로 선택해 주세요.'); return; }
+      if (!ids.length) { showToastNotification('선택 필요', '삭제할 행을 왼쪽 체크박스로 선택해 주세요.', 'warning'); return; }
       if (!confirm(`선택한 ${ids.length}건을 삭제하시겠습니까? 되돌릴 수 없습니다.`)) return;
       const { error } = await supabaseClient.from(IS_TABLE).delete().in('id', ids);
       if (error) { showToastNotification('삭제 실패', dbErrorMessage(error), 'warning'); return; }
@@ -9754,7 +9754,7 @@
       if (isState.sel && ids.includes(isState.sel.id)) isState.sel = null;
       isRender();
       isBroadcast('del', { ids });
-      showIosAutoToast(`${ids.length}건을 삭제했습니다.`);
+      showToastNotification('삭제 완료', `${ids.length}건을 삭제했습니다.`, 'success');
     }
     // 엑셀에서 복사한 여러 칸 붙여넣기 (선택한 칸부터 오른쪽·아래로, 모자라면 새 행 추가)
     async function isPaste(text) {
@@ -9778,10 +9778,10 @@
           else if (await isAddRow(patch)) n++;
         }
       } finally { hideBusy(); }
-      showIosAutoToast(`${n}행을 붙여넣었습니다.`);
+      showToastNotification('붙여넣기 완료', `${n}행을 붙여넣었습니다.`, 'success');
     }
     function isDownload() {
-      if (typeof XLSX === 'undefined') { showIosAutoToast('엑셀 기능을 불러오지 못했습니다.'); return; }
+      if (typeof XLSX === 'undefined') { showToastNotification('엑셀 오류', '엑셀 기능을 불러오지 못했습니다.', 'warning'); return; }
       const rows = isRowsView();
       const aoa = [IS_COLS.map(c => c.h)].concat(rows.map(r => IS_COLS.map(c => c.k === 'updated_at' ? isFmtTs(r[c.k]) : (r[c.k] ?? ''))));
       const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -9907,7 +9907,7 @@
       isCloseUserPicker();
       isTrack();
       isRender();
-      showIosAutoToast(`${isState.me} 님으로 입력합니다.`);
+      showToastNotification('사용자 선택 완료', `${isState.me} 님으로 입력합니다.`, 'success');
     });
 
     // ---------- 이벤트 ----------
