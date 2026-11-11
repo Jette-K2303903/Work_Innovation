@@ -752,6 +752,36 @@
         <span class="mt-3 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-full">준비 중</span>
       </div>
 
+      <!-- ============ 구간차량 관리 > 기사님 페이지 (driver/index.html 연결) ============ -->
+      <div id="svDriverPane" class="hidden space-y-3">
+        <section class="bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
+          <div class="flex items-center space-x-2.5 pb-3 mb-3 border-b border-gray-100 min-w-0">
+            <div class="w-9 h-9 rounded-xl bg-blue-50 text-[#007AFF] flex items-center justify-center flex-none"><i class="ph-bold ph-user text-lg"></i></div>
+            <div class="min-w-0">
+              <h3 class="text-[15px] font-bold text-gray-900 tracking-tight">기사님 페이지</h3>
+              <p class="text-[12px] text-gray-500">기사님들께는 아래 주소만 공유하세요. 이름 검색 화면부터 열립니다.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2.5 min-w-0">
+            <i class="ph-bold ph-link text-gray-500 flex-none"></i>
+            <span id="svDriverUrl" class="flex-1 min-w-0 truncate text-[13px] font-semibold text-gray-800 select-all"></span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 mt-3">
+            <button type="button" onclick="svOpenDriverPage()" class="py-3 rounded-xl bg-[#007AFF] text-white text-[14px] font-bold active:scale-[0.97] transition-transform flex items-center justify-center gap-1.5"><i class="ph-bold ph-arrow-square-out"></i>새 창으로 열기</button>
+            <button type="button" onclick="svCopyDriverUrl()" class="py-3 rounded-xl bg-gray-100 text-gray-800 text-[14px] font-bold active:scale-[0.97] transition-transform flex items-center justify-center gap-1.5"><i class="ph-bold ph-copy"></i>주소 복사</button>
+          </div>
+        </section>
+        <section class="bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-[14px] font-bold text-gray-900">휴대폰 화면 미리보기</h3>
+            <button type="button" onclick="svReloadDriverPreview()" class="text-[12px] font-bold text-[#007AFF] px-2 py-1 rounded-lg bg-blue-50">새로고침</button>
+          </div>
+          <div class="mx-auto w-full max-w-[390px] h-[720px] rounded-[36px] border-[10px] border-gray-900 overflow-hidden bg-[#F2F2F7] shadow-xl">
+            <iframe id="svDriverFrame" title="기사님 페이지 미리보기" class="w-full h-full border-0" loading="lazy"></iframe>
+          </div>
+        </section>
+      </div>
+
       <!-- ============ 구간차량 관리 > 홈화면 ============ -->
       <div id="svHomePane" class="hidden space-y-3">
 
@@ -6885,10 +6915,30 @@
       document.getElementById('svPaneTitle').textContent = SECTION_TABS[tab].title;
       const isHomeTab = tab === 'home';
       const isSmsTab = tab === 'sms';
+      const isDriverTab = tab === 'driver';
       document.getElementById('svHomePane').classList.toggle('hidden', !isHomeTab);
       document.getElementById('svSmsPane').classList.toggle('hidden', !isSmsTab);
-      document.getElementById('sectionVehiclePane').classList.toggle('hidden', isHomeTab || isSmsTab);
+      document.getElementById('svDriverPane').classList.toggle('hidden', !isDriverTab);
+      document.getElementById('sectionVehiclePane').classList.toggle('hidden', isHomeTab || isSmsTab || isDriverTab);
       if (isHomeTab || isSmsTab) svRenderAll();
+      if (isDriverTab) svInitDriverPane();
+    }
+
+    // ---------- 구간차량 관리 > 기사님 페이지 : driver/index.html (기사 전용 페이지) ----------
+    const SV_DRIVER_PATH = 'driver/';
+    function svDriverUrl() { return new URL(SV_DRIVER_PATH, location.href).href; }
+    function svInitDriverPane() {
+      document.getElementById('svDriverUrl').textContent = svDriverUrl();
+      const f = document.getElementById('svDriverFrame');
+      if (!f.getAttribute('src')) f.setAttribute('src', SV_DRIVER_PATH);
+    }
+    function svReloadDriverPreview() { document.getElementById('svDriverFrame').setAttribute('src', SV_DRIVER_PATH + '?t=' + Date.now()); }
+    function svOpenDriverPage() { window.open(svDriverUrl(), '_blank', 'noopener'); }
+    async function svCopyDriverUrl() {
+      const url = svDriverUrl();
+      try { await navigator.clipboard.writeText(url); }
+      catch (e) { const t = document.createElement('textarea'); t.value = url; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+      showToastNotification('주소 복사 완료', '기사님들께 이 주소를 공유하세요.', 'success');
     }
 
     // ==========================================

@@ -1,0 +1,2863 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <!-- viewport-fit=cover : 노치/다이내믹 아일랜드/홈 인디케이터 영역까지 그린 뒤 safe-area 로 안쪽 여백을 잡습니다 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#F2F2F7">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="format-detection" content="telephone=no">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Delivery Connect">
+    <meta property="og:description" content="배송지 특이사항 확인 시스템">
+
+    <title>Delivery Connect</title>
+
+    <!-- 홈개발_v32 와 동일한 Supabase SDK 버전 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+
+    <style>
+        /* =========================================================
+           기사 전용 페이지 (Driver) - 홈개발_v32 iOS 디자인 토큰 계승
+           ※ 통합 시 충돌 방지를 위해 모든 id / class / 변수는 drv- 접두사 사용
+           ========================================================= */
+        :root {
+            --drv-primary: #007AFF;
+            --drv-primary-tint: rgba(0, 122, 255, 0.10);
+            --drv-green: #34C759;
+            --drv-red: #FF3B30;
+            --drv-orange: #FF9500;
+            --drv-bg: #F2F2F7;
+            --drv-surface: #FFFFFF;
+            --drv-fill: #F3F4F6;          /* v32 bg-gray-100 */
+            --drv-fill-2: #F9FAFB;        /* v32 bg-gray-50 */
+            --drv-text: #1C1C1E;
+            --drv-text-2: #3A3A3C;
+            --drv-sub: #8E8E93;
+            --drv-sep: #E5E5EA;
+            --drv-card-radius: 20px;      /* v32 .ios-card */
+            --drv-btn-radius: 14px;       /* v32 .ios-btn */
+            --drv-field-radius: 12px;     /* v32 rounded-[12px] */
+            --drv-ease: cubic-bezier(0.4, 0, 0.2, 1);      /* v32 ios-btn transition */
+            --drv-spring: cubic-bezier(0.32, 0.72, 0, 1);  /* iOS 시트 스프링 */
+
+            /* Safe Area */
+            --sat: env(safe-area-inset-top, 0px);
+            --sar: env(safe-area-inset-right, 0px);
+            --sab: env(safe-area-inset-bottom, 0px);
+            --sal: env(safe-area-inset-left, 0px);
+
+            /* 동적 뷰포트 높이 (주소창/툴바 변화 대응) */
+            --drv-vh: 100vh;
+        }
+        @supports (height: 100dvh) { :root { --drv-vh: 100dvh; } }
+
+        /* v32 요청사항: 전체 폰트 굴림체 통일 + 기본 선택 방지 */
+        * {
+            font-family: '굴림', 'Gulim', 'dotum', sans-serif !important;
+            -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+        input, textarea { -webkit-user-select: text !important; user-select: text !important; }
+
+        html, body { margin: 0; padding: 0; background: var(--drv-bg); color: var(--drv-text); }
+        html { height: -webkit-fill-available; }
+        body {
+            min-height: var(--drv-vh);
+            -webkit-font-smoothing: antialiased;
+            -webkit-text-size-adjust: 100%;
+            overflow-x: hidden;
+            overscroll-behavior-y: none;
+        }
+        html.drv-lock, html.drv-lock body { overflow: hidden; touch-action: none; }
+        button { border: 0; background: none; padding: 0; margin: 0; color: inherit; cursor: pointer; font: inherit; }
+        svg { display: block; }
+
+        /* v32 공통 컴포넌트 */
+        .drv-card { background: var(--drv-surface); border-radius: var(--drv-card-radius); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .drv-press { transition: transform 0.2s var(--drv-ease), opacity 0.2s var(--drv-ease), background-color 0.2s var(--drv-ease); }
+        .drv-press:active { transform: scale(0.97); opacity: 0.8; }
+        .drv-glass { background: rgba(255,255,255,0.85); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); }
+
+        /* ---------- 앱 / 화면 전환 ---------- */
+        #drv-app { position: relative; min-height: var(--drv-vh); }
+        .drv-screen {
+            position: absolute; inset: 0; min-height: var(--drv-vh);
+            opacity: 0; visibility: hidden; transform: translateY(12px) scale(0.99);
+            transition: opacity .35s var(--drv-ease), transform .45s var(--drv-spring), visibility 0s linear .45s;
+        }
+        .drv-screen.is-active {
+            position: relative; opacity: 1; visibility: visible; transform: none;
+            transition: opacity .35s var(--drv-ease), transform .45s var(--drv-spring), visibility 0s;
+        }
+
+        /* =========================================================
+           1) 로그인 화면
+           ========================================================= */
+        .drv-login-wrap {
+            display: flex; flex-direction: column; align-items: center;
+            min-height: var(--drv-vh);
+            padding: calc(20px + var(--sat)) calc(20px + var(--sar)) calc(16px + var(--sab)) calc(20px + var(--sal));
+        }
+        .drv-spacer { flex: 1 1 0; min-height: 8px; }
+        .drv-spacer.is-bottom { flex-grow: 1.35; }
+
+        .drv-brand { text-align: center; margin-bottom: 22px; transition: transform .5s var(--drv-spring), margin .5s var(--drv-spring); }
+        .drv-brand h1 { margin: 0 0 8px; font-size: 30px; font-weight: 900; letter-spacing: -0.02em; color: var(--drv-primary); line-height: 1.1; }
+        .drv-brand p { margin: 0; font-size: 12px; font-weight: 700; color: #9CA3AF; letter-spacing: .18em; text-transform: uppercase; transition: opacity .3s var(--drv-ease), max-height .4s var(--drv-spring); max-height: 20px; overflow: hidden; }
+
+        .drv-login-card { width: 100%; max-width: 400px; padding: 22px 20px 14px; }
+
+        /* iOS 검색 바 */
+        .drv-search { position: relative; display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 12px 0 14px; background: var(--drv-fill); border-radius: var(--drv-field-radius); transition: box-shadow .25s var(--drv-ease), background-color .25s var(--drv-ease); }
+        .drv-search:focus-within { background: #EEF0F3; box-shadow: 0 0 0 3px rgba(0,122,255,.18); }
+        .drv-search svg { flex: none; color: var(--drv-sub); }
+        .drv-search input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; font-size: 16px; font-weight: 700; color: var(--drv-text); -webkit-appearance: none; appearance: none; }
+        .drv-search input::placeholder { color: #A1A1AA; font-weight: 700; }
+        .drv-search input:disabled { color: var(--drv-sub); }
+        .drv-search input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+        .drv-clear { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #C7C7CC; color: #fff; display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(.6); pointer-events: none; transition: opacity .2s var(--drv-ease), transform .25s var(--drv-spring); }
+        .drv-clear.is-show { opacity: 1; transform: scale(1); pointer-events: auto; }
+
+        /* 검색 결과 리스트 */
+        .drv-list { margin-top: 14px; min-height: 120px; max-height: min(320px, calc(var(--drv-vh) * 0.42)); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; display: flex; flex-direction: column; }
+        .drv-list::-webkit-scrollbar { width: 4px; }
+        .drv-list::-webkit-scrollbar-thumb { background: #d1d1d6; border-radius: 10px; }
+        .drv-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 6px; text-align: left; border-bottom: 1px solid #F3F4F6; border-radius: 12px; animation: drv-row-in .38s var(--drv-spring) both; }
+        .drv-row:last-child { border-bottom: 0; }
+        .drv-row:active { background: #E5E5EA; transform: scale(.985); }
+        .drv-avatar { flex: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--drv-primary-tint); color: var(--drv-primary); font-size: 16px; font-weight: 900; }
+        .drv-row-name { flex: 1; min-width: 0; font-size: 18px; font-weight: 700; color: #1F2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .drv-row-name mark { background: transparent; color: var(--drv-primary); }
+        .drv-row-name small { font-size: 15px; color: #6B7280; font-weight: 700; margin-left: 2px; }
+        .drv-row-go { flex: none; display: flex; align-items: center; gap: 2px; font-size: 13px; font-weight: 800; color: var(--drv-primary); }
+        @keyframes drv-row-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+        .drv-empty { margin: auto 0; padding: 18px 14px; text-align: center; font-size: 14px; font-weight: 700; color: #6B7280; line-height: 1.6; animation: drv-fade .3s var(--drv-ease) both; }
+        .drv-empty.is-box { background: var(--drv-fill-2); border-radius: var(--drv-btn-radius); font-size: 15px; }
+        .drv-empty.is-warn { color: var(--drv-red); }
+        .drv-empty .drv-empty-ico { font-size: 28px; display: block; margin-bottom: 6px; }
+        @keyframes drv-fade { from { opacity: 0; } to { opacity: 1; } }
+
+        .drv-login-foot { margin-top: 18px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+        .drv-meta { font-size: 11px; font-weight: 700; color: #A1A1AA; }
+        .drv-demo { display: none; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: #FFF7ED; border: 1px solid #FED7AA; color: #C2410C; font-size: 11px; font-weight: 800; }
+        .drv-demo.is-show { display: inline-flex; }
+        .drv-demo button { color: var(--drv-primary); font-weight: 900; text-decoration: underline; text-underline-offset: 2px; }
+
+        /* =========================================================
+           공통: 레이어 / 바텀시트
+           ========================================================= */
+        .drv-layer { position: fixed; inset: 0; z-index: 400; visibility: hidden; pointer-events: none; transition: visibility 0s linear .5s; }
+        .drv-layer.is-open { visibility: visible; pointer-events: auto; transition: visibility 0s; }
+        .drv-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.4); opacity: 0; transition: opacity .4s var(--drv-ease); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+        .drv-layer.is-open .drv-backdrop { opacity: 1; }
+        .drv-sheet {
+            position: absolute; left: 0; right: 0; bottom: 0; margin: 0 auto; max-width: 520px;
+            background: var(--drv-bg); border-radius: 24px 24px 0 0;
+            box-shadow: 0 -10px 40px rgba(0,0,0,.18);
+            transform: translateY(105%);
+            transition: transform .5s var(--drv-spring);
+            display: flex; flex-direction: column;
+            padding-left: var(--sal); padding-right: var(--sar);
+            will-change: transform;
+        }
+        .drv-layer.is-open .drv-sheet { transform: translateY(0); }
+        .drv-sheet.is-dragging { transition: none; }
+        .drv-grabber { flex: none; width: 100%; height: 22px; display: flex; align-items: center; justify-content: center; touch-action: none; cursor: grab; }
+        .drv-grabber::before { content: ''; width: 38px; height: 5px; border-radius: 3px; background: #C7C7CC; }
+
+        /* ---------- 인증번호 인라인 입력 (v32 pwSection 방식 : 팝업 없이 카드 아래로 펼침) ---------- */
+        .drv-collapse { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows .45s var(--drv-spring), opacity .3s var(--drv-ease); }
+        .drv-collapse > div { min-height: 0; overflow: hidden; }
+        .drv-collapse.is-pw { grid-template-rows: 0fr; opacity: 0; }
+        .drv-login-card.is-pw .drv-collapse.is-list { grid-template-rows: 0fr; opacity: 0; }
+        .drv-login-card.is-pw .drv-collapse.is-pw { grid-template-rows: 1fr; opacity: 1; }
+
+        .drv-pw-inner { padding: 16px 0 6px; text-align: center; }
+        .drv-pw-who { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: var(--drv-btn-radius); background: var(--drv-fill-2); border: 1px solid #F3F4F6; text-align: left; }
+        .drv-pw-name { flex: 1; min-width: 0; font-size: 19px; font-weight: 900; color: var(--drv-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .drv-pw-name small { font-size: 15px; color: var(--drv-text-2); font-weight: 700; margin-left: 2px; }
+        .drv-textbtn { flex: none; font-size: 14px; font-weight: 800; color: var(--drv-primary); padding: 8px 12px; border-radius: 10px; background: var(--drv-primary-tint); }
+        .drv-pin-guide { margin: 18px 0 0; font-size: 13px; font-weight: 700; color: var(--drv-sub); }
+
+        /* OTP 4칸 (입력값은 ● 로 마스킹) */
+        .drv-otp { position: relative; display: flex; justify-content: center; gap: 10px; margin: 12px 0 8px; cursor: text; }
+        .drv-otp-box {
+            position: relative; flex: 1 1 0; max-width: 64px; height: 64px; border-radius: var(--drv-btn-radius);
+            background: var(--drv-fill); border: 1.5px solid transparent;
+            display: flex; align-items: center; justify-content: center;
+            transition: border-color .2s var(--drv-ease), box-shadow .2s var(--drv-ease), background-color .2s var(--drv-ease), transform .25s var(--drv-spring);
+        }
+        .drv-otp-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--drv-text); animation: drv-otp-pop .28s var(--drv-spring) both; transition: background-color .2s var(--drv-ease); }
+        @keyframes drv-otp-pop { from { transform: scale(0); } 60% { transform: scale(1.25); } to { transform: scale(1); } }
+        .drv-otp-box.is-filled { background: #FFFFFF; border-color: #C7C7CC; }
+        .drv-otp-box.is-active { background: #FFFFFF; border-color: var(--drv-primary); box-shadow: 0 0 0 4px rgba(0,122,255,.15); transform: translateY(-2px); }
+        .drv-otp-box.is-active::after { content: ''; position: absolute; left: 50%; top: 50%; width: 2px; height: 26px; margin: -13px 0 0 -1px; border-radius: 1px; background: var(--drv-primary); animation: drv-caret 1s steps(1) infinite; }
+        @keyframes drv-caret { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+        .drv-otp.is-ok .drv-otp-box { border-color: var(--drv-green); background: #F0FDF4; box-shadow: 0 0 0 4px rgba(52,199,89,.15); }
+        .drv-otp.is-ok .drv-otp-dot { background: var(--drv-green); }
+        .drv-otp.is-bad .drv-otp-box { border-color: var(--drv-red); background: #FEF2F2; }
+        .drv-otp.is-bad .drv-otp-dot { background: var(--drv-red); }
+        .drv-otp.is-locked .drv-otp-box { background: #EDEDF0; border-color: transparent; }
+        .drv-otp.is-ok .drv-otp-box::after, .drv-otp.is-bad .drv-otp-box::after, .drv-otp.is-locked .drv-otp-box::after { display: none; }
+        /* 실제 입력은 칸 위에 겹친 투명 input (휴대폰 숫자 키보드 / 붙여넣기 / 자동완성 지원) */
+        .drv-otp-input { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; outline: 0; background: transparent; color: transparent; caret-color: transparent; font-size: 16px; opacity: 0; -webkit-appearance: none; appearance: none; }
+        .drv-otp-hint { margin: 0; font-size: 11px; font-weight: 700; color: #AEAEB2; }
+        .drv-otp-hint b { color: var(--drv-text-2); font-weight: 900; }
+        .drv-shake { animation: drv-shake .5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes drv-shake { 10%,90% { transform: translateX(-2px); } 20%,80% { transform: translateX(5px); } 30%,50%,70% { transform: translateX(-10px); } 40%,60% { transform: translateX(10px); } }
+        .drv-pin-error { min-height: 18px; margin: 6px 0 0; font-size: 12px; font-weight: 800; color: var(--drv-red); word-break: keep-all; }
+        .drv-pw-submit { width: 100%; height: 58px; margin-top: 8px; font-size: 18px; }
+        .drv-pw-submit[aria-disabled="true"] { background: #A7CCF7; box-shadow: none; }
+
+        /* =========================================================
+           2) 시스템 사용 동의 및 보안서약서 (전체 높이 시트)
+           ========================================================= */
+        .drv-agree-sheet { top: calc(var(--sat) + 10px); max-width: 640px; }
+        .drv-agree-head { flex: none; position: relative; padding: 0 16px 12px 20px; display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid var(--drv-sep); background: var(--drv-bg); border-radius: 24px 24px 0 0; touch-action: none; }
+        .drv-agree-head .drv-ttl { flex: 1; min-width: 0; }
+        .drv-req { display: inline-block; font-size: 10px; font-weight: 900; padding: 3px 8px; border-radius: 6px; background: #FEE2E2; color: #DC2626; margin-bottom: 6px; }
+        .drv-req.is-done { background: #DCFCE7; color: #15803D; }
+        .drv-agree-head h2 { margin: 0; font-size: 19px; font-weight: 900; color: var(--drv-text); line-height: 1.3; word-break: keep-all; }
+        .drv-icon-btn { flex: none; width: 32px; height: 32px; border-radius: 50%; background: #E3E3E8; color: #6B6B70; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
+        .drv-progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: transparent; overflow: hidden; }
+        .drv-progress i { display: block; height: 100%; width: 0; background: var(--drv-primary); transition: width .15s linear; }
+
+        .drv-agree-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 16px 16px 24px; }
+        .drv-notice { display: flex; gap: 10px; padding: 14px; border-radius: var(--drv-btn-radius); background: #FFF7ED; border: 1px solid #FED7AA; color: #9A3412; font-size: 12.5px; font-weight: 700; line-height: 1.6; word-break: keep-all; }
+        .drv-notice b { color: #C2410C; }
+        .drv-notice .drv-notice-ico { flex: none; font-size: 18px; line-height: 1.3; }
+
+        .drv-sec-label { margin: 22px 4px 8px; font-size: 12px; font-weight: 800; color: var(--drv-sub); letter-spacing: .02em; }
+        .drv-doc { padding: 18px 18px 6px; }
+        .drv-doc-intro { margin: 0 0 14px; font-size: 13.5px; font-weight: 700; color: var(--drv-text-2); line-height: 1.75; word-break: keep-all; }
+        .drv-art { padding: 14px 0; border-top: 1px solid #F0F0F3; }
+        .drv-art h3 { margin: 0 0 8px; font-size: 14.5px; font-weight: 900; color: var(--drv-text); }
+        .drv-art h3 em { font-style: normal; color: var(--drv-primary); margin-right: 4px; }
+        .drv-art ol, .drv-art ul { margin: 0; padding-left: 18px; }
+        .drv-art li, .drv-art p { font-size: 13px; font-weight: 700; color: #48484A; line-height: 1.75; word-break: keep-all; margin: 0 0 4px; }
+        .drv-art li strong { color: var(--drv-red); }
+        .drv-doc-ver { padding: 12px 0 14px; border-top: 1px solid #F0F0F3; font-size: 11px; font-weight: 700; color: #AEAEB2; text-align: right; }
+
+        /* iOS 그룹 리스트 + 체크 */
+        .drv-group { overflow: hidden; }
+        .drv-check { width: 100%; display: flex; align-items: center; gap: 12px; padding: 15px 16px; text-align: left; border-bottom: 1px solid #F0F0F3; transition: background-color .15s var(--drv-ease); }
+        .drv-check:last-child { border-bottom: 0; }
+        .drv-check:active { background: #F2F2F7; }
+        .drv-check.is-all { background: #FAFAFC; }
+        .drv-check .drv-cb { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #C7C7CC; display: flex; align-items: center; justify-content: center; color: #fff; transition: background-color .2s var(--drv-ease), border-color .2s var(--drv-ease), transform .3s var(--drv-spring); }
+        .drv-check .drv-cb svg { transform: scale(0); transition: transform .3s var(--drv-spring); }
+        .drv-check[aria-checked="true"] .drv-cb { background: var(--drv-primary); border-color: var(--drv-primary); transform: scale(1.06); }
+        .drv-check[aria-checked="true"] .drv-cb svg { transform: scale(1); }
+        .drv-check .drv-ck-txt { flex: 1; font-size: 14px; font-weight: 800; color: var(--drv-text); line-height: 1.45; word-break: keep-all; }
+        .drv-check.is-all .drv-ck-txt { font-size: 15px; font-weight: 900; }
+        .drv-check .drv-ck-txt span { color: var(--drv-red); margin-right: 4px; }
+        .drv-check[aria-disabled="true"] { pointer-events: none; }
+        .drv-attn { animation: drv-attn 1s var(--drv-ease) 1; }
+        @keyframes drv-attn { 0%,100% { box-shadow: 0 4px 15px rgba(0,0,0,0.05); } 30%,70% { box-shadow: 0 0 0 3px rgba(255,59,48,.45); } }
+
+        /* 서명 영역 */
+        .drv-sign-card { padding: 16px; }
+        .drv-sign-info { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin-bottom: 12px; font-size: 12px; font-weight: 700; color: var(--drv-sub); }
+        .drv-sign-info b { color: var(--drv-text); font-weight: 900; text-align: right; }
+        .drv-sign-info b.is-red { color: var(--drv-red); }
+        .drv-pad { position: relative; height: 170px; border: 2px dashed #D1D1D6; border-radius: var(--drv-btn-radius); background: #FFFFFF; overflow: hidden; transition: border-color .25s var(--drv-ease); }
+        .drv-pad.is-ink { border-style: solid; border-color: var(--drv-primary); }
+        .drv-pad canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+        .drv-pad-ph { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; pointer-events: none; color: #C7C7CC; font-size: 17px; font-weight: 900; transition: opacity .25s var(--drv-ease); }
+        .drv-pad-ph small { font-size: 11px; font-weight: 700; color: #C7C7CC; }
+        .drv-pad.is-ink .drv-pad-ph { opacity: 0; }
+        .drv-pad-line { position: absolute; left: 18px; right: 18px; bottom: 34px; border-bottom: 1px solid #EDEDF0; pointer-events: none; }
+        .drv-pad-clear { position: absolute; top: 8px; right: 8px; z-index: 2; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.95); border: 1px solid var(--drv-sep); font-size: 11px; font-weight: 800; color: #6B7280; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+        .drv-sign-img { display: none; width: 100%; height: 170px; object-fit: contain; border: 1px solid var(--drv-sep); border-radius: var(--drv-btn-radius); background: var(--drv-fill-2); }
+        .drv-view .drv-pad { display: none; }
+        .drv-view .drv-sign-img { display: block; }
+
+        .drv-agree-foot { flex: none; padding: 10px 16px calc(12px + var(--sab)); border-top: 1px solid var(--drv-sep); }
+        .drv-status { display: flex; justify-content: center; gap: 14px; margin-bottom: 10px; font-size: 11.5px; font-weight: 800; color: var(--drv-sub); }
+        .drv-status span { display: inline-flex; align-items: center; gap: 4px; transition: color .2s var(--drv-ease); }
+        .drv-status span::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #C7C7CC; transition: background-color .2s var(--drv-ease); }
+        .drv-status span.is-ok { color: #15803D; }
+        .drv-status span.is-ok::before { background: var(--drv-green); }
+        .drv-actions { display: flex; gap: 8px; }
+        .drv-btn { height: 54px; border-radius: var(--drv-btn-radius); font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+        .drv-btn.is-gray { flex: 1; background: #E5E5EA; color: #4B5563; }
+        .drv-btn.is-blue { flex: 1.6; background: var(--drv-primary); color: #fff; box-shadow: 0 8px 20px rgba(0,122,255,.28); }
+        .drv-btn.is-blue[aria-disabled="true"] { background: #A7CCF7; box-shadow: none; }
+        .drv-btn.is-full { flex: 1; }
+
+        /* =========================================================
+           3) 로그인 이후 셸 (메인 화면은 통합 시 연결)
+           ========================================================= */
+        .drv-nav { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: calc(12px + var(--sat)) calc(18px + var(--sar)) 12px calc(18px + var(--sal)); border-bottom: 1px solid #E5E7EB; }
+        .drv-nav-title { min-width: 0; font-size: 20px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .drv-nav-title b { color: var(--drv-primary); }
+        .drv-nav-title span { color: #9CA3AF; margin-left: 4px; }
+        .drv-exit { flex: none; padding: 9px 16px; border-radius: var(--drv-btn-radius); background: #FEF2F2; color: var(--drv-red); font-size: 14px; font-weight: 800; }
+        .drv-home-main { max-width: 672px; margin: 0 auto; padding: 20px calc(18px + var(--sar)) calc(28px + var(--sab)) calc(18px + var(--sal)); display: flex; flex-direction: column; gap: 18px; }
+        .drv-info { padding: 20px; animation: drv-row-in .45s var(--drv-spring) both; }
+        .drv-info-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
+        .drv-info-top h2 { margin: 0; font-size: 18px; font-weight: 900; color: #1F2937; }
+        .drv-pill { padding: 9px 14px; border-radius: var(--drv-btn-radius); font-size: 12px; font-weight: 800; }
+        .drv-pill.is-orange { background: var(--drv-orange); color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+        .drv-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .drv-stat { padding: 14px 10px; border-radius: var(--drv-btn-radius); background: var(--drv-fill-2); border: 1px solid #F3F4F6; text-align: center; }
+        .drv-stat p { margin: 0; }
+        .drv-stat p:first-child { font-size: 10px; color: #9CA3AF; font-weight: 800; margin-bottom: 4px; }
+        .drv-stat p:last-child { font-size: 16px; color: #374151; font-weight: 800; }
+        .drv-slot { padding: 34px 20px; text-align: center; border: 2px dashed #D1D5DB; background: transparent; box-shadow: none; animation: drv-row-in .5s var(--drv-spring) .06s both; }
+        .drv-slot .drv-slot-ico { font-size: 34px; }
+        .drv-slot h3 { margin: 10px 0 6px; font-size: 15px; font-weight: 900; color: #374151; }
+        .drv-slot p { margin: 0; font-size: 12px; font-weight: 700; color: var(--drv-sub); line-height: 1.6; }
+        .drv-sync { display: none; margin-top: 10px; padding: 10px 14px; border-radius: var(--drv-btn-radius); background: #FFF7ED; border: 1px solid #FED7AA; color: #C2410C; font-size: 12px; font-weight: 800; line-height: 1.5; }
+        .drv-sync.is-show { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .drv-sync button { flex: none; padding: 6px 10px; border-radius: 10px; background: #fff; border: 1px solid #FED7AA; color: #C2410C; font-size: 11.5px; font-weight: 900; }
+        .drv-signed { display: block; line-height: 1.5; word-break: keep-all; padding: 12px 14px; border-radius: var(--drv-btn-radius); background: #F0FDF4; border: 1px solid #BBF7D0; color: #15803D; font-size: 12px; font-weight: 800; margin-top: 12px; }
+
+        /* =========================================================
+           공통 오버레이: iOS Alert / HUD / Toast
+           ========================================================= */
+        .drv-alert-layer { position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; padding: calc(20px + var(--sat)) calc(20px + var(--sar)) calc(20px + var(--sab)) calc(20px + var(--sal)); background: rgba(0,0,0,.4); opacity: 0; visibility: hidden; transition: opacity .25s var(--drv-ease), visibility 0s linear .25s; }
+        .drv-alert-layer.is-open { opacity: 1; visibility: visible; transition: opacity .25s var(--drv-ease), visibility 0s; }
+        .drv-alert { width: 290px; max-width: 100%; border-radius: 14px; overflow: hidden; background: rgba(250,250,252,.94); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%); text-align: center; transform: scale(1.15); opacity: 0; transition: transform .3s var(--drv-spring), opacity .2s var(--drv-ease); box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+        .drv-alert-layer.is-open .drv-alert { transform: scale(1); opacity: 1; }
+        .drv-alert-body { padding: 20px 18px 18px; }
+        .drv-alert-ico { font-size: 34px; line-height: 1; margin-bottom: 10px; }
+        .drv-alert-title { margin: 0 0 6px; font-size: 17px; font-weight: 900; color: var(--drv-text); word-break: keep-all; }
+        .drv-alert-msg { margin: 0; font-size: 13px; font-weight: 700; color: #3C3C43; line-height: 1.6; white-space: pre-line; word-break: keep-all; }
+        .drv-alert-btns { display: flex; border-top: 0.5px solid rgba(60,60,67,.29); }
+        .drv-alert-btns button { flex: 1; height: 46px; font-size: 16px; font-weight: 700; color: var(--drv-primary); transition: background-color .1s linear; }
+        .drv-alert-btns button + button { border-left: 0.5px solid rgba(60,60,67,.29); }
+        .drv-alert-btns button:active { background: rgba(0,0,0,.06); }
+        .drv-alert-btns button.is-bold { font-weight: 900; }
+        .drv-alert-btns button.is-danger { color: var(--drv-red); font-weight: 900; }
+
+        .drv-hud { position: fixed; inset: 0; z-index: 950; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.12); opacity: 0; visibility: hidden; transition: opacity .2s var(--drv-ease), visibility 0s linear .2s; }
+        .drv-hud.is-open { opacity: 1; visibility: visible; transition: opacity .2s var(--drv-ease), visibility 0s; }
+        .drv-hud-box { min-width: 132px; max-width: 220px; padding: 22px 18px 16px; border-radius: 18px; background: rgba(28,28,30,.82); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); color: #fff; text-align: center; transform: scale(.9); transition: transform .3s var(--drv-spring); }
+        .drv-hud.is-open .drv-hud-box { transform: scale(1); }
+        .drv-hud-box p { margin: 12px 0 0; font-size: 13px; font-weight: 700; line-height: 1.4; word-break: keep-all; }
+        .drv-spin { position: relative; width: 34px; height: 34px; margin: 0 auto; }
+        .drv-spin i { position: absolute; left: 15.5px; top: 0; width: 3px; height: 10px; border-radius: 2px; background: #fff; transform-origin: 1.5px 17px; animation: drv-spin 1s linear infinite; }
+        @keyframes drv-spin { from { opacity: 1; } to { opacity: .15; } }
+
+        .drv-toast { position: fixed; z-index: 980; top: calc(14px + var(--sat)); left: 50%; display: flex; align-items: center; gap: 8px; width: max-content; max-width: calc(100% - 32px - var(--sal) - var(--sar)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 12px 18px; border-radius: 999px; background: rgba(255,255,255,.95); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border: 1px solid var(--drv-primary); box-shadow: 0 10px 30px rgba(0,0,0,.12); font-size: 14px; font-weight: 900; color: var(--drv-primary); transform: translate(-50%, -140%); opacity: 0; transition: transform .5s var(--drv-spring), opacity .3s var(--drv-ease); pointer-events: none; }
+        .drv-toast.is-show { transform: translate(-50%, 0); opacity: 1; }
+        .drv-toast.is-green { border-color: var(--drv-green); color: #15803D; }
+
+
+        /* =========================================================
+           4) 홈 매장 목록 + 배차 리스트(순서 변경)
+           ========================================================= */
+        .drv-info-btns { display: flex; gap: 8px; }
+        .drv-pill.is-gray { background: var(--drv-fill); color: #1F2937; }
+
+        .drv-stores { display: flex; flex-direction: column; gap: 12px; }
+        .drv-stores-head { display: flex; align-items: baseline; justify-content: space-between; padding: 2px 4px 0; }
+        .drv-stores-head h3 { margin: 0; font-size: 16px; font-weight: 900; color: #1F2937; }
+        .drv-stores-head h3 b { color: var(--drv-primary); }
+        .drv-stores-head span { font-size: 11px; font-weight: 700; color: var(--drv-sub); }
+        .drv-store { display: flex; align-items: center; gap: 12px; padding: 16px 14px 16px 16px; border: 1px solid #F3F4F6; will-change: transform; }
+        .drv-store.is-flash { animation: drv-flash 1.1s var(--drv-ease) 1; }
+        @keyframes drv-flash { 0% { box-shadow: 0 0 0 0 rgba(0,122,255,.0); background: #fff; } 25% { box-shadow: 0 0 0 3px rgba(0,122,255,.35); background: #F0F7FF; } 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.05); background: #fff; } }
+        .drv-no { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--drv-primary); color: #fff; font-size: 13px; font-weight: 900; display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+        .drv-store-main { flex: 1; min-width: 0; }
+        .drv-store-name { font-size: 15px; font-weight: 900; color: var(--drv-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .drv-store-name small { font-size: 11px; font-weight: 800; color: var(--drv-primary); margin-left: 4px; }
+        .drv-store-addr { margin-top: 3px; font-size: 12px; font-weight: 700; color: #6B7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .drv-store-sub { margin-top: 2px; font-size: 11px; font-weight: 800; color: var(--drv-primary); }
+
+        /* 전화 버튼 (v32 #34C759) */
+        .drv-call { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 4px; background: var(--drv-green); color: #fff; text-decoration: none; font-weight: 800; box-shadow: 0 2px 6px rgba(52,199,89,.3); transition: transform .2s var(--drv-ease), opacity .2s var(--drv-ease); touch-action: manipulation; }
+        .drv-call:active { transform: scale(.94); opacity: .85; }
+        .drv-call.is-round { width: 44px; height: 44px; border-radius: 50%; }
+        .drv-call.is-pill { height: 38px; padding: 0 12px; border-radius: 12px; font-size: 12.5px; }
+        .drv-call.is-none { background: #E5E5EA; color: #A1A1AA; box-shadow: none; pointer-events: none; }
+        .drv-call.is-none.is-pill { font-size: 11px; }
+
+        /* 배차 리스트 시트 */
+        .drv-dl-sheet { max-height: calc(var(--drv-vh) - var(--sat) - 24px); height: calc(var(--drv-vh) * 0.86); }
+        .drv-dl-head { flex: none; padding: 0 16px 12px 20px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--drv-sep); touch-action: none; }
+        .drv-dl-head .drv-ttl { flex: 1; min-width: 0; }
+        .drv-dl-head h2 { margin: 0; font-size: 19px; font-weight: 900; color: var(--drv-primary); }
+        .drv-dl-head p { margin: 4px 0 0; font-size: 11.5px; font-weight: 700; color: var(--drv-sub); }
+        .drv-dl-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 14px 14px calc(18px + var(--sab)); }
+        .drv-dl-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+        .drv-dl-row { position: relative; display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 6px; background: #fff; border-radius: 16px; border: 1px solid #F0F0F3; box-shadow: 0 2px 8px rgba(0,0,0,.04); touch-action: pan-y; -webkit-touch-callout: none; transition: transform .22s var(--drv-spring), box-shadow .2s var(--drv-ease), background-color .2s var(--drv-ease); cursor: grab; }
+        .drv-dl-row.is-pressing { background: #F7F8FA; transform: scale(.985); }
+        .drv-dl-row.is-lift { z-index: 5; transition: box-shadow .2s var(--drv-ease); box-shadow: 0 16px 32px rgba(0,0,0,.18); background: #fff; cursor: grabbing; }
+        .drv-dl-list.is-sorting .drv-dl-row:not(.is-lift) { pointer-events: none; }
+        .drv-dl-handle { flex: none; width: 34px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; color: #C7C7CC; touch-action: none; cursor: grab; }
+        .drv-dl-row.is-lift .drv-dl-handle { color: var(--drv-primary); }
+        .drv-dl-row .drv-no { width: 24px; height: 24px; font-size: 12px; background: var(--drv-primary-tint); color: var(--drv-primary); }
+        .drv-dl-main { flex: 1; min-width: 0; }
+        .drv-dl-code { display: block; font-size: 9.5px; font-weight: 900; color: var(--drv-primary); letter-spacing: .02em; }
+        .drv-dl-main h4 { margin: 1px 0 0; font-size: 14.5px; font-weight: 900; color: #1F2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .drv-dl-main p { margin: 2px 0 0; font-size: 11px; font-weight: 700; color: #6B7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .drv-dl-empty { padding: 40px 10px; text-align: center; font-size: 14px; font-weight: 700; color: var(--drv-sub); }
+
+        /* =========================================================
+           5) 홈 매장 카드 : 펼침(특이사항 사진) / 매장 도착 · 하차 완료
+           ========================================================= */
+        .drv-progress-wrap { padding: 0 4px; }
+        .drv-prog-bar { height: 6px; border-radius: 3px; background: #E5E5EA; overflow: hidden; margin-top: 8px; }
+        .drv-prog-bar i { display: block; height: 100%; background: var(--drv-green); border-radius: 3px; transition: width .5s var(--drv-spring); }
+        .drv-store { display: block; padding: 0; overflow: hidden; transition: background-color .3s var(--drv-ease), opacity .3s var(--drv-ease), box-shadow .3s var(--drv-ease); }
+        .drv-store-top { display: flex; align-items: center; gap: 12px; padding: 16px 14px 12px 16px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .drv-store-top:active { background: #FAFAFC; }
+        .drv-chev { flex: none; width: 18px; color: #C7C7CC; transition: transform .35s var(--drv-spring); }
+        .drv-store.is-open .drv-chev { transform: rotate(180deg); color: var(--drv-primary); }
+        .drv-store.is-current { border: 1.5px solid var(--drv-primary); box-shadow: 0 6px 20px rgba(0,122,255,.14); }
+        .drv-store.is-done { background: #F2F2F7; border-color: #E5E5EA; box-shadow: none; opacity: .78; }
+        .drv-store.is-done .drv-store-top { cursor: default; }
+        .drv-store.is-done .drv-store-top:active { background: transparent; }
+        .drv-store.is-done .drv-store-name, .drv-store.is-done .drv-store-sub { color: #8E8E93; }
+        .drv-store.is-done .drv-no { background: var(--drv-green); }
+        .drv-store.is-done .drv-chev { visibility: hidden; }
+        .drv-store-tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 10px 56px; }
+        .drv-tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 8px; font-size: 11.5px; font-weight: 800; }
+        .drv-tag.is-arr { background: #EFF6FF; color: var(--drv-primary); }
+        .drv-tag.is-fin { background: #DCFCE7; color: #15803D; }
+        .drv-tag.is-now { background: var(--drv-primary); color: #fff; }
+        .drv-store-acts { display: flex; gap: 8px; padding: 0 14px 14px; }
+        .drv-act { flex: 1; height: 46px; border-radius: 12px; font-size: 14.5px; font-weight: 900; transition: transform .2s var(--drv-ease), opacity .2s var(--drv-ease), background-color .25s var(--drv-ease), color .25s var(--drv-ease); }
+        .drv-act:active { transform: scale(.97); opacity: .85; }
+        .drv-act.is-arrive { background: var(--drv-primary); color: #fff; box-shadow: 0 6px 14px rgba(0,122,255,.25); }
+        .drv-act.is-unload { background: var(--drv-orange); color: #fff; box-shadow: 0 6px 14px rgba(255,149,0,.28); }
+        .drv-act.is-recorded { background: #EFF6FF; color: var(--drv-primary); box-shadow: none; }
+        .drv-act:disabled { background: #E5E5EA; color: #AEAEB2; box-shadow: none; pointer-events: none; }
+        .drv-act.is-recorded:disabled { background: #EFF6FF; color: var(--drv-primary); }
+
+        .drv-store-detail { border-top: 1px solid transparent; transition: grid-template-rows .45s var(--drv-spring), opacity .3s var(--drv-ease), border-color .3s; }
+        .drv-store.is-open .drv-store-detail { grid-template-rows: 1fr; opacity: 1; border-top-color: #F0F0F3; }
+        .drv-detail-in { padding: 14px 14px 16px; background: #FAFAFC; }
+        .drv-detail-cap { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 12px; font-weight: 900; color: var(--drv-text); }
+        .drv-detail-cap span { font-size: 11px; font-weight: 700; color: var(--drv-sub); }
+        .drv-photos { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding-bottom: 2px; scrollbar-width: none; }
+        .drv-photos::-webkit-scrollbar { display: none; }
+        .drv-photo { position: relative; flex: 0 0 72%; aspect-ratio: 3 / 4; max-height: 340px; border-radius: 14px; overflow: hidden; background: #111; scroll-snap-align: start; padding: 0; -webkit-touch-callout: none; }
+        .drv-photos.is-single .drv-photo { flex-basis: 100%; aspect-ratio: 4 / 3; }
+        .drv-photo img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
+        .drv-photo em { position: absolute; right: 8px; bottom: 8px; padding: 3px 8px; border-radius: 999px; background: rgba(0,0,0,.55); color: #fff; font-style: normal; font-size: 10.5px; font-weight: 800; }
+        .drv-photo b { position: absolute; left: 8px; bottom: 8px; padding: 4px 9px; border-radius: 999px; background: rgba(255,255,255,.92); color: var(--drv-text); font-size: 10.5px; font-weight: 900; }
+        .drv-nophoto { padding: 26px 16px; border-radius: 14px; background: #E9E9EE; text-align: center; font-size: 13.5px; font-weight: 800; color: #3A3A3C; line-height: 1.7; word-break: keep-all; }
+        .drv-nophoto span { display: block; font-size: 26px; margin-bottom: 6px; }
+
+        .drv-dl-row.is-done { background: #F2F2F7; opacity: .7; cursor: default; box-shadow: none; }
+        .drv-dl-row.is-done .drv-no { background: var(--drv-green); color: #fff; }
+        .drv-dl-lock { flex: none; width: 34px; text-align: center; font-size: 15px; color: #34C759; font-weight: 900; }
+
+        /* =========================================================
+           6) 사진 전체화면 뷰어 (좌우 슬라이드 · 핀치/더블탭 확대 · 하단 닫기)
+           ========================================================= */
+        .drv-pv { position: fixed; inset: 0; z-index: 960; background: #000; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: opacity .28s var(--drv-ease), visibility 0s linear .28s; -webkit-touch-callout: none; }
+        .drv-pv.is-open { opacity: 1; visibility: visible; transition: opacity .28s var(--drv-ease), visibility 0s; }
+        .drv-pv-top { flex: none; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 2px; padding: calc(12px + var(--sat)) calc(16px + var(--sar)) 10px calc(16px + var(--sal)); color: #fff; text-align: center; z-index: 2; }
+        .drv-pv-top b { font-size: 14px; font-weight: 900; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .drv-pv-top span { font-size: 12px; font-weight: 800; color: rgba(255,255,255,.7); font-variant-numeric: tabular-nums; }
+        .drv-pv-stage { position: relative; flex: 1; overflow: hidden; touch-action: none; }
+        .drv-pv-track { display: flex; width: 100%; height: 100%; will-change: transform; }
+        .drv-pv-slide { flex: 0 0 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .drv-pv-slide img { max-width: 100%; max-height: 100%; object-fit: contain; transform-origin: center center; pointer-events: none; -webkit-user-drag: none; user-select: none; will-change: transform; }
+        .drv-pv.is-in .drv-pv-slide img { animation: drv-pv-in .32s var(--drv-spring) both; }
+        @keyframes drv-pv-in { from { transform: scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
+        .drv-pv-nav { position: absolute; top: 50%; z-index: 3; width: 40px; height: 40px; margin-top: -20px; border-radius: 50%; background: rgba(255,255,255,.16); color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: opacity .2s; }
+        .drv-pv-nav.is-prev { left: calc(10px + var(--sal)); }
+        .drv-pv-nav.is-next { right: calc(10px + var(--sar)); }
+        .drv-pv-nav:disabled { opacity: 0; pointer-events: none; }
+        .drv-pv-bottom { flex: none; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px calc(16px + var(--sar)) calc(16px + var(--sab)) calc(16px + var(--sal)); z-index: 2; }
+        .drv-pv-dots { display: flex; gap: 6px; min-height: 6px; }
+        .drv-pv-dots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.35); transition: width .3s var(--drv-spring), background-color .3s; }
+        .drv-pv-dots i.is-on { width: 18px; background: #fff; }
+        .drv-pv-hint { font-size: 11px; font-weight: 700; color: rgba(255,255,255,.55); }
+        .drv-pv-close { min-width: 160px; height: 52px; padding: 0 28px; border-radius: 16px; background: #F2F2F7; color: #111; font-size: 16px; font-weight: 900; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+
+        /* =========================================================
+           7) 구간 차량 : 센터 출발 카드 / 입차 및 주의사항
+           ========================================================= */
+        .drv-center { border: 1.5px solid #1F2937; background: linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%); }
+        .drv-center.is-current { border-color: var(--drv-primary); box-shadow: 0 6px 20px rgba(0,122,255,.14); }
+        .drv-center.is-done { background: #F2F2F7; border-color: #E5E5EA; }
+        .drv-center-top { display: flex; align-items: center; gap: 12px; padding: 16px 16px 12px; }
+        .drv-center-ico { flex: none; width: 44px; height: 44px; border-radius: 14px; background: #1F2937; color: #fff; font-size: 22px; display: flex; align-items: center; justify-content: center; }
+        .drv-center.is-current .drv-center-ico { background: var(--drv-primary); }
+        .drv-center.is-done .drv-center-ico { background: var(--drv-green); font-size: 18px; }
+        .drv-center-label { display: inline-block; margin-bottom: 3px; padding: 2px 8px; border-radius: 6px; background: #111827; color: #fff; font-size: 10px; font-weight: 900; letter-spacing: .02em; }
+        .drv-center.is-current .drv-center-label { background: var(--drv-primary); }
+        .drv-center.is-done .drv-center-label { background: #AEAEB2; }
+        .drv-center .drv-store-addr { white-space: normal; word-break: keep-all; line-height: 1.45; }
+        .drv-center.is-done .drv-store-name, .drv-center.is-done .drv-store-addr { color: #8E8E93; }
+        .drv-center .drv-store-tags { padding-left: 72px; }
+        .drv-center-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 14px 14px; }
+        .drv-act.is-sub { background: #FFFFFF; color: #1F2937; border: 1px solid #E5E7EB; box-shadow: 0 1px 2px rgba(0,0,0,.04); font-size: 13.5px; }
+        .drv-act.is-warn { background: #FFF7ED; color: #C2410C; border: 1px solid #FED7AA; }
+        .drv-act.is-start { grid-column: 1 / -1; height: 52px; font-size: 16px; background: var(--drv-primary); color: #fff; box-shadow: 0 8px 18px rgba(0,122,255,.28); }
+        .drv-store.is-locked .drv-act.is-arrive:disabled { background: #E5E5EA; color: #AEAEB2; }
+        .drv-lockmsg { margin: -4px 14px 12px; font-size: 11.5px; font-weight: 800; color: var(--drv-sub); text-align: center; }
+
+        /* 입차 및 주의사항 시트 */
+        .drv-en-sheet { max-height: calc(var(--drv-vh) - var(--sat) - 24px); height: calc(var(--drv-vh) * 0.88); }
+        .drv-en-head { flex: none; padding: 0 16px 12px 20px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--drv-sep); touch-action: none; }
+        .drv-en-head .drv-ttl { flex: 1; min-width: 0; }
+        .drv-en-head h2 { margin: 0; font-size: 19px; font-weight: 900; color: #C2410C; }
+        .drv-en-head p { margin: 4px 0 0; font-size: 11.5px; font-weight: 700; color: var(--drv-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .drv-en-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 14px 14px calc(18px + var(--sab)); }
+        .drv-en-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; counter-reset: en; }
+        .drv-en-item { background: #fff; border-radius: 18px; border: 1px solid #F0F0F3; box-shadow: 0 2px 8px rgba(0,0,0,.04); overflow: hidden; animation: drv-row-in .4s var(--drv-spring) both; }
+        .drv-en-photo { display: block; width: 100%; aspect-ratio: 16 / 9; padding: 0; background: #111; position: relative; -webkit-touch-callout: none; }
+        .drv-en-photo img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
+        .drv-en-photo b { position: absolute; right: 10px; bottom: 10px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.92); color: var(--drv-text); font-size: 11px; font-weight: 900; }
+        .drv-en-body { display: flex; gap: 12px; padding: 14px 16px 16px; }
+        .drv-en-no { flex: none; width: 26px; height: 26px; border-radius: 50%; background: #FFF7ED; color: #C2410C; font-size: 13px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+        .drv-en-body h4 { margin: 2px 0 6px; font-size: 15px; font-weight: 900; color: var(--drv-text); }
+        .drv-en-body p { margin: 0; font-size: 13px; font-weight: 700; color: #48484A; line-height: 1.7; word-break: keep-all; white-space: pre-line; }
+        .drv-en-body p strong { color: var(--drv-red); }
+        .drv-en-empty { padding: 40px 10px; text-align: center; font-size: 14px; font-weight: 700; color: var(--drv-sub); }
+
+        @media (prefers-reduced-motion: reduce) {
+            /* 애니메이션 줄이기 설정 기기 : 움직임은 즉시 처리하되, 무한 반복 애니메이션(커서·로딩)이 초고속으로 깜빡이지 않도록 1회로 제한 */
+            *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+            .drv-otp-box.is-active::after { animation: drv-caret 1s steps(1) infinite !important; }   /* 커서는 설정과 무관하게 일반 속도(1초)로 깜빡임 */
+            .drv-spin i { animation: none !important; opacity: .35; }
+            .drv-spin i:nth-child(-n+3) { opacity: 1; }
+        }
+        /* 가로 모드 / 낮은 화면: 입력 칸 높이 압축 */
+        @media (max-height: 560px) {
+            .drv-otp-box { height: 54px; }
+            .drv-pw-submit { height: 50px; }
+        }
+        @media (min-width: 560px) {
+            .drv-sheet { border-radius: 24px 24px 0 0; }
+        }
+    </style>
+</head>
+<body>
+<div id="drv-app">
+
+    <!-- =====================================================
+         1) 기사 로그인 화면
+         ===================================================== -->
+    <section id="drv-login" class="drv-screen drv-login is-active" aria-label="기사 로그인">
+        <div class="drv-login-wrap">
+            <div class="drv-spacer is-top"></div>
+
+            <header class="drv-brand">
+                <h1>DELIVERY CONNECT</h1>
+                <p>배송지 특이사항 확인 시스템</p>
+            </header>
+
+            <div class="drv-card drv-login-card" id="drv-login-card">
+                <label class="drv-search" for="drv-name-search">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+                    <input id="drv-name-search" type="search" placeholder="성함 검색" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="기사 성함 검색">
+                    <button type="button" id="drv-clear" class="drv-clear" aria-label="검색어 지우기">
+                        <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 2l6 6M8 2L2 8"/></svg>
+                    </button>
+                </label>
+                <div class="drv-collapse is-list"><div>
+                    <div id="drv-driver-list" class="drv-list" role="listbox" aria-label="검색 결과"></div>
+                </div></div>
+
+                <!-- 인증번호 입력 (기사 선택 시 카드 아래로 펼쳐짐) -->
+                <div class="drv-collapse is-pw" id="drv-pw" aria-hidden="true"><div>
+                    <div class="drv-pw-inner">
+                        <div class="drv-pw-who">
+                            <span class="drv-avatar" id="drv-pw-avatar"></span>
+                            <div class="drv-pw-name"><span id="drv-pw-name"></span><small id="drv-pw-hon">사장님</small></div>
+                            <button type="button" class="drv-textbtn drv-press" id="drv-pw-change">변경</button>
+                        </div>
+                        <p class="drv-pin-guide">인증번호 4자리를 입력해 주세요</p>
+                        <div class="drv-otp" id="drv-dots" aria-live="polite">
+                            <span class="drv-otp-box"></span><span class="drv-otp-box"></span><span class="drv-otp-box"></span><span class="drv-otp-box"></span>
+                            <input id="drv-pw-input" class="drv-otp-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="one-time-code" enterkeyhint="go" aria-label="인증번호 4자리">
+                        </div>
+                        <p class="drv-otp-hint">인증번호 = 배차 차량번호 <b>뒤 4자리</b></p>
+                        <p class="drv-pin-error" id="drv-pin-error" role="alert"></p>
+                        <button type="button" class="drv-btn is-blue drv-press drv-pw-submit" id="drv-pw-submit" aria-disabled="true">로그인</button>
+                    </div>
+                </div></div>
+            </div>
+
+            <footer class="drv-login-foot">
+                <span id="drv-demo" class="drv-demo">⚠️ 서버 연결 실패 · 데모 데이터 <button type="button" id="drv-retry">다시 시도</button></span>
+                <span id="drv-meta" class="drv-meta"></span>
+            </footer>
+
+            <div class="drv-spacer is-bottom"></div>
+        </div>
+    </section>
+
+    <!-- =====================================================
+         3) 로그인 이후 셸 (기사 메인 화면은 통합 시 이 영역에 연결)
+         ===================================================== -->
+    <section id="drv-home" class="drv-screen" aria-label="기사 메인">
+        <header class="drv-nav drv-glass">
+            <div class="drv-nav-title"><b id="drv-home-name"></b><span id="drv-home-hon">사장님</span></div>
+            <button type="button" id="drv-exit" class="drv-exit drv-press">나가기</button>
+        </header>
+        <main class="drv-home-main">
+            <div class="drv-card drv-info">
+                <div class="drv-info-top">
+                    <h2>배차 정보</h2>
+                    <div class="drv-info-btns">
+                        <button type="button" id="drv-view-agree" class="drv-pill is-orange drv-press">사용 동의서</button>
+                        <button type="button" id="drv-open-dl" class="drv-pill is-gray drv-press">배차 리스트</button>
+                    </div>
+                </div>
+                <div class="drv-grid2">
+                    <div class="drv-stat"><p>차량 번호</p><p id="drv-home-car">-</p></div>
+                    <div class="drv-stat"><p>배정 매장</p><p id="drv-home-stores">0개 매장</p></div>
+                </div>
+                <div class="drv-signed">✅ 보안서약 완료 <span id="drv-home-signed" style="color:#16A34A;font-weight:700;margin-left:4px"></span></div>
+                <div class="drv-sync" id="drv-sync"><span id="drv-sync-text"></span><button type="button" id="drv-sync-retry">지금 전송</button></div>
+            </div>
+
+            <!-- ▼ 배송지(매장) 목록 : 배차 리스트의 순서와 실시간 동기화 -->
+            <div id="drv-home-slot" class="drv-stores"></div>
+        </main>
+    </section>
+</div>
+
+<!-- =====================================================
+     2) 시스템 사용 동의 및 보안서약서
+     ===================================================== -->
+<div id="drv-agree-layer" class="drv-layer" aria-hidden="true">
+    <div class="drv-backdrop" data-agree-dismiss="backdrop"></div>
+    <div class="drv-sheet drv-agree-sheet" id="drv-agree-sheet" role="dialog" aria-modal="true" aria-labelledby="drv-agree-title">
+        <div class="drv-agree-head" data-drag="agree">
+            <div class="drv-ttl">
+                <span class="drv-req" id="drv-agree-badge">필수 · 서명 후 이용 가능</span>
+                <h2 id="drv-agree-title">시스템 사용 동의 및 보안서약서</h2>
+            </div>
+            <button type="button" class="drv-icon-btn drv-press" data-agree-dismiss="close" aria-label="닫기">
+                <svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l8 8M10 2l-8 8"/></svg>
+            </button>
+            <div class="drv-progress"><i id="drv-agree-progress"></i></div>
+        </div>
+
+        <div class="drv-agree-scroll" id="drv-agree-scroll">
+            <div class="drv-notice" id="drv-agree-notice">
+                <span class="drv-notice-ico">🔒</span>
+                <div>아래 내용을 확인한 뒤 <b>필수 항목 동의와 서명</b>을 완료해야 서비스를 이용하실 수 있습니다.<br><b>닫기·뒤로가기 등으로 동의 없이 나가면 즉시 로그아웃</b>됩니다.</div>
+            </div>
+
+            <div class="drv-sec-label">동의서 전문</div>
+            <article class="drv-card drv-doc" id="drv-agree-doc"></article>
+
+            <div class="drv-sec-label">필수 동의 항목</div>
+            <div class="drv-card drv-group" id="drv-agree-checks"></div>
+
+            <div class="drv-sec-label">서명</div>
+            <div class="drv-card drv-sign-card" id="drv-sign-card">
+                <div class="drv-sign-info">
+                    <span>기사명</span><b id="drv-sign-name"></b>
+                    <span>작성일시</span><b id="drv-sign-date"></b>
+                    <span>유효기간</span><b id="drv-sign-valid" class="is-red"></b>
+                </div>
+                <div class="drv-pad" id="drv-pad">
+                    <canvas id="drv-sign-canvas" aria-label="서명 입력란"></canvas>
+                    <div class="drv-pad-line"></div>
+                    <div class="drv-pad-ph">이곳에 서명해 주세요<small>손가락으로 정자 서명</small></div>
+                    <button type="button" class="drv-pad-clear drv-press" id="drv-pad-clear">지우기</button>
+                </div>
+                <img id="drv-sign-img" class="drv-sign-img" alt="서명 이미지">
+            </div>
+        </div>
+
+        <footer class="drv-agree-foot" id="drv-agree-foot">
+            <div class="drv-status" id="drv-agree-status">
+                <span id="drv-st-check">필수 동의 0/3</span>
+                <span id="drv-st-sign">서명 필요</span>
+            </div>
+            <div class="drv-actions" id="drv-agree-actions">
+                <button type="button" class="drv-btn is-gray drv-press" data-agree-dismiss="reject">동의하지 않음</button>
+                <button type="button" class="drv-btn is-blue drv-press" id="drv-agree-submit" aria-disabled="true">서명 및 확인</button>
+            </div>
+        </footer>
+    </div>
+</div>
+
+<!-- =====================================================
+     4) 배차 리스트 (순서 변경)
+     ===================================================== -->
+<div id="drv-dl-layer" class="drv-layer" aria-hidden="true">
+    <div class="drv-backdrop" data-dl-close></div>
+    <div class="drv-sheet drv-dl-sheet" id="drv-dl-sheet" role="dialog" aria-modal="true" aria-labelledby="drv-dl-title">
+        <div class="drv-grabber" data-drag="dl"></div>
+        <div class="drv-dl-head" data-drag="dl">
+            <div class="drv-ttl">
+                <h2 id="drv-dl-title">배차 리스트</h2>
+                <p>〓 또는 상자를 길게 눌러 순서 변경 · 완료 매장 고정</p>
+            </div>
+            <button type="button" class="drv-icon-btn drv-press" data-dl-close aria-label="닫기">
+                <svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l8 8M10 2l-8 8"/></svg>
+            </button>
+        </div>
+        <div class="drv-dl-scroll" id="drv-dl-scroll">
+            <ul class="drv-dl-list" id="drv-dl-list" aria-label="배차 매장 목록"></ul>
+        </div>
+    </div>
+</div>
+
+<!-- =====================================================
+     7) 입차 및 주의사항 (구간 차량)
+     ===================================================== -->
+<div id="drv-en-layer" class="drv-layer" aria-hidden="true">
+    <div class="drv-backdrop" data-en-close></div>
+    <div class="drv-sheet drv-en-sheet" id="drv-en-sheet" role="dialog" aria-modal="true" aria-labelledby="drv-en-title">
+        <div class="drv-grabber" data-drag="en"></div>
+        <div class="drv-en-head" data-drag="en">
+            <div class="drv-ttl">
+                <h2 id="drv-en-title">⚠️ 입차 및 주의사항</h2>
+                <p id="drv-en-sub">센터 입차 시 반드시 확인해 주세요</p>
+            </div>
+            <button type="button" class="drv-icon-btn drv-press" data-en-close aria-label="닫기">
+                <svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l8 8M10 2l-8 8"/></svg>
+            </button>
+        </div>
+        <div class="drv-en-scroll" id="drv-en-scroll">
+            <ul class="drv-en-list" id="drv-en-list"></ul>
+        </div>
+    </div>
+</div>
+
+<!-- =====================================================
+     6) 특이사항 사진 전체화면 뷰어
+     ===================================================== -->
+<div id="drv-pv" class="drv-pv" role="dialog" aria-modal="true" aria-hidden="true" aria-label="매장 특이사항 사진">
+    <div class="drv-pv-top"><b id="drv-pv-title"></b><span id="drv-pv-count"></span></div>
+    <div class="drv-pv-stage" id="drv-pv-stage" oncontextmenu="return false;">
+        <div class="drv-pv-track" id="drv-pv-track"></div>
+        <button type="button" class="drv-pv-nav is-prev" id="drv-pv-prev" aria-label="이전 사진">‹</button>
+        <button type="button" class="drv-pv-nav is-next" id="drv-pv-next" aria-label="다음 사진">›</button>
+    </div>
+    <div class="drv-pv-bottom">
+        <div class="drv-pv-dots" id="drv-pv-dots"></div>
+        <div class="drv-pv-hint">좌우로 넘기기 · 두 손가락 또는 두 번 탭하여 확대</div>
+        <button type="button" class="drv-pv-close drv-press" id="drv-pv-close">닫기</button>
+    </div>
+</div>
+
+<!-- iOS Alert -->
+<div id="drv-alert-layer" class="drv-alert-layer" role="alertdialog" aria-modal="true" aria-hidden="true">
+    <div class="drv-alert">
+        <div class="drv-alert-body">
+            <div class="drv-alert-ico" id="drv-alert-ico"></div>
+            <h3 class="drv-alert-title" id="drv-alert-title"></h3>
+            <p class="drv-alert-msg" id="drv-alert-msg"></p>
+        </div>
+        <div class="drv-alert-btns" id="drv-alert-btns"></div>
+    </div>
+</div>
+
+<!-- 로딩 HUD -->
+<div id="drv-hud" class="drv-hud" aria-hidden="true">
+    <div class="drv-hud-box">
+        <div class="drv-spin" id="drv-spin"></div>
+        <p id="drv-hud-text">불러오는 중</p>
+    </div>
+</div>
+
+<!-- 토스트 -->
+<div id="drv-toast" class="drv-toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+    'use strict';
+
+    /* =========================================================
+       설정 (통합 시 홈개발_v32 값과 맞춰 사용)
+       ========================================================= */
+    const CONFIG = {
+        SUPABASE_URL: 'https://rhseofuhqyecehuctxaf.supabase.co',
+        SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoc2VvZnVocXllY2VodWN0eGFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxMzQzNzksImV4cCI6MjEwNTcxMDM3OX0.5WMQ3QxKpGuS7sNuzDmAVHBD4x_sh-3w9cMUNR2bXEA',
+        HONORIFIC: '사장님',               // 호칭 (v32 기준 '사장님')
+        AGREEMENT_POLICY: 'daily',         // 'daily' : 매일 19:00 기준 재서명 (서명 시각과 무관) / 'once' : 유효기간 내 1회만
+        AGREEMENT_RESET_HM: [19, 0],       // 사용 동의서 초기화 시각 (19:00 이후 첫 접속 시 재서명)
+        AGREEMENT_VALID_MONTHS: 12,        // 유효기간 (개월)
+        MAX_PIN_FAILS: 5,                  // 인증번호 연속 오류 허용 횟수
+        PIN_LOCK_SECONDS: 30,              // 초과 시 잠금 시간
+        FETCH_TIMEOUT_MS: 9000,
+        SESSION_KEY: 'drv_session_v1',     // sessionStorage (탭 종료 시 자동 소멸)
+        SECTION_VALUE: '구간',             // dispatch_data.vehicle_type 이 이 값이면 센터 출발 카드 표시
+        FALLBACK_MAP_URL: 'https://map.naver.com/p/search/',   // TMAP 미설치 시 (v32 openCenterLocation 과 동일)
+        // 서버 기록 (기사전용_DB_마이그레이션.sql 적용 시 모두 저장 · 컬럼/테이블이 없으면 해당 항목만 건너뜀)
+        DB: {
+            ORDER_COL: 'route_order',          // dispatch_data : 배송 순서 (1부터)
+            LOG_TABLE: 'driver_event_logs',    // 배송 시작 · 매장 도착 · 하차 완료 · 순서 변경 이력
+            REALTIME: true,                    // 관리자가 Supabase 에서 순서/상태를 바꾸면 기사 화면에 즉시 반영
+            RETRY_MS: 30000                    // 미전송 기록 재시도 주기
+        },
+        MOCK_DRIVERS: [                    // 서버 연결 실패 시 데모 데이터 (v32 mockDrivers 와 동일 인물)
+            { name: '김테스트', car4: '1234', carFull: '12가 1234', stores: 6 },
+            { name: '이샘플', car4: '5678', carFull: '34나 5678', stores: 9 },
+            { name: '김샘플', car4: '2468', carFull: '80바 2468', stores: 4 }
+        ]
+    };
+
+    /* 동의서 본문 (관리자 '사용 동의서 관리'와 별개로 기사 페이지 기본값) */
+    const AGREEMENT = {
+        title: '시스템 사용 동의 및 보안서약서',
+        version: 'v1.0',
+        intro: '본인은 Delivery Connect(이하 "시스템")를 배송 업무에 사용함에 있어 아래 내용을 충분히 숙지하였으며, 이에 동의하고 성실히 준수할 것을 서약합니다.',
+        articles: [
+            { no: '제1조', title: '목적', items: [
+                '본 동의서는 시스템 이용 조건, 개인정보 처리 및 업무상 취득한 정보의 보안 유지에 관한 사항을 정함을 목적으로 합니다.'
+            ], type: 'p' },
+            { no: '제2조', title: '시스템 사용 동의', items: [
+                '시스템 계정(성함·인증번호)은 본인만 사용하며, 타인에게 양도·대여·공유하지 않습니다.',
+                '시스템에서 제공하는 배차·매장·특이사항 정보는 당일 배송 업무 목적으로만 사용합니다.',
+                '배송 완료 처리 등 시스템 입력은 사실에 근거하여 정확하게 기록합니다.'
+            ] },
+            { no: '제3조', title: '개인정보 수집·이용 동의', items: [
+                '수집 항목: 성명, 차량번호, 연락처, 전자서명, 접속 일시 및 배송 처리 기록',
+                '이용 목적: 본인 확인 및 로그인, 배차·배송 관리, 보안서약 이력 관리',
+                '보유 기간: 서비스 이용 기간 (전자서명 이미지는 내부 정책에 따라 주기적으로 파기)'
+            ] },
+            { no: '제4조', title: '보안 서약', items: [
+                '매장 정보, 매장 특이사항 및 사진, 출입 방법, 연락처 등 시스템 내 모든 정보는 <strong>사내 대외비</strong>임을 인지합니다.',
+                '화면 <strong>캡처·촬영·녹화·복사 및 외부 전송(메신저·SNS 등)을 하지 않습니다.</strong>',
+                '업무상 알게 된 정보를 제3자에게 누설하지 않으며, 계약 종료 후에도 동일하게 준수합니다.',
+                '단말기 분실 또는 정보 유출이 의심되는 경우 즉시 사무실에 보고합니다.'
+            ] },
+            { no: '제5조', title: '위반 시 조치', items: [
+                '본 서약을 위반한 경우 시스템 이용이 제한될 수 있으며, 관련 법령 및 계약에 따른 민·형사상 책임을 질 수 있습니다.'
+            ], type: 'p' },
+            { no: '제6조', title: '동의 거부 권리 안내', items: [
+                '본인은 위 동의를 거부할 권리가 있습니다. 다만 본 동의는 시스템 이용을 위한 필수 사항으로, <strong>동의하지 않을 경우 서비스 제공이 어렵습니다.</strong>'
+            ], type: 'p' }
+        ],
+        checks: [
+            { id: 'use',     text: '시스템 사용 조건에 동의합니다.' },
+            { id: 'privacy', text: '개인정보 수집 및 이용에 동의합니다.' },
+            { id: 'pledge',  text: '보안서약 내용을 숙지하였으며 이를 준수할 것을 서약합니다.' }
+        ]
+    };
+
+    /* =========================================================
+       상태
+       ========================================================= */
+    const S = {
+        sb: null,
+        live: false,
+        settings: { driverTimeout: 720, restrictStart: '14:30', restrictEnd: '20:30' },
+        settingsLoaded: false,
+        drivers: [],
+        latestDate: null,
+        pinDriver: null,
+        pin: '',
+        pinBusy: false,
+        fails: {},          // 기사별 오류 횟수
+        lockUntil: {},      // 기사별 잠금 해제 시각
+        lockTimer: null,
+        pendingDriver: null,  // 인증번호 통과 + 동의 대기 중인 기사 (세션 미발급 상태)
+        loginTs: 0,
+        session: null,
+        agreeMode: null,      // 'forced' | 'view'
+        agreeHistory: false,
+        ignorePop: false,
+        checks: {},
+        pad: null,
+        alertOpen: false
+    };
+
+    /* =========================================================
+       유틸
+       ========================================================= */
+    const $ = (sel, root = document) => root.querySelector(sel);
+    const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+    const p2 = n => String(n).padStart(2, '0');
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const ymd = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+    const ymdhm = d => `${ymd(d)} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+    const fileStamp = d => `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}_${p2(d.getHours())}${p2(d.getMinutes())}`;
+    const last4 = car => { const n = String(car || '').replace(/[^0-9]/g, ''); return n.length >= 4 ? n.slice(-4) : n; };
+    const vibrate = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const withTimeout = (promise, ms) => Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+
+    function addMonths(d, m) { const x = new Date(d); x.setMonth(x.getMonth() + m); return x; }
+
+    // 동의 주기 키 : 19:00 이전이면 전일, 19:00 이후면 당일 (예: 1/2 02:30 서명·1/2 18:30 서명 → 키 1/1 → 1/2 19:00 이후 재서명)
+    function resetKey() {
+        const now = new Date();
+        const [h, m] = CONFIG.AGREEMENT_RESET_HM;
+        if (now.getHours() < h || (now.getHours() === h && now.getMinutes() < m)) {
+            const prev = new Date(now); prev.setDate(prev.getDate() - 1); return ymd(prev);
+        }
+        return ymd(now);
+    }
+
+    // v32 isDriverAccessRestricted 와 동일 (서버 설정을 받아온 경우에만 적용)
+    function isRestricted() {
+        if (!S.settingsLoaded || !S.settings.restrictStart || !S.settings.restrictEnd) return false;
+        const now = new Date();
+        const cur = now.getHours() * 60 + now.getMinutes();
+        const [sh, sm] = S.settings.restrictStart.split(':').map(Number);
+        const [eh, em] = S.settings.restrictEnd.split(':').map(Number);
+        const st = sh * 60 + sm, en = eh * 60 + em;
+        return st <= en ? (cur >= st && cur <= en) : (cur >= st || cur <= en);
+    }
+
+    /* =========================================================
+       공통 UI: HUD / Toast / Alert / 레이어 잠금
+       ========================================================= */
+    (function buildSpinner() {
+        const box = $('#drv-spin');
+        for (let i = 0; i < 12; i++) {
+            const bar = document.createElement('i');
+            bar.style.transform = `rotate(${i * 30}deg)`;
+            bar.style.animationDelay = `${-1 + i / 12}s`;
+            box.appendChild(bar);
+        }
+    })();
+
+    function showHUD(text) { $('#drv-hud-text').textContent = text || '처리 중'; $('#drv-hud').classList.add('is-open'); }
+    function hideHUD() { $('#drv-hud').classList.remove('is-open'); }
+
+    let toastTimer = null;
+    function toast(text, tone) {
+        const t = $('#drv-toast');
+        t.textContent = text;
+        t.classList.toggle('is-green', tone === 'green');
+        t.classList.add('is-show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('is-show'), 2200);
+    }
+
+    /** iOS 스타일 Alert. buttons: [{ text, style: 'bold'|'danger'|'', value }] → 선택된 value 반환 */
+    function iosAlert({ icon = '', title = '', message = '', buttons = [{ text: '확인', style: 'bold', value: true }] }) {
+        return new Promise(resolve => {
+            const layer = $('#drv-alert-layer');
+            $('#drv-alert-ico').textContent = icon;
+            $('#drv-alert-ico').style.display = icon ? '' : 'none';
+            $('#drv-alert-title').textContent = title;
+            $('#drv-alert-msg').textContent = message;
+            const wrap = $('#drv-alert-btns');
+            wrap.innerHTML = '';
+            buttons.forEach(b => {
+                const el = document.createElement('button');
+                el.type = 'button';
+                el.textContent = b.text;
+                if (b.style) el.className = 'is-' + b.style;
+                el.addEventListener('click', () => {
+                    layer.classList.remove('is-open');
+                    layer.setAttribute('aria-hidden', 'true');
+                    S.alertOpen = false;
+                    syncLock();
+                    resolve(b.value);
+                }, { once: true });
+                wrap.appendChild(el);
+            });
+            S.alertOpen = true;
+            layer.setAttribute('aria-hidden', 'false');
+            layer.classList.add('is-open');
+            syncLock();
+            setTimeout(() => { const last = wrap.lastElementChild; last && last.focus({ preventScroll: true }); }, 50);
+        });
+    }
+
+    function syncLock() {
+        const anyOpen = S.alertOpen || $('#drv-agree-layer').classList.contains('is-open') || $('#drv-dl-layer').classList.contains('is-open') || $('#drv-pv').classList.contains('is-open') || $('#drv-en-layer').classList.contains('is-open');
+        document.documentElement.classList.toggle('drv-lock', anyOpen);
+    }
+
+    function showScreen(id) {
+        $$('.drv-screen').forEach(s => s.classList.toggle('is-active', s.id === id));
+        window.scrollTo(0, 0);
+    }
+
+    /* =========================================================
+       데이터: Supabase (v32 와 동일 테이블)
+       ========================================================= */
+    function initClient() {
+        try {
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                S.sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+            }
+        } catch (e) { S.sb = null; }
+    }
+
+    async function loadSettings() {
+        if (!S.sb) return;
+        try {
+            const { data, error } = await withTimeout(S.sb.from('system_settings').select('*'), CONFIG.FETCH_TIMEOUT_MS);
+            if (error) throw error;
+            (data || []).forEach(r => {
+                if (r.key === 'driverTimeout') S.settings.driverTimeout = parseInt(r.value, 10) || 720;
+                if (r.key === 'restrictStart') S.settings.restrictStart = r.value;
+                if (r.key === 'restrictEnd') S.settings.restrictEnd = r.value;
+            });
+            S.settingsLoaded = true;
+        } catch (e) { console.warn('[기사] 시스템 설정 로드 실패 - 기본값 사용', e); }
+    }
+
+    // v32 fetchLatestDispatchForDrivers 와 동일 규칙: 최신 transport_date 기준, 이름 중복 제거, 차량번호 숫자 뒤 4자리
+    async function loadDrivers() {
+        if (!S.sb) throw new Error('no-client');
+        const { data: dateData, error: dErr } = await withTimeout(
+            S.sb.from('dispatch_data').select('transport_date').order('transport_date', { ascending: false }).limit(1),
+            CONFIG.FETCH_TIMEOUT_MS
+        );
+        if (dErr) throw dErr;
+        if (!dateData || !dateData.length) { S.latestDate = null; S.drivers = []; S.live = true; return; }
+        S.latestDate = dateData[0].transport_date;
+
+        // 1,000행 제한 대비 페이지 단위 조회
+        const rows = [];
+        const PAGE = 1000;
+        for (let from = 0; from < 20000; from += PAGE) {
+            const { data, error } = await withTimeout(
+                S.sb.from('dispatch_data').select('driver_name, car_number, business_code').eq('transport_date', S.latestDate).range(from, from + PAGE - 1),
+                CONFIG.FETCH_TIMEOUT_MS
+            );
+            if (error) throw error;
+            rows.push(...(data || []));
+            if (!data || data.length < PAGE) break;
+        }
+
+        const map = new Map();
+        rows.forEach(r => {
+            const name = (r.driver_name || '').trim();
+            if (!name || !r.car_number) return;
+            if (!map.has(name)) map.set(name, { name, car4: last4(r.car_number), carFull: String(r.car_number).trim(), storeSet: new Set() });
+            if (r.business_code) map.get(name).storeSet.add(r.business_code);
+        });
+        S.drivers = Array.from(map.values()).map(d => ({ name: d.name, car4: d.car4, carFull: d.carFull, stores: d.storeSet.size }));
+        S.live = true;
+    }
+
+    async function loadAll() {
+        S.live = false;
+        initClient();
+        await loadSettings();
+        try {
+            await loadDrivers();
+        } catch (e) {
+            console.warn('[기사] 배차 데이터 로드 실패 - 데모 데이터 사용', e);
+            S.live = false;
+            S.drivers = CONFIG.MOCK_DRIVERS.slice();
+            S.latestDate = null;
+        }
+        renderFooter();
+    }
+
+    function renderFooter() {
+        $('#drv-demo').classList.toggle('is-show', !S.live);
+        $('#drv-meta').textContent = S.live
+            ? (S.latestDate ? `배차 기준일 ${S.latestDate}` : '등록된 배차 데이터가 없습니다')
+            : '데모 계정 : 김테스트 / 인증번호 1234';
+    }
+
+    /* =========================================================
+       1) 로그인: 검색
+       ========================================================= */
+    const searchInput = $('#drv-name-search');
+    const listEl = $('#drv-driver-list');
+    const loginEl = $('#drv-login');
+
+    function renderList() {
+        const q = searchInput.value.trim();
+        $('#drv-clear').classList.toggle('is-show', q.length > 0 && !searchInput.disabled);
+
+        if (isRestricted()) {
+            searchInput.disabled = true;
+            searchInput.value = '';
+            searchInput.placeholder = '현재 배차 준비중입니다.';
+            loginEl.classList.remove('is-searching');
+            listEl.innerHTML = `<div class="drv-empty is-warn"><span class="drv-empty-ico">⏳</span>현재 배차 내역 준비 시간입니다.<br>(${esc(S.settings.restrictStart)} ~ ${esc(S.settings.restrictEnd)})</div>`;
+            return;
+        }
+        searchInput.disabled = false;
+        searchInput.placeholder = '성함 검색';
+
+        if (!q) {
+            listEl.innerHTML = `<div class="drv-empty">성함을 검색하여주세요.</div>`;
+            return;
+        }
+
+        const lq = q.toLowerCase();
+        const matched = S.drivers.filter(d => d.name.toLowerCase().includes(lq));
+        if (!matched.length) {
+            listEl.innerHTML = `<div class="drv-empty is-box">금일 배차는 없습니다.</div>`;
+            return;
+        }
+        listEl.innerHTML = matched.map((d, i) => {
+            const idx = d.name.toLowerCase().indexOf(lq);
+            const nameHtml = esc(d.name.slice(0, idx)) + '<mark>' + esc(d.name.slice(idx, idx + q.length)) + '</mark>' + esc(d.name.slice(idx + q.length));
+            return `<button type="button" class="drv-row" role="option" data-name="${esc(d.name)}" style="animation-delay:${Math.min(i, 8) * 35}ms">
+                        <span class="drv-avatar">${esc(d.name.charAt(0))}</span>
+                        <span class="drv-row-name">${nameHtml}<small>${esc(CONFIG.HONORIFIC)}</small></span>
+                        <span class="drv-row-go">로그인<svg width="8" height="13" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5l5 5-5 5"/></svg></span>
+                    </button>`;
+        }).join('');
+    }
+
+    searchInput.addEventListener('input', () => { if (isPwOpen()) closePw(); renderList(); });
+    searchInput.addEventListener('focus', () => loginEl.classList.add('is-searching'));
+    searchInput.addEventListener('blur', () => { setTimeout(() => { if (!searchInput.value.trim() && !isPwOpen()) loginEl.classList.remove('is-searching'); }, 120); });
+    searchInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const rows = $$('.drv-row', listEl);
+            if (rows.length === 1) rows[0].click(); else searchInput.blur();
+        }
+    });
+    $('#drv-clear').addEventListener('click', () => { if (isPwOpen()) closePw(); searchInput.value = ''; renderList(); searchInput.focus(); });
+    listEl.addEventListener('click', e => {
+        const row = e.target.closest('.drv-row');
+        if (!row) return;
+        const d = S.drivers.find(x => x.name === row.dataset.name);
+        if (d) openPw(d);
+    });
+    $('#drv-retry').addEventListener('click', async () => {
+        showHUD('서버에 다시 연결하는 중');
+        await loadAll();
+        hideHUD();
+        renderList();
+        toast(S.live ? '서버에 연결되었습니다' : '서버 연결에 실패했습니다', S.live ? 'green' : '');
+    });
+
+    function resetLogin() {
+        searchInput.value = '';
+        loginEl.classList.remove('is-searching');
+        renderList();
+    }
+
+    /* =========================================================
+       1) 로그인: 인증번호 인라인 입력 (인증번호 = 차량번호 뒤 4자리, ● 마스킹)
+       ========================================================= */
+    const cardEl = $('#drv-login-card');
+    const pwEl = $('#drv-pw');
+    const dotsEl = $('#drv-dots');
+    const pinErr = $('#drv-pin-error');
+    const pwInput = $('#drv-pw-input');
+    const pwSubmit = $('#drv-pw-submit');
+    const isPwOpen = () => cardEl.classList.contains('is-pw');
+    const isLocked = () => !!S.pinDriver && (S.lockUntil[S.pinDriver.name] || 0) > Date.now();
+
+    function openPw(driver) {
+        S.pinDriver = driver;
+        S.pin = '';
+        S.pinBusy = false;
+        $('#drv-pw-avatar').textContent = driver.name.charAt(0);
+        $('#drv-pw-name').textContent = driver.name;
+        $('#drv-pw-hon').textContent = CONFIG.HONORIFIC;
+        searchInput.value = driver.name;                 // v32 처럼 검색창에 선택한 이름 표시
+        $('#drv-clear').classList.add('is-show');
+        dotsEl.classList.remove('is-ok', 'is-bad', 'drv-shake');
+        pinErr.textContent = '';
+        pwInput.value = '';
+        pwSubmit.textContent = '로그인';
+        cardEl.classList.add('is-pw');
+        loginEl.classList.add('is-searching');
+        pwEl.setAttribute('aria-hidden', 'false');
+        checkLock();
+        // iOS 는 탭 이벤트 안에서 바로 focus 해야 숫자 키보드가 열림
+        if (!isLocked()) pwInput.focus();   // 키보드에 가려질 때만 브라우저가 필요한 만큼 스크롤
+        renderDots();
+    }
+
+    function closePw() {
+        cardEl.classList.remove('is-pw');
+        pwEl.setAttribute('aria-hidden', 'true');
+        clearInterval(S.lockTimer);
+        S.pinDriver = null;
+        S.pin = '';
+        S.pinBusy = false;
+        pwInput.value = '';
+        pwInput.blur();
+    }
+
+    function renderDots() {
+        const locked = isLocked();
+        const focused = document.activeElement === pwInput;
+        dotsEl.classList.toggle('is-locked', locked);
+        $$('.drv-otp-box', dotsEl).forEach((box, i) => {
+            const has = i < S.pin.length;
+            if (has !== box.classList.contains('is-filled')) box.innerHTML = has ? '<i class="drv-otp-dot"></i>' : '';
+            box.classList.toggle('is-filled', has);
+            box.classList.toggle('is-active', focused && !locked && !S.pinBusy && S.pin.length < 4 && i === S.pin.length);
+        });
+        pwSubmit.setAttribute('aria-disabled', (S.pin.length === 4 && !locked && !S.pinBusy) ? 'false' : 'true');
+    }
+
+    function checkLock() {
+        const name = S.pinDriver && S.pinDriver.name;
+        clearInterval(S.lockTimer);
+        const tick = () => {
+            const left = Math.ceil(((S.lockUntil[name] || 0) - Date.now()) / 1000);
+            if (left > 0) {
+                pwInput.disabled = true;
+                pinErr.textContent = `인증번호 ${CONFIG.MAX_PIN_FAILS}회 오류 · ${left}초 후 다시 시도해 주세요`;
+            } else {
+                pwInput.disabled = false;
+                if (S.lockUntil[name]) { delete S.lockUntil[name]; S.fails[name] = 0; pinErr.textContent = ''; }
+                clearInterval(S.lockTimer);
+            }
+            renderDots();
+        };
+        tick();
+        if ((S.lockUntil[name] || 0) > Date.now()) S.lockTimer = setInterval(tick, 250);
+    }
+
+    pwInput.addEventListener('input', () => {
+        if (S.pinBusy) { pwInput.value = S.pin; return; }
+        const v = pwInput.value.replace(/\D/g, '').slice(0, 4);
+        if (pwInput.value !== v) pwInput.value = v;
+        if (v.length > S.pin.length) vibrate(8);
+        if (dotsEl.classList.contains('is-bad')) { dotsEl.classList.remove('is-bad'); if (!isLocked()) pinErr.textContent = ''; }
+        S.pin = v;
+        if (v.length === 4) { S.pinBusy = true; setTimeout(verifyPin, 160); }
+        renderDots();
+    });
+    pwInput.addEventListener('focus', renderDots);
+    pwInput.addEventListener('blur', renderDots);
+    pwInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitPw(); } });
+    pwSubmit.addEventListener('click', submitPw);
+    $('#drv-pw-change').addEventListener('click', () => { closePw(); searchInput.value = ''; renderList(); searchInput.focus(); });
+
+    function shakeOtp() { dotsEl.classList.remove('drv-shake'); void dotsEl.offsetWidth; dotsEl.classList.add('drv-shake'); }
+
+    function submitPw() {
+        if (isLocked() || S.pinBusy || !S.pinDriver) return;
+        if (S.pin.length < 4) {
+            pinErr.textContent = '인증번호 4자리를 모두 입력해 주세요';
+            shakeOtp(); vibrate(30);
+            pwInput.focus();
+            return;
+        }
+        S.pinBusy = true;
+        verifyPin();
+    }
+
+    async function verifyPin() {
+        const d = S.pinDriver;
+        if (!d) return;
+        if (S.pin === d.car4) {
+            dotsEl.classList.add('is-ok');
+            pwSubmit.textContent = '확인되었습니다';
+            pinErr.textContent = '';
+            vibrate(20);
+            S.fails[d.name] = 0;
+            pwInput.blur();
+            renderDots();
+            await sleep(450);
+            closePw();
+            await sleep(200);
+            onAuthSuccess(d);
+        } else {
+            S.fails[d.name] = (S.fails[d.name] || 0) + 1;
+            dotsEl.classList.add('is-bad');
+            shakeOtp();
+            vibrate([40, 40, 40]);
+            const left = CONFIG.MAX_PIN_FAILS - S.fails[d.name];
+            pinErr.textContent = left > 0 ? `인증번호가 일치하지 않습니다. (남은 횟수 ${left}회)` : '';
+            renderDots();
+            await sleep(450);
+            S.pin = '';
+            pwInput.value = '';
+            S.pinBusy = false;
+            if (left <= 0) {
+                S.lockUntil[d.name] = Date.now() + CONFIG.PIN_LOCK_SECONDS * 1000;
+                pwInput.blur();
+                checkLock();
+            } else {
+                renderDots();
+            }
+        }
+    }
+
+    /* =========================================================
+       인증 성공 → 동의서 확인 → 세션 발급
+       ========================================================= */
+    async function onAuthSuccess(driver) {
+        S.pendingDriver = driver;   // 동의 완료 전까지는 세션 미발급
+        S.loginTs = Date.now();
+        showHUD('보안서약 이력 확인 중');
+        let need = true;
+        try { need = await needsAgreement(driver.name); } catch (e) { need = true; }
+        hideHUD();
+        if (need) openAgreement('forced');
+        else completeLogin(await getSavedAgreement(driver.name));
+    }
+
+    function isValidRecord(rec) {
+        if (!rec || !rec.validUntil) return false;
+        if (new Date() >= new Date(rec.validUntil)) return false;
+        if (CONFIG.AGREEMENT_POLICY === 'daily') return rec.lastSignedKey === resetKey();
+        return true;
+    }
+
+    async function getSavedAgreement(name) {
+        let rec = null;
+        if (S.live && S.sb) {
+            try {
+                const { data } = await withTimeout(S.sb.from('driver_agreements').select('*').eq('driver_name', name).maybeSingle(), CONFIG.FETCH_TIMEOUT_MS);
+                if (data) rec = { url: data.sign_url, signedAt: data.signed_at, validUntil: data.valid_until, lastSignedKey: data.last_signed_key };
+            } catch (e) { /* 로컬 백업으로 진행 */ }
+        }
+        if (!rec) {
+            try { const raw = localStorage.getItem('agree_' + name); if (raw) rec = JSON.parse(raw); } catch (e) {}
+        }
+        return rec;
+    }
+
+    async function needsAgreement(name) {
+        const rec = await getSavedAgreement(name);
+        if (isValidRecord(rec)) {
+            try { localStorage.setItem('agree_' + name, JSON.stringify(rec)); } catch (e) {}
+            return false;
+        }
+        return true;
+    }
+
+    function completeLogin(agreeRec) {
+        const d = S.pendingDriver;
+        if (!d) return;
+        S.session = {
+            name: d.name, car4: d.car4, carFull: d.carFull, stores: d.stores,
+            loginTs: S.loginTs || Date.now(),
+            agreedKey: resetKey(),
+            signedAt: (agreeRec && agreeRec.signedAt) || ymdhm(new Date()),
+            demo: !S.live
+        };
+        S.pendingDriver = null;
+        try { sessionStorage.setItem(CONFIG.SESSION_KEY, JSON.stringify(S.session)); } catch (e) {}
+        renderHome();
+        showScreen('drv-home');
+        resetLogin();
+
+        const detail = Object.assign({}, S.session);
+        document.dispatchEvent(new CustomEvent('drv:login', { detail }));
+        if (typeof window.DriverApp.onLogin === 'function') {
+            try { window.DriverApp.onLogin(detail, $('#drv-home-slot')); } catch (e) { console.error(e); }
+        }
+    }
+
+    function clearSession() {
+        S.session = null;
+        S.pendingDriver = null;
+        S.loginTs = 0;
+        try { sessionStorage.removeItem(CONFIG.SESSION_KEY); } catch (e) {}
+    }
+
+    function logout() {
+        const had = S.session;
+        clearSession();
+        closePw();
+        closeDispatch();
+        closeViewer();
+        closeNotices();
+        unsubscribeRealtime();
+        S.route = []; S.routeOrig = []; S.prog = {}; S.openKey = null; S.isSection = false; S.center = null;
+        showScreen('drv-login');
+        resetLogin();
+        if (had) document.dispatchEvent(new CustomEvent('drv:logout'));
+        if (typeof window.DriverApp.onLogout === 'function') { try { window.DriverApp.onLogout(); } catch (e) {} }
+    }
+
+    /* =========================================================
+       2) 시스템 사용 동의 및 보안서약서
+       ========================================================= */
+    const agreeLayer = $('#drv-agree-layer');
+    const agreeSheet = $('#drv-agree-sheet');
+    const agreeScroll = $('#drv-agree-scroll');
+
+    (function buildAgreementDoc() {
+        $('#drv-agree-title').textContent = AGREEMENT.title;
+        const doc = $('#drv-agree-doc');
+        doc.innerHTML = `<p class="drv-doc-intro">${esc(AGREEMENT.intro)}</p>` +
+            AGREEMENT.articles.map(a => {
+                // items 는 내부 고정 문자열(신뢰된 HTML: <strong> 강조 허용)
+                const body = a.type === 'p'
+                    ? a.items.map(t => `<p>${t}</p>`).join('')
+                    : `<ol>${a.items.map(t => `<li>${t}</li>`).join('')}</ol>`;
+                return `<section class="drv-art"><h3><em>${esc(a.no)}</em>${esc(a.title)}</h3>${body}</section>`;
+            }).join('') +
+            `<div class="drv-doc-ver">${esc(AGREEMENT.title)} ${esc(AGREEMENT.version)}</div>`;
+
+        const ckSvg = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.3l2.3 2.3 4.7-5"/></svg>';
+        $('#drv-agree-checks').innerHTML =
+            `<button type="button" class="drv-check is-all" role="checkbox" aria-checked="false" data-ck="all"><span class="drv-cb">${ckSvg}</span><span class="drv-ck-txt">전체 동의</span></button>` +
+            AGREEMENT.checks.map(c => `<button type="button" class="drv-check" role="checkbox" aria-checked="false" data-ck="${c.id}"><span class="drv-cb">${ckSvg}</span><span class="drv-ck-txt"><span>[필수]</span>${esc(c.text)}</span></button>`).join('');
+    })();
+
+    function setCheck(id, val) {
+        S.checks[id] = val;
+        const el = $(`.drv-check[data-ck="${id}"]`);
+        if (el) el.setAttribute('aria-checked', val ? 'true' : 'false');
+    }
+    function allChecked() { return AGREEMENT.checks.every(c => S.checks[c.id]); }
+    function syncAllCheck() { const el = $('.drv-check[data-ck="all"]'); el.setAttribute('aria-checked', allChecked() ? 'true' : 'false'); }
+
+    $('#drv-agree-checks').addEventListener('click', e => {
+        const el = e.target.closest('.drv-check');
+        if (!el || S.agreeMode !== 'forced') return;
+        const id = el.dataset.ck;
+        if (id === 'all') {
+            const v = !allChecked();
+            AGREEMENT.checks.forEach(c => setCheck(c.id, v));
+        } else {
+            setCheck(id, !S.checks[id]);
+        }
+        syncAllCheck();
+        vibrate(6);
+        updateAgreeState();
+    });
+
+    function updateAgreeState() {
+        const n = AGREEMENT.checks.filter(c => S.checks[c.id]).length;
+        const signed = !!(S.pad && S.pad.hasInk());
+        const st1 = $('#drv-st-check'), st2 = $('#drv-st-sign');
+        st1.textContent = `필수 동의 ${n}/${AGREEMENT.checks.length}`;
+        st1.classList.toggle('is-ok', n === AGREEMENT.checks.length);
+        st2.textContent = signed ? '서명 완료' : '서명 필요';
+        st2.classList.toggle('is-ok', signed);
+        const sb = $('#drv-agree-submit');
+        if (sb) sb.setAttribute('aria-disabled', (n === AGREEMENT.checks.length && signed) ? 'false' : 'true');
+    }
+
+    agreeScroll.addEventListener('scroll', () => {
+        const max = agreeScroll.scrollHeight - agreeScroll.clientHeight;
+        $('#drv-agree-progress').style.width = (max > 0 ? Math.min(100, agreeScroll.scrollTop / max * 100) : 100) + '%';
+    }, { passive: true });
+
+    /* ---------- 서명 패드 (고해상도 / Pointer Events / 곡선 보정) ---------- */
+    function createSignPad(canvas, onChange) {
+        const ctx = canvas.getContext('2d');
+        let dpr = 1, drawing = false, pts = [], ink = 0, w = 0, h = 0;
+
+        function fillWhite() { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.restore(); }
+        function setupCtx() { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#111111'; ctx.lineWidth = 2.8; }
+
+        function resize() {
+            const r = canvas.getBoundingClientRect();
+            if (!r.width || !r.height) return;
+            const prev = ink > 0 ? canvas.toDataURL('image/png') : null;
+            const pw = w, ph = h;
+            dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+            w = r.width; h = r.height;
+            canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+            fillWhite(); setupCtx();
+            if (prev) { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, pw || w, ph || h); img.src = prev; }
+        }
+        function pos(e) { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+
+        canvas.addEventListener('pointerdown', e => {
+            if (canvas.dataset.readonly === '1') return;
+            e.preventDefault();
+            canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+            drawing = true;
+            const p = pos(e); pts = [p];
+            ctx.beginPath(); ctx.arc(p.x, p.y, 1.4, 0, Math.PI * 2); ctx.fillStyle = '#111'; ctx.fill();
+        });
+        canvas.addEventListener('pointermove', e => {
+            if (!drawing) return;
+            e.preventDefault();
+            const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+            evs.forEach(ev => {
+                const p = pos(ev);
+                const l = pts[pts.length - 1];
+                ink += Math.hypot(p.x - l.x, p.y - l.y);
+                pts.push(p);
+                if (pts.length >= 3) {
+                    const a = pts[pts.length - 3], b = pts[pts.length - 2], c = pts[pts.length - 1];
+                    const m1 = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, m2 = { x: (b.x + c.x) / 2, y: (b.y + c.y) / 2 };
+                    ctx.beginPath(); ctx.moveTo(m1.x, m1.y); ctx.quadraticCurveTo(b.x, b.y, m2.x, m2.y); ctx.stroke();
+                }
+            });
+            onChange && onChange();
+        });
+        const end = () => { if (!drawing) return; drawing = false; pts = []; onChange && onChange(); };
+        canvas.addEventListener('pointerup', end);
+        canvas.addEventListener('pointercancel', end);
+        canvas.addEventListener('pointerleave', end);
+
+        return {
+            resize,
+            clear() { ink = 0; fillWhite(); setupCtx(); onChange && onChange(); },
+            hasInk() { return ink > 24; },          // 점 한 번 찍기 등 무의미한 서명 방지
+            toBlob() { return new Promise(res => canvas.toBlob(b => res(b), 'image/jpeg', 0.85)); },
+            toDataURL() { return canvas.toDataURL('image/jpeg', 0.85); }
+        };
+    }
+
+    S.pad = createSignPad($('#drv-sign-canvas'), () => {
+        $('#drv-pad').classList.toggle('is-ink', S.pad.hasInk());
+        updateAgreeState();
+    });
+    $('#drv-pad-clear').addEventListener('click', () => S.pad.clear());
+    window.addEventListener('resize', () => { if (agreeLayer.classList.contains('is-open') && S.agreeMode === 'forced') S.pad.resize(); });
+
+    /* ---------- 열기 / 닫기 ---------- */
+    async function openAgreement(mode) {
+        S.agreeMode = mode;
+        const forced = mode === 'forced';
+        const name = forced ? S.pendingDriver.name : S.session.name;
+        const now = new Date();
+
+        agreeSheet.classList.toggle('drv-view', !forced);
+        $('#drv-agree-notice').style.display = forced ? '' : 'none';
+        $('#drv-agree-status').style.display = forced ? '' : 'none';
+        const badge = $('#drv-agree-badge');
+        badge.textContent = forced ? '필수 · 서명 후 이용 가능' : '서약 완료';
+        badge.classList.toggle('is-done', !forced);
+        $('#drv-sign-name').textContent = name;
+        $('#drv-sign-date').textContent = ymdhm(now);
+        $('#drv-sign-valid').textContent = '~ ' + ymd(addMonths(now, CONFIG.AGREEMENT_VALID_MONTHS));
+
+        S.checks = {};
+        AGREEMENT.checks.forEach(c => setCheck(c.id, !forced));
+        syncAllCheck();
+        $$('.drv-check').forEach(el => el.setAttribute('aria-disabled', forced ? 'false' : 'true'));
+
+        const actions = $('#drv-agree-actions');
+        if (forced) {
+            actions.innerHTML = `<button type="button" class="drv-btn is-gray drv-press" data-agree-dismiss="reject">동의하지 않음</button>
+                                 <button type="button" class="drv-btn is-blue drv-press" id="drv-agree-submit" aria-disabled="true">서명 및 확인</button>`;
+        } else {
+            actions.innerHTML = `<button type="button" class="drv-btn is-gray is-full drv-press" data-agree-close>닫기</button>`;
+            const rec = await getSavedAgreement(name);
+            if (rec) {
+                $('#drv-sign-img').src = rec.url || '';
+                $('#drv-sign-date').textContent = rec.signedAt || '-';
+                $('#drv-sign-valid').textContent = rec.validUntil ? '~ ' + String(rec.validUntil).split('T')[0] : '-';
+            }
+        }
+
+        agreeScroll.scrollTop = 0;
+        $('#drv-agree-progress').style.width = '0%';
+        agreeSheet.style.transform = '';
+        agreeLayer.classList.add('is-open');
+        agreeLayer.setAttribute('aria-hidden', 'false');
+        syncLock();
+
+        if (forced) {
+            // 뒤로가기(안드로이드/브라우저 제스처) 감지를 위한 히스토리 트랩
+            try { history.pushState({ drvAgree: true }, ''); S.agreeHistory = true; } catch (e) { S.agreeHistory = false; }
+            requestAnimationFrame(() => { S.pad.resize(); S.pad.clear(); $('#drv-pad').classList.remove('is-ink'); updateAgreeState(); });
+        }
+    }
+
+    function closeAgreementUI() {
+        agreeLayer.classList.remove('is-open');
+        agreeLayer.setAttribute('aria-hidden', 'true');
+        agreeSheet.style.transform = '';
+        const wasForced = S.agreeMode === 'forced';
+        S.agreeMode = null;
+        if (wasForced && S.agreeHistory) {
+            S.agreeHistory = false;
+            S.ignorePop = true;
+            try { history.back(); } catch (e) {}
+            setTimeout(() => { S.ignorePop = false; }, 800);
+        }
+        syncLock();
+    }
+
+    /** 동의 없이 이탈 시도 → 즉시 강제 로그아웃 + 서비스 불가 안내 */
+    async function forceLogout(via) {
+        if (S.agreeMode !== 'forced') return;
+        console.info('[기사] 보안서약 미동의 이탈 시도 → 강제 로그아웃 :', via);
+        const name = S.pendingDriver ? S.pendingDriver.name : '';
+        closeAgreementUI();
+        logout();            // 세션 미발급 상태로 즉시 초기화
+        vibrate([60, 60, 60]);
+        await sleep(200);
+        await iosAlert({
+            icon: '🔒',
+            title: '서비스 이용 불가',
+            message: '시스템 사용 동의 및 보안서약에\n동의하지 않으면 서비스 제공이 어렵습니다.\n\n보안을 위해 자동 로그아웃되었습니다.\n이용하시려면 다시 로그인 후 서명해 주세요.',
+            buttons: [{ text: '확인', style: 'bold', value: true }]
+        });
+        document.dispatchEvent(new CustomEvent('drv:agreement-rejected', { detail: { name, via } }));
+    }
+
+    agreeLayer.addEventListener('click', e => {
+        const d = e.target.closest('[data-agree-dismiss]');
+        if (d) {
+            if (S.agreeMode === 'forced') forceLogout(d.dataset.agreeDismiss);
+            else closeAgreementUI();
+            return;
+        }
+        if (e.target.closest('[data-agree-close]')) { closeAgreementUI(); return; }
+        if (e.target.closest('#drv-agree-submit')) submitAgreement();
+    });
+
+    function attention(el) {
+        el.classList.remove('drv-attn'); void el.offsetWidth; el.classList.add('drv-attn');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    async function submitAgreement() {
+        if (S.agreeMode !== 'forced' || !S.pendingDriver) return;
+        if (!allChecked()) { vibrate(30); toast('필수 동의 항목에 모두 체크해 주세요'); attention($('#drv-agree-checks')); return; }
+        if (!S.pad.hasInk()) { vibrate(30); toast('서명란에 서명해 주세요'); attention($('#drv-sign-card')); return; }
+
+        const name = S.pendingDriver.name;
+        const now = new Date();
+        const rec = {
+            url: '',
+            signedAt: ymdhm(now),
+            validUntil: addMonths(now, CONFIG.AGREEMENT_VALID_MONTHS).toISOString(),
+            lastSignedKey: resetKey()
+        };
+
+        showHUD('서명을 저장하는 중');
+        try {
+            if (!S.live || !S.sb) throw new Error('offline');
+            const blob = await S.pad.toBlob();
+            const stamp = fileStamp(now);
+            // v32 파일명 규칙(YYYYMMDD_HHMM_기사이름) 우선, 한글 키 거부 시 인코딩 파일명으로 재시도
+            let fileName = `${stamp}_${name}.jpg`;
+            let up = await S.sb.storage.from('signatures').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+            if (up.error) {
+                fileName = `${stamp}_${Array.from(new TextEncoder().encode(name)).map(b => b.toString(16).padStart(2, '0')).join('')}.jpg`;
+                up = await S.sb.storage.from('signatures').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+            }
+            if (up.error) throw up.error;
+            rec.url = S.sb.storage.from('signatures').getPublicUrl(fileName).data.publicUrl;
+
+            const { error } = await S.sb.from('driver_agreements').upsert({
+                driver_name: name,
+                sign_url: rec.url,
+                signed_at: rec.signedAt,
+                valid_until: rec.validUntil,
+                last_signed_key: rec.lastSignedKey
+            }, { onConflict: 'driver_name' });
+            if (error) throw error;
+        } catch (e) {
+            console.warn('[기사] 서명 서버 저장 실패 - 로컬 백업으로 진행:', e && e.message);
+            rec.url = S.pad.toDataURL();
+        }
+        try { localStorage.setItem('agree_' + name, JSON.stringify(rec)); } catch (e) {}
+        hideHUD();
+
+        closeAgreementUI();
+        await sleep(250);
+        completeLogin(rec);
+        toast('✅ 동의가 완료되었습니다', 'green');
+    }
+
+    /* ---------- 시트 드래그(스와이프 다운) : PIN 은 닫기, 동의서는 강제 로그아웃 ---------- */
+    function enableDrag(handleSel, sheet, onDismiss) {
+        let startY = 0, dy = 0, active = false, startT = 0;
+        document.addEventListener('pointerdown', e => {
+            const h = e.target.closest(handleSel);
+            if (!h || e.target.closest('button')) return;
+            active = true; startY = e.clientY; dy = 0; startT = Date.now();
+            sheet.classList.add('is-dragging');
+        });
+        document.addEventListener('pointermove', e => {
+            if (!active) return;
+            dy = Math.max(0, e.clientY - startY);
+            const damp = dy < 0 ? 0 : dy;
+            sheet.style.transform = `translateY(${damp}px)`;
+        });
+        const end = () => {
+            if (!active) return;
+            active = false;
+            sheet.classList.remove('is-dragging');
+            const velocity = dy / Math.max(1, Date.now() - startT);
+            if (dy > 120 || (dy > 40 && velocity > 0.6)) onDismiss();
+            else sheet.style.transform = '';
+        };
+        document.addEventListener('pointerup', end);
+        document.addEventListener('pointercancel', end);
+    }
+    enableDrag('[data-drag="agree"]', agreeSheet, () => {
+        if (S.agreeMode === 'forced') forceLogout('swipe');
+        else closeAgreementUI();
+    });
+
+    /* ---------- 키보드 / 뒤로가기 ---------- */
+    document.addEventListener('keydown', e => {
+        if (S.alertOpen) {
+            if (e.key === 'Escape' || e.key === 'Enter') {
+                e.preventDefault();
+                const btns = $('#drv-alert-btns');
+                const b = e.key === 'Escape' ? btns.firstElementChild : btns.lastElementChild;   // ESC = 취소, Enter = 기본
+                b && b.click();
+            }
+            return;
+        }
+        if ($('#drv-pv').classList.contains('is-open')) {
+            if (e.key === 'Escape') { e.preventDefault(); closeViewer(); }
+            else if (e.key === 'ArrowLeft') { e.preventDefault(); pvGo(PV.idx - 1); }
+            else if (e.key === 'ArrowRight') { e.preventDefault(); pvGo(PV.idx + 1); }
+            return;
+        }
+        if (agreeLayer.classList.contains('is-open')) {
+            if (e.key === 'Escape') {
+                e.preventDefault(); e.stopPropagation();
+                if (S.agreeMode === 'forced') forceLogout('esc'); else closeAgreementUI();
+            }
+            return;
+        }
+        if ($('#drv-en-layer').classList.contains('is-open')) {
+            if (e.key === 'Escape') { e.preventDefault(); closeNotices(); }
+            return;
+        }
+        if (dlLayer.classList.contains('is-open')) {
+            if (e.key === 'Escape') { e.preventDefault(); closeDispatch(); }
+            return;
+        }
+        if (isPwOpen() && e.key === 'Escape') { e.preventDefault(); closePw(); searchInput.value = ''; renderList(); }
+    }, true);
+
+    /* =========================================================
+       4) 배송지 목록 / 배차 리스트 (순서 변경 → 홈 즉시 반영)
+       ========================================================= */
+    const dlLayer = $('#drv-dl-layer');
+    const dlSheet = $('#drv-dl-sheet');
+    const dlList = $('#drv-dl-list');
+    const dlScroll = $('#drv-dl-scroll');
+    const homeSlot = $('#drv-home-slot');
+    S.route = []; S.routeOrig = []; S.prog = {}; S.openKey = null; S.photos = null;
+
+    const MOCK_STORES = [
+        ['A1001', '강남역점', '서울 강남구 테헤란로 101', '홍길동', '010-1111-2222'],
+        ['A1002', '역삼역점', '서울 강남구 테헤란로 202', '김철수', '010-3333-4444'],
+        ['A1003', '선릉역점', '서울 강남구 선릉로 303', '이영희', '010-5555-6666'],
+        ['A1004', '삼성중앙점', '서울 강남구 삼성로 404', '박민수', '010-7777-8888'],
+        ['A1005', '대치사거리점', '서울 강남구 도곡로 505', '최지은', '010-2222-3333'],
+        ['A1006', '도곡역점', '서울 강남구 남부순환로 606', '정우성', '010-4444-5555'],
+        ['A1007', '양재시민의숲점', '서울 서초구 매헌로 707', '한가람', '010-6666-7777'],
+        ['A1008', '교대역점', '서울 서초구 서초대로 808', '오세훈', '010-8888-9999'],
+        ['A1009', '서초법조타운점', '서울 서초구 반포대로 909', '윤하늘', '']
+    ];
+
+    const telDigits = p => String(p || '').replace(/[^0-9+]/g, '');
+    const orderKey = name => `drv_order_v1|${S.latestDate || 'demo'}|${name}`;
+
+    // v32 maskDriverInfo 와 동일 규칙
+    function maskName(n) { n = n || ''; return n.length > 2 ? n[0] + '●'.repeat(n.length - 2) + n[n.length - 1] : (n.length === 2 ? n[0] + '●' : n); }
+    function maskPhone(p) { p = p || ''; const a = p.split('-'); if (a.length === 3) return `${a[0]}-●●●●-${a[2]}`; return p.length >= 10 ? p.slice(0, 3) + '●●●●' + p.slice(-4) : p; }
+
+    function callBtn(r, variant) {
+        const tel = telDigits(r.phone);
+        if (!tel) return `<span class="drv-call is-${variant} is-none" aria-hidden="true">${variant === 'pill' ? '번호없음' : '📵'}</span>`;
+        return `<a class="drv-call is-${variant}" href="tel:${esc(tel)}" aria-label="${esc(r.name)} 전화 걸기">📞${variant === 'pill' ? ' 통화' : ''}</a>`;
+    }
+
+    async function loadRoute(silent) {
+        const s = S.session;
+        if (!s) return;
+        if (!silent) homeSlot.innerHTML = `<div class="drv-card drv-slot"><div class="drv-slot-ico">⏳</div><h3>배송지를 불러오는 중</h3></div>`;
+        let fromServer = false;
+        let rows = [];
+        if (!s.demo && S.sb && S.latestDate) {
+            try {
+                const { data, error } = await withTimeout(
+                    S.sb.from('dispatch_data').select('*').eq('transport_date', S.latestDate).eq('driver_name', s.name).order('id', { ascending: true }),
+                    CONFIG.FETCH_TIMEOUT_MS);
+                if (error) throw error;
+                rows = data || [];
+                fromServer = true;
+            } catch (e) { console.warn('[기사] 배차 매장 로드 실패', e); if (silent) return; }
+        } else {
+            const vt = s.name === '김테스트' ? CONFIG.SECTION_VALUE : '월대';      // 데모 : 김테스트 = 구간 차량
+            rows = MOCK_STORES.slice(0, s.stores || 6).map(([code, name, address, drv, phone], i) => ({ id: i + 1, business_code: code, business_name: name, address, main_course_driver: drv, contact: phone, vehicle_type: vt, main_center: '밀양센터' }));
+            if (!S.photos) S.photos = demoPhotos();
+        }
+        if (!S.session || S.session.name !== s.name) return;   // 로딩 중 로그아웃 대비
+
+        // 구간 차량 판별 : vehicle_type = '구간' (컬럼이 아직 없으면 v32 employment_type 으로 대체)
+        S.isSection = rows.some(d => String(('vehicle_type' in d ? d.vehicle_type : d.employment_type) || '').trim() === CONFIG.SECTION_VALUE);
+        S.center = null;
+        if (S.isSection) {
+            const mc = (rows.find(d => d.main_center) || {}).main_center || '';
+            S.center = await resolveCenter(mc);
+            const sr = rows.find(d => d.started_ts || d.started_at) || {};
+            S.dbStarted = sr.started_ts ? { ts: Date.parse(sr.started_ts) } : (sr.started_at ? { hm: korToHM(sr.started_at) } : null);
+            if (!S.session || S.session.name !== s.name) return;
+        }
+
+        // v32 buildDriverRoute 와 동일 : 매장코드 기준 중복 제거, 본코스 기사/연락처
+        const map = new Map();
+        rows.forEach(d => {
+            const key = String(d.business_code || ('id' + d.id));
+            if (map.has(key)) {
+                const ex = map.get(key);
+                ex.ids.push(d.id);
+                if (d.is_completed && !ex.dbDone) ex.dbDone = d.completed_at || '완료';
+                if (d.arrived_at && !ex.dbArr) ex.dbArr = d.arrived_at;
+                if (d.completed_ts && !ex.dbDoneTs) ex.dbDoneTs = d.completed_ts;
+                if (d.arrived_ts && !ex.dbArrTs) ex.dbArrTs = d.arrived_ts;
+                if (d[CONFIG.DB.ORDER_COL] != null) ex.dbOrder = Math.min(ex.dbOrder ?? 1e9, +d[CONFIG.DB.ORDER_COL]);
+                return;
+            }
+            map.set(key, {
+                key, dbId: d.id, ids: [d.id],
+                dbDone: d.is_completed ? (d.completed_at || '완료') : null,
+                dbArr: d.arrived_at || null,
+                dbDoneTs: d.completed_ts || null,
+                dbArrTs: d.arrived_ts || null,
+                dbOrder: d[CONFIG.DB.ORDER_COL] != null ? +d[CONFIG.DB.ORDER_COL] : null,
+                code: d.business_code || '-',
+                name: d.business_name || '이름없음',
+                address: d.address || '주소없음',
+                driver: d.main_course_driver || d.driver_name || '',
+                phone: d.contact || d.store_contact || ''      // 본코스 연락처 우선(v32), 없으면 매장 연락처
+            });
+        });
+        S.routeOrig = Array.from(map.values());
+
+        // 순서 우선순위 : ① 서버 route_order (관리자 수정 포함) → ② 휴대폰 저장 순서 → ③ 배차 업로드 순서
+        //   단, 아직 서버로 못 보낸 순서 변경이 있으면 휴대폰 순서를 우선
+        const pendingIds = outboxPendingIds();
+        const pendingOrder = outboxLoad().some(i => i.dedupe && i.dedupe.startsWith('order:'));
+        let saved = [];
+        try { saved = JSON.parse(localStorage.getItem(orderKey(s.name)) || '[]'); } catch (e) {}
+        let pos = new Map(saved.map((k, i) => [k, i]));
+        const serverOrdered = S.routeOrig.filter(r => r.dbOrder != null);
+        if (fromServer && serverOrdered.length && !pendingOrder) {
+            pos = new Map(serverOrdered.map(r => [r.key, r.dbOrder]));
+            try { localStorage.setItem(orderKey(s.name), JSON.stringify(S.routeOrig.slice().sort((a, b) => (a.dbOrder ?? 1e9) - (b.dbOrder ?? 1e9)).map(r => r.key))); } catch (e) {}
+        }
+        S.route = S.routeOrig.slice().sort((a, b) => {
+            const pa = pos.has(a.key) ? pos.get(a.key) : 1e6 + S.routeOrig.indexOf(a);
+            const pb = pos.has(b.key) ? pos.get(b.key) : 1e6 + S.routeOrig.indexOf(b);
+            return pa - pb;
+        });
+
+        // 진행 상태 : 서버(is_completed / completed_at / arrived_at) + 휴대폰 기록 병합
+        let local = {};
+        try { local = JSON.parse(localStorage.getItem(progKey(s.name)) || '{}'); } catch (e) {}
+        // 진행 상태 : 서버에 해당 컬럼이 있고 미전송 기록이 없으면 서버 값이 기준 (관리자 수정 반영)
+        //            그 외(데모 · 컬럼 없음 · 미전송 중)에는 휴대폰 기록 유지
+        const r0 = rows[0] || {};
+        const hasArrCol = fromServer && ('arrived_ts' in r0 || 'arrived_at' in r0);
+        const hasDoneCol = fromServer && ('is_completed' in r0);
+        S.prog = {};
+        S.routeOrig.forEach(r => {
+            const loc = local[r.key] || {};
+            const pending = (r.ids || []).some(id => pendingIds.has(id));
+            const p = {};
+            if (hasArrCol && !pending) {
+                if (r.dbArrTs) { p.aTs = Date.parse(r.dbArrTs); p.a = tsToHM(p.aTs); }
+                else if (r.dbArr) { p.a = korToHM(r.dbArr); p.aTs = (loc.a === p.a && loc.aTs) || hmToTs(p.a); }
+            } else if (loc.a) { p.a = loc.a; p.aTs = loc.aTs; }
+            if (hasDoneCol && !pending) {
+                if (r.dbDoneTs) { p.dTs = Date.parse(r.dbDoneTs); p.d = tsToHM(p.dTs); }
+                else if (r.dbDone) { p.d = korToHM(r.dbDone) || '완료'; p.dTs = (loc.d === p.d && loc.dTs) || hmToTs(p.d); }
+            } else if (loc.d) { p.d = loc.d; p.dTs = loc.dTs; }
+            if (p.d && !p.a) { p.a = p.d; p.aTs = p.dTs; }     // 관리자가 완료만 처리한 경우
+            if (p.a || p.d) S.prog[r.key] = p;
+        });
+        if (S.isSection) {
+            const loc = local[CENTER_KEY] || {};
+            const pending = outboxLoad().some(i => i.dedupe === 'start');
+            const c = {};
+            if (fromServer && !pending && ('started_at' in r0 || 'started_ts' in r0)) {
+                if (S.dbStarted && S.dbStarted.ts) { c.sTs = S.dbStarted.ts; c.s = tsToHM(c.sTs); }
+                else if (S.dbStarted && S.dbStarted.hm) { c.s = S.dbStarted.hm; c.sTs = (loc.s === c.s && loc.sTs) || hmToTs(c.s); }
+            } else if (loc.s) { c.s = loc.s; c.sTs = loc.sTs; }
+            if (c.s) S.prog[CENTER_KEY] = c;
+        }
+        saveProg();
+        partitionDone();
+        $('#drv-home-stores').textContent = `${S.route.length}개 매장`;
+        renderHomeStores();
+        if (dlLayer.classList.contains('is-open')) renderDispatchList();
+        document.dispatchEvent(new CustomEvent('drv:route', { detail: S.route.slice() }));
+        if (!S.photos) loadIssuePhotos().then(() => { if (S.session && S.session.name === s.name) renderHomeStores(); });
+        if (!silent) subscribeRealtime();
+    }
+
+    function saveOrder(reason) {
+        if (!S.session) return;
+        try { localStorage.setItem(orderKey(S.session.name), JSON.stringify(S.route.map(r => r.key))); } catch (e) {}
+        scheduleOrderSync(reason || 'reorder');
+    }
+
+    /* ---------- 진행 상태 유틸 ---------- */
+    const progKey = name => `drv_prog_v1|${S.latestDate || 'demo'}|${name}`;
+    const prog = r => S.prog[r.key] || {};
+    const isDone = r => !!prog(r).d;
+    function nowHM() { const d = new Date(); return `${p2(d.getHours())}:${p2(d.getMinutes())}`; }
+    function korToHM(str) { const m = String(str || '').match(/(\d+)\s*시\s*(\d+)\s*분/) || String(str || '').match(/(\d{1,2}):(\d{2})/); return m ? `${p2(m[1])}:${p2(m[2])}` : null; }
+    function hmToTs(hm) { if (!hm || !/^\d\d:\d\d$/.test(hm)) return 0; const [h, m] = hm.split(':').map(Number); const d = new Date(); d.setHours(h, m, 0, 0); return d.getTime(); }
+    function hmToKor(hm, suffix) { const [h, m] = hm.split(':'); return `${h}시 ${m}분 ${suffix}`; }   // v32 completed_at 형식
+    function saveProg() { if (!S.session) return; try { localStorage.setItem(progKey(S.session.name), JSON.stringify(S.prog)); } catch (e) {} }
+    // 완료 매장은 항상 맨 아래, 먼저 완료한 매장일수록 위 (가장 최근 완료가 맨 아래)
+    function partitionDone() {
+        const pend = S.route.filter(r => !isDone(r));
+        const done = S.route.filter(isDone).sort((a, b) => (prog(a).dTs || 0) - (prog(b).dTs || 0));
+        S.route = pend.concat(done);
+    }
+    // 현재 진행 매장 : 도착만 기록된 매장 → 없으면 첫 미완료 매장
+    function activeKey() {
+        if (S.isSection && !centerStarted()) return CENTER_KEY;
+        const arr = S.route.find(r => prog(r).a && !isDone(r));
+        if (arr) return arr.key;
+        const first = S.route.find(r => !isDone(r));
+        return first ? first.key : null;
+    }
+
+    function photoHtml(r) {
+        const list = (S.photos && S.photos.get(r.code)) || [];
+        if (!S.photos) return `<div class="drv-nophoto"><span>⏳</span>특이사항 사진을 불러오는 중입니다.</div>`;
+        if (!list.length) return `<div class="drv-nophoto"><span>🗂️</span>자동 분류된 매장 정보가 없습니다.<br>사무실에 문의하시기 바랍니다.</div>`;
+        return `<div class="drv-detail-cap">매장 특이사항 사진<span>사진을 누르면 크게 볼 수 있어요</span></div>
+                <div class="drv-photos${list.length === 1 ? ' is-single' : ''}">` +
+            list.map((u, i) => `<button type="button" class="drv-photo" data-photo="${i}" data-code="${esc(r.code)}" aria-label="특이사항 사진 ${i + 1}"><img src="${esc(u)}" alt="" loading="lazy" draggable="false"><b>🔍 크게 보기</b>${list.length > 1 ? `<em>${i + 1} / ${list.length}</em>` : ''}</button>`).join('') +
+            `</div>`;
+    }
+
+    /** 홈 목록 렌더링 (FLIP 애니메이션으로 순서 변경을 부드럽게) */
+    function renderHomeStores(flashKey) {
+        const before = new Map($$('.drv-store', homeSlot).map(el => [el.dataset.key, el.getBoundingClientRect().top]));
+        if (!S.route.length) {
+            homeSlot.innerHTML = `<div class="drv-card drv-slot"><div class="drv-slot-ico">📭</div><h3>배정된 매장이 없습니다</h3><p>최신 배차 데이터를 확인해 주세요.</p></div>`;
+            return;
+        }
+        const act = activeKey();
+        const doneN = S.route.filter(isDone).length;
+        const chev = '<svg class="drv-chev" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7l4.5 4.5L13.5 7"/></svg>';
+        let no = 0;
+        homeSlot.innerHTML =
+            `<div class="drv-progress-wrap"><div class="drv-stores-head"><h3>배송지 목록 <b>${S.route.length}</b>곳</h3><span>하차 완료 ${doneN} / ${S.route.length}</span></div>
+             <div class="drv-prog-bar"><i style="width:${Math.round(doneN / S.route.length * 100)}%"></i></div></div>` +
+            insertCenter(S.route.map(r => {
+                const p = prog(r), done = !!p.d, cur = r.key === act, arrived = !!p.a;
+                const open = !done && S.openKey === r.key;
+                if (!done) no++;
+                const tags = [
+                    cur && !arrived ? `<span class="drv-tag is-now">다음 배송지</span>` : '',
+                    arrived ? `<span class="drv-tag is-arr">🕑 도착 ${esc(p.a)}</span>` : '',
+                    done ? `<span class="drv-tag is-fin">✅ 하차 완료 ${esc(p.d)}</span>` : ''
+                ].join('');
+                const acts = done ? '' : `
+                    <div class="drv-store-acts">
+                        ${arrived
+                            ? `<button type="button" class="drv-act is-arrive is-recorded" disabled>도착 ${esc(p.a)}</button>`
+                            : `<button type="button" class="drv-act is-arrive" data-act="arrive"${cur ? '' : ' disabled'}>매장 도착</button>`}
+                        <button type="button" class="drv-act is-unload" data-act="unload"${cur && arrived ? '' : ' disabled'}>하차 완료</button>
+                    </div>${act === CENTER_KEY && no === 1 ? '<p class="drv-lockmsg">센터에서 배송 시작을 누르면 매장 도착을 기록할 수 있어요</p>' : ''}`;
+                const detail = done ? '' : `<div class="drv-collapse is-pw drv-store-detail"><div><div class="drv-detail-in">${open ? photoHtml(r) : ''}</div></div></div>`;
+                return `
+            <div class="drv-card drv-store${done ? ' is-done' : ''}${cur ? ' is-current' : ''}${open ? ' is-open' : ''}${r.key === flashKey ? ' is-flash' : ''}" data-key="${esc(r.key)}">
+                <div class="drv-store-top" data-toggle>
+                    <span class="drv-no">${done ? '✓' : no}</span>
+                    <div class="drv-store-main">
+                        <div class="drv-store-name">${esc(r.name)}<small>${esc(r.code)}</small></div>
+                        <div class="drv-store-addr">📍 ${esc(r.address)}</div>
+                        <div class="drv-store-sub">본코스: ${esc(maskName(r.driver))}${r.phone ? ' (' + esc(maskPhone(r.phone)) + ')' : ''}</div>
+                    </div>
+                    ${chev}
+                    ${callBtn(r, 'round')}
+                </div>
+                ${tags ? `<div class="drv-store-tags">${tags}</div>` : ''}
+                ${acts}
+                ${detail}
+            </div>`;
+            }), act).join('');
+        if (!before.size) return;
+        $$('.drv-store', homeSlot).forEach(el => {
+            const old = before.get(el.dataset.key);
+            if (old == null) return;
+            const d = old - el.getBoundingClientRect().top;
+            if (!d) return;
+            el.style.transition = 'none';
+            el.style.transform = `translateY(${d}px)`;
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                el.style.transition = 'transform .5s cubic-bezier(0.32, 0.72, 0, 1)';
+                el.style.transform = '';
+            }));
+        });
+    }
+
+    /* =========================================================
+       7) 구간 차량 : 센터 출발 카드 · 입차 및 주의사항 · TMAP · 배송 시작
+       ========================================================= */
+    const CENTER_KEY = '__center';
+    S.isSection = false; S.center = null; S.dbStarted = null;
+    const centerStarted = () => !!(S.prog[CENTER_KEY] && S.prog[CENTER_KEY].s);
+
+    // 센터 정보 : v32 center_passwords (center_code / center_name / center_address) 에서 main_center 로 매칭
+    async function resolveCenter(mainCenter) {
+        const base = { code: '', name: mainCenter || '출발 센터', address: '', lat: null, lng: null };
+        if (!S.session || S.session.demo || !S.sb) {
+            return Object.assign(base, { code: 'MY01', name: '제때 밀양물류센터', address: '경상남도 밀양시 (데모 주소) 물류센터로 100' });
+        }
+        try {
+            const { data, error } = await withTimeout(S.sb.from('center_passwords').select('center_code, center_name, center_address'), CONFIG.FETCH_TIMEOUT_MS);
+            if (error) throw error;
+            const key = String(mainCenter || '').replace(/\s/g, '');
+            const hit = (data || []).find(c => key && (String(c.center_code || '').replace(/\s/g, '') === key || String(c.center_name || '').replace(/\s/g, '') === key))
+                     || (data || []).find(c => key && (String(c.center_name || '').replace(/\s/g, '').includes(key) || key.includes(String(c.center_name || '').replace(/\s/g, '') || '∅')));
+            if (hit) return Object.assign(base, { code: hit.center_code || '', name: hit.center_name || base.name, address: hit.center_address || '' });
+        } catch (e) { console.warn('[기사] 센터 정보 조회 실패', e); }
+        return base;
+    }
+
+    function insertCenter(cards, act) {
+        if (!S.isSection) return cards;
+        const c = S.center || { name: '출발 센터', address: '' };
+        const st = S.prog[CENTER_KEY] || {};
+        const started = !!st.s, cur = act === CENTER_KEY;
+        const html = `
+            <div class="drv-card drv-store drv-center${started ? ' is-done' : ''}${cur ? ' is-current' : ''}" data-key="${CENTER_KEY}">
+                <div class="drv-center-top">
+                    <span class="drv-center-ico">${started ? '✓' : '🏭'}</span>
+                    <div class="drv-store-main">
+                        <span class="drv-center-label">출발 센터 · ${esc(CONFIG.SECTION_VALUE)}</span>
+                        <div class="drv-store-name">${esc(c.name)}</div>
+                        <div class="drv-store-addr">📍 ${esc(c.address || '센터 주소 미등록')}</div>
+                    </div>
+                </div>
+                ${started ? `<div class="drv-store-tags"><span class="drv-tag is-fin">🚚 배송 시작 ${esc(st.s)}</span></div>` : `
+                <div class="drv-center-acts">
+                    <button type="button" class="drv-act is-sub is-warn" data-act="notice">⚠️ 입차 및 주의사항</button>
+                    <button type="button" class="drv-act is-sub" data-act="nav">🧭 센터 위치 확인</button>
+                    <button type="button" class="drv-act is-start" data-act="start">배송 시작</button>
+                </div>`}
+            </div>`;
+        if (!started) return [html].concat(cards);
+        // 시작 완료 → 완료 카드들과 함께 시간 순으로 아래쪽에 배치 (가장 최근 완료가 맨 아래)
+        const pendN = S.route.filter(r => !isDone(r)).length;
+        const before = S.route.slice(pendN).filter(r => (prog(r).dTs || 0) < (st.sTs || 0)).length;
+        const out = cards.slice();
+        out.splice(pendN + before, 0, html);
+        return out;
+    }
+
+    async function startDelivery() {
+        if (!S.isSection || centerStarted() || !S.session) return;
+        const ok = await iosAlert({ title: '배송 시작', message: '배송을 시작하시겠습니까?\n시작 시간이 기록됩니다.', buttons: [{ text: '취소', value: false }, { text: '배송 시작', style: 'bold', value: true }] });
+        if (!ok || !S.session) return;
+        const hm = nowHM();
+        S.prog[CENTER_KEY] = { s: hm, sTs: Date.now() };
+        saveProg();
+        vibrate([20, 40, 20]);
+        renderHomeStores();
+        toast(`🚚 배송 시작 ${hm}`, 'green');
+        // v32 startDeliveryRoutine 과 동일 : 해당 기사 배차 전체에 started_at 기록 (+ 정확한 시각 started_ts, 이벤트 로그)
+        const ids = S.routeOrig.reduce((a, r) => a.concat(r.ids || []), []);
+        const ts = S.prog[CENTER_KEY].sTs;
+        enqueue({ kind: 'update', ids, patch: { started_at: hmToKor(hm, '시작'), started_ts: new Date(ts).toISOString() }, dedupe: 'start' });
+        logEvent('start', null, ts, { center: S.center ? S.center.name : null });
+        document.dispatchEvent(new CustomEvent('drv:start', { detail: { time: hm, center: S.center } }));
+        const next = $(`.drv-store[data-key="${CSS.escape(activeKey() || '')}"]`, homeSlot);
+        if (next) setTimeout(() => next.scrollIntoView({ behavior: 'smooth', block: 'center' }), 550);
+    }
+
+    /* ---------- 센터 위치 : TMAP 길안내 호출 (미설치 시 네이버 지도) ---------- */
+    function openCenterNav() {
+        const c = S.center || {};
+        const name = c.name || '물류센터';
+        const custom = window.DriverApp && window.DriverApp.navigate;          // 통합 시 교체 가능
+        if (typeof custom === 'function') { try { if (custom(c) !== false) return; } catch (e) {} }
+        const url = (c.lat && c.lng)
+            ? `tmap://route?rGoName=${encodeURIComponent(name)}&rGoX=${c.lng}&rGoY=${c.lat}`      // 좌표 있으면 바로 길안내
+            : `tmap://search?name=${encodeURIComponent(c.address || name)}`;                      // 없으면 주소 검색
+        const t0 = Date.now();
+        const fallback = setTimeout(() => {
+            if (document.visibilityState === 'visible' && Date.now() - t0 < 2500) {
+                window.open(CONFIG.FALLBACK_MAP_URL + encodeURIComponent(c.address || name), '_blank');
+            }
+        }, 1600);
+        const cancel = () => { if (document.visibilityState === 'hidden') clearTimeout(fallback); };
+        document.addEventListener('visibilitychange', cancel, { once: true });
+        window.location.href = url;
+    }
+
+    /* ---------- 입차 및 주의사항 (사진 + 설명 리스트) ---------- */
+    const enLayer = $('#drv-en-layer'), enSheet = $('#drv-en-sheet'), enList = $('#drv-en-list');
+    function noticeImg(title, hue, emoji) {
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+            `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+               <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${hue},50%,40%)"/><stop offset="1" stop-color="hsl(${hue + 30},55%,20%)"/></linearGradient></defs>
+               <rect width="1280" height="720" fill="url(#g)"/>
+               <text x="640" y="330" font-size="170" text-anchor="middle">${emoji}</text>
+               <text x="640" y="470" font-size="56" font-weight="700" fill="#fff" text-anchor="middle" font-family="sans-serif">${title}</text>
+               <text x="640" y="540" font-size="30" fill="rgba(255,255,255,.75)" text-anchor="middle" font-family="sans-serif">예시 사진 · 실제 센터 사진으로 교체 예정</text>
+             </svg>`);
+    }
+    // 기본(예시) 목록 : 통합 시 DriverApp.setEntryNotices([...]) 로 교체
+    S.entryNotices = [
+        { title: '입차 대기 위치', body: '센터 정문 우측 대기 차선에서 순서대로 대기합니다.\n<strong>도로변 정차 금지</strong>', photo: noticeImg('입차 대기 위치', 210, '🚛') },
+        { title: '게이트 출입 등록', body: '경비실에서 차량번호와 성함을 말씀하고 출입 등록 후 입차합니다.', photo: noticeImg('게이트 출입 등록', 160, '🪪') },
+        { title: '센터 내 서행', body: '구내 제한속도 <strong>10km/h</strong> · 지게차 통행로 우선', photo: noticeImg('센터 내 서행 10km/h', 20, '⚠️') },
+        { title: '도크 배정 확인', body: '배정된 도크 번호를 확인한 뒤 후진 접안하고 시동을 끕니다.', photo: noticeImg('도크 배정 확인', 260, '🅿️') },
+        { title: '안전 장구 착용', body: '하차장 진입 시 안전화 착용 필수, 상차 중 차량 이동 금지', photo: noticeImg('안전 장구 착용', 120, '🦺') }
+    ];
+    function renderNotices() {
+        const list = S.entryNotices || [];
+        $('#drv-en-sub').textContent = `${(S.center && S.center.name) || '센터'} 입차 시 반드시 확인해 주세요`;
+        if (!list.length) { enList.innerHTML = `<li class="drv-en-empty">등록된 입차 주의사항이 없습니다.</li>`; return; }
+        let pi = -1;
+        enList.innerHTML = list.map((n, i) => {
+            const hasPhoto = !!n.photo; if (hasPhoto) pi++;
+            // body 는 관리자 등록 문구(신뢰 HTML: <strong> 강조 허용)
+            return `<li class="drv-en-item" style="animation-delay:${Math.min(i, 6) * 45}ms">
+                ${hasPhoto ? `<button type="button" class="drv-en-photo" data-en-photo="${pi}" aria-label="${esc(n.title)} 사진 크게 보기"><img src="${esc(n.photo)}" alt="" loading="lazy" draggable="false"><b>🔍 크게 보기</b></button>` : ''}
+                <div class="drv-en-body"><span class="drv-en-no">${i + 1}</span><div><h4>${esc(n.title)}</h4><p>${n.body || ''}</p></div></div>
+            </li>`;
+        }).join('');
+    }
+    function openNotices() {
+        renderNotices();
+        $('#drv-en-scroll').scrollTop = 0;
+        enSheet.style.transform = '';
+        enLayer.classList.add('is-open');
+        enLayer.setAttribute('aria-hidden', 'false');
+        syncLock();
+    }
+    function closeNotices() {
+        if (!enLayer.classList.contains('is-open')) return;
+        enLayer.classList.remove('is-open');
+        enLayer.setAttribute('aria-hidden', 'true');
+        enSheet.style.transform = '';
+        syncLock();
+    }
+    enLayer.addEventListener('click', e => {
+        if (e.target.closest('[data-en-close]')) { closeNotices(); return; }
+        const ph = e.target.closest('[data-en-photo]');
+        if (ph) openViewer((S.entryNotices || []).filter(n => n.photo).map(n => n.photo), +ph.dataset.enPhoto, '입차 및 주의사항');
+    });
+    enLayer.addEventListener('contextmenu', e => { if (e.target.closest('.drv-en-photo')) e.preventDefault(); });
+    enableDrag('[data-drag="en"]', enSheet, () => { enSheet.style.transform = ''; closeNotices(); });
+
+    /* ---------- 예상 도착시간 계산용 타임라인 (출발 · 도착 · 하차완료) ---------- */
+    function getTimeline() {
+        if (!S.session) return null;
+        const c = S.prog[CENTER_KEY] || {};
+        let prevTs = c.sTs || null;
+        const stops = S.route.map((r, i) => {
+            const p = prog(r);
+            const item = {
+                order: i + 1, code: r.code, name: r.name,
+                arrive: p.a ? { hm: p.a, ts: p.aTs || null } : null,
+                depart: p.d ? { hm: p.d, ts: p.dTs || null } : null,           // 하차 완료 = 매장 출발
+                travelMin: (p.aTs && prevTs) ? Math.round((p.aTs - prevTs) / 60000) : null,   // 직전 출발 → 도착
+                dwellMin: (p.aTs && p.dTs) ? Math.round((p.dTs - p.aTs) / 60000) : null      // 도착 → 하차 완료
+            };
+            if (p.dTs) prevTs = p.dTs;
+            return item;
+        });
+        return { date: S.latestDate || null, driver: S.session.name, section: S.isSection, center: S.center, start: c.s ? { hm: c.s, ts: c.sTs || null } : null, stops };
+    }
+
+    /* =========================================================
+       8) 서버 기록 계층 : 배송 순서 · 시간 기록 · 이벤트 로그
+          - 모든 기록은 휴대폰 대기열(outbox)에 먼저 저장 → 순서대로 서버 전송
+          - 통신 실패 시 자동 재시도 (온라인 복귀 · 화면 복귀 · 30초 주기)
+          - 서버에 없는 컬럼/테이블은 그 항목만 건너뛰고 나머지는 저장
+       ========================================================= */
+    const OUTBOX_KEY = 'drv_outbox_v1';
+    S.dbMissingCols = new Set();
+    S.logTableMissing = false;
+    const canWrite = () => !!(S.session && !S.session.demo && S.sb && S.live);
+    function tsToHM(ts) { const d = new Date(ts); return `${p2(d.getHours())}:${p2(d.getMinutes())}`; }
+    function outboxLoad() { try { return JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]'); } catch (e) { return []; } }
+    function outboxSave(q) { try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(q.slice(-1000))); } catch (e) {} renderSync(q.length); }
+    function outboxPendingIds() { const set = new Set(); outboxLoad().forEach(i => { if (i.kind === 'update' && i.dedupe !== 'start' && !(i.dedupe || '').startsWith('order:')) (i.ids || []).forEach(id => set.add(id)); }); return set; }
+
+    function enqueue(item) {
+        if (!canWrite() || !item) return;
+        if (item.kind === 'update' && (!item.ids || !item.ids.length)) return;
+        let q = outboxLoad();
+        if (item.dedupe) q = q.filter((x, i) => i === 0 && flushing ? true : x.dedupe !== item.dedupe);   // 같은 대상의 이전 미전송 값은 최신 값으로 교체
+        q.push(Object.assign({ qid: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), tries: 0, at: new Date().toISOString() }, item));
+        outboxSave(q);
+        flushOutbox();
+    }
+
+    function logEvent(type, r, ts, payload) {
+        if (!S.session) return;
+        enqueue({ kind: 'log', row: {
+            transport_date: S.latestDate || null,
+            driver_name: S.session.name,
+            car_number: S.session.carFull || null,
+            business_code: r ? r.code : null,
+            business_name: r ? r.name : null,
+            event_type: type,                                  // start | arrive | unload | reorder
+            device_at: new Date(ts || Date.now()).toISOString(),
+            payload: payload || null
+        } });
+    }
+
+    function missingColumn(err) {
+        const m = String((err && (err.message || err.details)) || '');
+        const a = m.match(/'([^']+)' column/) || m.match(/column "([^"]+)"/) || m.match(/column ([a-z_]+) does not exist/i);
+        return (err && (err.code === 'PGRST204' || err.code === '42703')) || a ? (a ? a[1] : null) : null;
+    }
+    const isMissingTable = err => !!err && (err.code === 'PGRST205' || err.code === '42P01' || /Could not find the table|relation .* does not exist/i.test(err.message || ''));
+
+    async function sendItem(it) {
+        try {
+            if (it.kind === 'update') {
+                const patch = Object.assign({}, it.patch);
+                S.dbMissingCols.forEach(c => delete patch[c]);
+                for (let n = 0; n < 8; n++) {
+                    if (!Object.keys(patch).length) return 'drop';
+                    const { error } = await withTimeout(S.sb.from('dispatch_data').update(patch).in('id', it.ids), CONFIG.FETCH_TIMEOUT_MS);
+                    if (!error) return 'ok';
+                    const col = missingColumn(error);
+                    if (col && col in patch) { S.dbMissingCols.add(col); delete patch[col]; console.info(`[기사] dispatch_data.${col} 컬럼 없음 → 이 항목은 건너뜀`); continue; }
+                    throw error;
+                }
+                return 'drop';
+            }
+            if (it.kind === 'log') {
+                if (S.logTableMissing) return 'drop';
+                const row = Object.assign({}, it.row);
+                for (let n = 0; n < 6; n++) {
+                    const { error } = await withTimeout(S.sb.from(CONFIG.DB.LOG_TABLE).insert(row), CONFIG.FETCH_TIMEOUT_MS);
+                    if (!error) return 'ok';
+                    if (isMissingTable(error)) { S.logTableMissing = true; console.info(`[기사] ${CONFIG.DB.LOG_TABLE} 테이블 없음 → 이벤트 로그 건너뜀`); return 'drop'; }
+                    const col = missingColumn(error);
+                    if (col && col in row) { delete row[col]; continue; }
+                    throw error;
+                }
+                return 'drop';
+            }
+            return 'drop';
+        } catch (e) {
+            it.tries = (it.tries || 0) + 1;
+            console.warn('[기사] 서버 기록 전송 실패 · 재시도 예정', it.kind, e && (e.message || e.code || e));
+            // 통신 문제가 아닌 거부(권한 등)는 5회 후 포기 · 통신 문제(timeout 등)는 계속 재시도
+            const network = !e || e.message === 'timeout' || /fetch|network|Failed/i.test(e.message || '');
+            return (!network && it.tries >= 5) ? 'drop' : 'retry';
+        }
+    }
+
+    let flushing = false;
+    async function flushOutbox() {
+        if (flushing || !S.sb || !S.live) return;
+        if (navigator.onLine === false) { renderSync(outboxLoad().length); return; }
+        flushing = true;
+        try {
+            let q = outboxLoad();
+            while (q.length) {
+                const it = q[0];
+                const res = await sendItem(it);
+                q = outboxLoad();                                 // 전송 중 추가/교체된 항목 반영
+                const idx = q.findIndex(x => x.qid === it.qid);
+                if (res === 'retry') { if (idx >= 0) { q[idx].tries = it.tries; outboxSave(q); } break; }
+                if (idx >= 0) q.splice(idx, 1);
+                outboxSave(q);
+            }
+        } finally { flushing = false; renderSync(outboxLoad().length); }
+    }
+
+    function renderSync(n) {
+        const el = $('#drv-sync');
+        if (!el) return;
+        const show = !!(S.session && !S.session.demo && n > 0);
+        el.classList.toggle('is-show', show);
+        if (show) $('#drv-sync-text').textContent = `⏳ 서버 미전송 기록 ${n}건 · 연결되면 자동 전송됩니다`;
+    }
+    $('#drv-sync-retry').addEventListener('click', async () => { await flushOutbox(); const n = outboxLoad().length; toast(n ? `아직 ${n}건 전송 대기 중입니다` : '모든 기록이 서버에 저장되었습니다', n ? '' : 'green'); });
+    window.addEventListener('online', flushOutbox);
+    setInterval(flushOutbox, CONFIG.DB.RETRY_MS);
+
+    // 배송 순서 → dispatch_data.route_order (변경 후 0.7초 모아서 전송)
+    let orderTimer = null;
+    function scheduleOrderSync(reason) {
+        if (!canWrite()) return;
+        clearTimeout(orderTimer);
+        orderTimer = setTimeout(() => {
+            S.route.forEach((r, i) => enqueue({ kind: 'update', ids: r.ids, patch: { [CONFIG.DB.ORDER_COL]: i + 1 }, dedupe: 'order:' + r.key }));
+            if (reason === 'reorder') logEvent('reorder', null, Date.now(), { order: S.route.map(r => r.code) });
+        }, 700);
+    }
+
+    /* ---------- 실시간 반영 : 관리자가 Supabase 에서 순서 / 상태를 수정하면 즉시 다시 불러오기 ---------- */
+    let reloadTimer = null;
+    function scheduleSilentReload() {
+        clearTimeout(reloadTimer);
+        reloadTimer = setTimeout(() => {
+            // 드래그 중이거나 내 기록이 아직 전송 중이면 잠시 뒤로 미룸
+            if (dlList.classList.contains('is-sorting') || flushing || outboxLoad().length) { scheduleSilentReload(); return; }
+            loadRoute(true);
+        }, 1500);
+    }
+    function subscribeRealtime() {
+        unsubscribeRealtime();
+        if (!CONFIG.DB.REALTIME || !canWrite() || typeof S.sb.channel !== 'function') return;
+        try {
+            S.rt = S.sb.channel('drv-dispatch-' + Date.now())
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatch_data', filter: `driver_name=eq.${S.session.name}` }, () => scheduleSilentReload())
+                .subscribe();
+        } catch (e) { console.warn('[기사] 실시간 구독 실패', e); }
+    }
+    function unsubscribeRealtime() {
+        clearTimeout(reloadTimer);
+        if (S.rt && S.sb) { try { S.sb.removeChannel(S.rt); } catch (e) {} }
+        S.rt = null;
+    }
+
+    /* ---------- 카드 펼침 / 도착 / 하차 ---------- */
+    function toggleStore(key) {
+        const r = S.route.find(x => x.key === key);
+        if (!r || isDone(r)) return;                 // 하차 완료 매장은 펼쳐지지 않음
+        const card = $(`.drv-store[data-key="${CSS.escape(key)}"]`, homeSlot);
+        const wasOpen = S.openKey === key;
+        $$('.drv-store.is-open', homeSlot).forEach(c => c.classList.remove('is-open'));
+        S.openKey = wasOpen ? null : key;
+        if (!wasOpen && card) {
+            $('.drv-detail-in', card).innerHTML = photoHtml(r);
+            void card.offsetWidth;
+            card.classList.add('is-open');
+            setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 380);
+        }
+    }
+
+
+    async function markArrive(key) {
+        const r = S.route.find(x => x.key === key);
+        if (!r || isDone(r) || prog(r).a || activeKey() !== key) return;
+        const hm = nowHM();
+        S.prog[key] = Object.assign({}, prog(r), { a: hm, aTs: Date.now() });
+        saveProg();
+        vibrate(15);
+        renderHomeStores();
+        if (dlLayer.classList.contains('is-open')) renderDispatchList();
+        toast(`🕑 ${r.name} 도착 ${hm} 기록`);
+        const ts = S.prog[key].aTs;
+        enqueue({ kind: 'update', ids: r.ids, patch: { arrived_at: hmToKor(hm, '도착'), arrived_ts: new Date(ts).toISOString() } });
+        logEvent('arrive', r, ts, { order: S.route.indexOf(r) + 1 });
+        document.dispatchEvent(new CustomEvent('drv:arrive', { detail: { code: r.code, name: r.name, time: hm } }));
+    }
+
+    async function markUnload(key) {
+        const r = S.route.find(x => x.key === key);
+        if (!r || isDone(r) || !prog(r).a) return;
+        const ok = await iosAlert({ title: '하차 완료', message: `${r.name}\n하차 완료 처리하시겠습니까?`, buttons: [{ text: '취소', value: false }, { text: '하차 완료', style: 'bold', value: true }] });
+        if (!ok || !S.session) return;
+        const hm = nowHM();
+        S.prog[key] = Object.assign({}, prog(r), { d: hm, dTs: Date.now() });
+        if (S.openKey === key) S.openKey = null;
+        // 완료 카드는 맨 아래로
+        S.route = S.route.filter(x => x.key !== key).concat(r);
+        partitionDone();
+        saveProg();
+        saveOrder('unload');
+        vibrate([20, 40, 20]);
+        renderHomeStores();
+        if (dlLayer.classList.contains('is-open')) renderDispatchList();
+        const ts = S.prog[key].dTs;
+        enqueue({ kind: 'update', ids: r.ids, patch: { is_completed: true, completed_at: hmToKor(hm, '완료'), completed_ts: new Date(ts).toISOString() } });
+        logEvent('unload', r, ts, { arrived_ts: prog(r).aTs ? new Date(prog(r).aTs).toISOString() : null, dwell_min: prog(r).aTs ? Math.round((ts - prog(r).aTs) / 60000) : null });
+        document.dispatchEvent(new CustomEvent('drv:unload', { detail: { code: r.code, name: r.name, time: hm } }));
+
+        const remain = S.route.filter(x => !isDone(x)).length;
+        if (remain === 0) {
+            await sleep(650);
+            await iosAlert({ icon: '🙏', title: '모든 배송이 완료되었습니다', message: '발송된 카카오톡 배송승인 부탁드립니다.\n감사합니다', buttons: [{ text: '확인', style: 'bold', value: true }] });
+        } else {
+            toast(`✅ ${r.name} 하차 완료 ${hm}`, 'green');
+            const next = $(`.drv-store[data-key="${CSS.escape(activeKey())}"]`, homeSlot);
+            if (next) setTimeout(() => next.scrollIntoView({ behavior: 'smooth', block: 'center' }), 550);
+        }
+    }
+
+    homeSlot.addEventListener('click', e => {
+        if (e.target.closest('.drv-call')) return;                      // 전화는 기본 동작
+        const card = e.target.closest('.drv-store');
+        if (!card) return;
+        const act = e.target.closest('[data-act]');
+        if (act) {
+            const a = act.dataset.act;
+            if (a === 'arrive') markArrive(card.dataset.key);
+            else if (a === 'unload') markUnload(card.dataset.key);
+            else if (a === 'start') startDelivery();
+            else if (a === 'notice') openNotices();
+            else if (a === 'nav') openCenterNav();
+            return;
+        }
+        const ph = e.target.closest('.drv-photo');
+        if (ph) {
+            const r = S.route.find(x => x.key === card.dataset.key);
+            openViewer((S.photos.get(ph.dataset.code) || []), +ph.dataset.photo, r ? r.name : '');
+            return;
+        }
+        if (e.target.closest('[data-toggle]')) toggleStore(card.dataset.key);
+    });
+    homeSlot.addEventListener('contextmenu', e => { if (e.target.closest('.drv-photo')) e.preventDefault(); });
+
+    /* ---------- 특이사항 사진 (v32 : issues_photos 버킷, 파일명 '매장코드 매장명.jpg') ---------- */
+    async function loadIssuePhotos() {
+        const map = new Map();
+        if (S.sb && S.session && !S.session.demo) {
+            try {
+                const bucket = S.sb.storage.from('issues_photos');
+                for (let offset = 0; offset < 20000; offset += 1000) {
+                    const { data, error } = await withTimeout(bucket.list('', { limit: 1000, offset, sortBy: { column: 'name', order: 'asc' } }), CONFIG.FETCH_TIMEOUT_MS);
+                    if (error) throw error;
+                    (data || []).forEach(f => {
+                        if (!f.name || f.name.startsWith('.')) return;
+                        const code = f.name.replace(/\.[^/.]+$/, '').trim().replace(/\s+/g, ' ').split(' ')[0];
+                        if (!code) return;
+                        if (!map.has(code)) map.set(code, []);
+                        map.get(code).push(bucket.getPublicUrl(f.name).data.publicUrl);   // 같은 코드 여러 장 → 슬라이드
+                    });
+                    if (!data || data.length < 1000) break;
+                }
+            } catch (e) { console.warn('[기사] 특이사항 사진 목록 로드 실패', e); }
+        }
+        S.photos = map;
+    }
+
+    function demoPhotos() {
+        const mk = (name, i, n, hue, label) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+            `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
+               <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${hue},55%,42%)"/><stop offset="1" stop-color="hsl(${hue + 40},60%,22%)"/></linearGradient></defs>
+               <rect width="900" height="1200" fill="url(#g)"/>
+               <rect x="250" y="300" width="400" height="560" rx="18" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="14"/>
+               <circle cx="590" cy="590" r="18" fill="rgba(255,255,255,.85)"/>
+               <path d="M120 1000 h660" stroke="rgba(255,255,255,.35)" stroke-width="10" stroke-dasharray="30 22"/>
+               <text x="450" y="170" font-size="54" font-weight="700" fill="#fff" text-anchor="middle" font-family="sans-serif">${name}</text>
+               <text x="450" y="240" font-size="34" fill="rgba(255,255,255,.8)" text-anchor="middle" font-family="sans-serif">${label}</text>
+               <text x="450" y="1110" font-size="40" font-weight="700" fill="#fff" text-anchor="middle" font-family="sans-serif">특이사항 예시 ${i} / ${n}</text>
+             </svg>`);
+        const m = new Map();
+        m.set('A1001', [mk('강남역점', 1, 3, 210, '후문 출입 · 비밀번호 1234*'), mk('강남역점', 2, 3, 150, '하차 위치 : 냉장고 앞'), mk('강남역점', 3, 3, 20, '주차 : 건물 뒤편')]);
+        m.set('A1002', [mk('역삼역점', 1, 1, 280, '열쇠 : 우편함 2번')]);
+        m.set('A1004', [mk('삼성중앙점', 1, 2, 330, '엘리베이터 이용'), mk('삼성중앙점', 2, 2, 100, '파손주의 박스 분리')]);
+        return m;
+    }
+
+    /* ---------- 전체화면 뷰어 ---------- */
+    const PV = { el: $('#drv-pv'), stage: $('#drv-pv-stage'), track: $('#drv-pv-track'), urls: [], idx: 0, s: 1, tx: 0, ty: 0, ptrs: new Map(), mode: null, dx: 0, lastTap: null };
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+    function openViewer(urls, idx, title) {
+        if (!urls || !urls.length) return;
+        PV.urls = urls.slice();
+        PV.idx = clamp(idx || 0, 0, urls.length - 1);
+        PV.s = 1; PV.tx = 0; PV.ty = 0; PV.dx = 0; PV.ptrs.clear(); PV.mode = null;
+        $('#drv-pv-title').textContent = title || '매장 특이사항';
+        PV.track.innerHTML = PV.urls.map(u => `<div class="drv-pv-slide"><img src="${esc(u)}" alt="" draggable="false"></div>`).join('');
+        $('#drv-pv-dots').innerHTML = PV.urls.length > 1 ? PV.urls.map(() => '<i></i>').join('') : '';
+        pvLayout(false);
+        PV.el.classList.add('is-open', 'is-in');
+        PV.el.setAttribute('aria-hidden', 'false');
+        setTimeout(() => PV.el.classList.remove('is-in'), 400);
+        syncLock();
+    }
+    function closeViewer() {
+        if (!PV.el.classList.contains('is-open')) return;
+        PV.el.classList.remove('is-open');
+        PV.el.setAttribute('aria-hidden', 'true');
+        PV.ptrs.clear();
+        syncLock();
+        setTimeout(() => { if (!PV.el.classList.contains('is-open')) PV.track.innerHTML = ''; }, 300);
+    }
+    const pvImg = () => { const sl = PV.track.children[PV.idx]; return sl ? sl.querySelector('img') : null; };
+    function pvApply(anim) {
+        const img = pvImg(); if (!img) return;
+        img.style.transition = anim ? 'transform .28s cubic-bezier(0.32, 0.72, 0, 1)' : 'none';
+        img.style.transform = `translate(${PV.tx}px, ${PV.ty}px) scale(${PV.s})`;
+    }
+    function pvClampPan() {
+        const img = pvImg(); if (!img) return;
+        const W = PV.stage.clientWidth, H = PV.stage.clientHeight;
+        const mx = Math.max(0, (img.offsetWidth * PV.s - W) / 2), my = Math.max(0, (img.offsetHeight * PV.s - H) / 2);
+        PV.tx = clamp(PV.tx, -mx, mx); PV.ty = clamp(PV.ty, -my, my);
+    }
+    function pvLayout(anim) {
+        PV.track.style.transition = anim ? 'transform .38s cubic-bezier(0.32, 0.72, 0, 1)' : 'none';
+        PV.track.style.transform = `translateX(calc(${-PV.idx * 100}% + ${PV.dx}px))`;
+        $('#drv-pv-count').textContent = PV.urls.length > 1 ? `${PV.idx + 1} / ${PV.urls.length}` : '';
+        $$('#drv-pv-dots i').forEach((d, i) => d.classList.toggle('is-on', i === PV.idx));
+        $('#drv-pv-prev').disabled = PV.idx <= 0;
+        $('#drv-pv-next').disabled = PV.idx >= PV.urls.length - 1;
+    }
+    function pvGo(i) {
+        if (i < 0 || i >= PV.urls.length) { PV.dx = 0; pvLayout(true); return; }
+        if (i !== PV.idx) { PV.s = 1; PV.tx = 0; PV.ty = 0; pvApply(true); }
+        PV.idx = i; PV.dx = 0;
+        pvLayout(true);
+    }
+    function pvCenter() { const r = PV.stage.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
+    function pvZoomAt(px, py, s1) {
+        const c = pvCenter();
+        const qx = (px - c.x - PV.tx) / PV.s, qy = (py - c.y - PV.ty) / PV.s;
+        PV.s = s1; PV.tx = (px - c.x) - qx * s1; PV.ty = (py - c.y) - qy * s1;
+        pvClampPan(); pvApply(true);
+    }
+
+    $('#drv-pv-close').addEventListener('click', closeViewer);
+    $('#drv-pv-prev').addEventListener('click', () => pvGo(PV.idx - 1));
+    $('#drv-pv-next').addEventListener('click', () => pvGo(PV.idx + 1));
+
+    PV.stage.addEventListener('pointerdown', e => {
+        if (e.target.closest('.drv-pv-nav')) return;
+        try { PV.stage.setPointerCapture(e.pointerId); } catch (er) {}
+        PV.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (PV.ptrs.size === 2) {
+            const [a, b] = [...PV.ptrs.values()];
+            PV.mode = 'pinch'; PV.dx = 0; pvLayout(true);
+            PV.p0 = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, s: PV.s, tx: PV.tx, ty: PV.ty };
+        } else if (PV.ptrs.size === 1) {
+            PV.st = { x: e.clientX, y: e.clientY, t: Date.now(), tx: PV.tx, ty: PV.ty };
+            PV.mode = PV.s > 1.01 ? 'pan' : 'tap';
+        }
+    });
+    PV.stage.addEventListener('pointermove', e => {
+        if (!PV.ptrs.has(e.pointerId)) return;
+        PV.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (PV.mode === 'pinch' && PV.ptrs.size >= 2) {
+            const [a, b] = [...PV.ptrs.values()];
+            const d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+            const s1 = clamp(PV.p0.s * d / PV.p0.d, 0.8, 4);
+            const c = pvCenter();
+            const qx = (PV.p0.mx - c.x - PV.p0.tx) / PV.p0.s, qy = (PV.p0.my - c.y - PV.p0.ty) / PV.p0.s;
+            PV.s = s1; PV.tx = (mx - c.x) - qx * s1; PV.ty = (my - c.y) - qy * s1;
+            pvApply(false);
+            return;
+        }
+        const dx = e.clientX - PV.st.x, dy = e.clientY - PV.st.y;
+        if (PV.mode === 'pan') {
+            PV.tx = PV.st.tx + dx; PV.ty = PV.st.ty + dy; pvClampPan(); pvApply(false);
+        } else if (PV.mode === 'tap' && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+            PV.mode = 'swipe';
+        }
+        if (PV.mode === 'swipe') {
+            const atEdge = (PV.idx === 0 && dx > 0) || (PV.idx === PV.urls.length - 1 && dx < 0);
+            PV.dx = atEdge ? dx * 0.3 : dx;
+            pvLayout(false);
+        }
+    });
+    function pvUp(e) {
+        if (!PV.ptrs.has(e.pointerId)) return;
+        PV.ptrs.delete(e.pointerId);
+        if (PV.mode === 'pinch') {
+            if (PV.ptrs.size >= 2) return;
+            if (PV.s < 1.03) { PV.s = 1; PV.tx = 0; PV.ty = 0; }
+            pvClampPan(); pvApply(true);
+            if (PV.ptrs.size === 1) { const p = [...PV.ptrs.values()][0]; PV.st = { x: p.x, y: p.y, t: Date.now(), tx: PV.tx, ty: PV.ty }; PV.mode = PV.s > 1.01 ? 'pan' : 'none'; }
+            else PV.mode = null;
+            return;
+        }
+        if (PV.mode === 'swipe') {
+            const dx = e.clientX - PV.st.x, v = dx / Math.max(1, Date.now() - PV.st.t);
+            const W = PV.stage.clientWidth;
+            let n = PV.idx;
+            if (dx < -W * 0.18 || v < -0.45) n++; else if (dx > W * 0.18 || v > 0.45) n--;
+            PV.dx = 0; pvGo(clamp(n, 0, PV.urls.length - 1));
+        } else if (PV.mode === 'tap' || PV.mode === 'pan') {
+            const moved = Math.hypot(e.clientX - PV.st.x, e.clientY - PV.st.y);
+            if (moved < 10) {                                 // 더블탭 확대 / 원복
+                const now = Date.now(), lt = PV.lastTap;
+                if (lt && now - lt.t < 300 && Math.hypot(e.clientX - lt.x, e.clientY - lt.y) < 30) {
+                    PV.lastTap = null;
+                    if (PV.s > 1.01) { PV.s = 1; PV.tx = 0; PV.ty = 0; pvApply(true); }
+                    else pvZoomAt(e.clientX, e.clientY, 2.5);
+                } else PV.lastTap = { t: now, x: e.clientX, y: e.clientY };
+            }
+        }
+        if (!PV.ptrs.size) PV.mode = null;
+    }
+    PV.stage.addEventListener('pointerup', pvUp);
+    PV.stage.addEventListener('pointercancel', pvUp);
+    PV.stage.addEventListener('wheel', e => {          // 데스크톱 : 휠/트랙패드 확대
+        e.preventDefault();
+        pvZoomAt(e.clientX, e.clientY, clamp(PV.s * (e.deltaY < 0 ? 1.15 : 0.87), 1, 4));
+        if (PV.s <= 1.01) { PV.s = 1; PV.tx = 0; PV.ty = 0; pvApply(true); }
+    }, { passive: false });
+    window.addEventListener('resize', () => { if (PV.el.classList.contains('is-open')) { pvClampPan(); pvApply(false); pvLayout(false); } });
+
+    function renderDispatchList() {
+        if (!S.route.length) { dlList.innerHTML = `<li class="drv-dl-empty">배차된 매장이 없습니다.</li>`; return; }
+        let no = 0;
+        dlList.innerHTML = S.route.map(r => {
+            const p = prog(r), done = !!p.d;
+            if (!done) no++;
+            const st = done ? `하차 완료 ${esc(p.d)}` : (p.a ? `도착 ${esc(p.a)} · 하차 대기` : `본코스: ${esc(r.driver || '-')}`);
+            return `
+            <li class="drv-dl-row${done ? ' is-done' : ''}" data-key="${esc(r.key)}">
+                ${done ? '<span class="drv-dl-lock" aria-label="완료">✓</span>' : '<span class="drv-dl-handle" aria-label="순서 변경">〓</span>'}
+                <span class="drv-no">${done ? '✓' : no}</span>
+                <div class="drv-dl-main">
+                    <span class="drv-dl-code">${esc(r.code)}</span>
+                    <h4>${esc(r.name)}</h4>
+                    <p>${st}</p>
+                </div>
+                ${callBtn(r, 'pill')}
+            </li>`;
+        }).join('');
+    }
+
+    function openDispatch() {
+        if (!S.session) return;
+        renderDispatchList();
+        dlScroll.scrollTop = 0;
+        dlSheet.style.transform = '';
+        dlLayer.classList.add('is-open');
+        dlLayer.setAttribute('aria-hidden', 'false');
+        syncLock();
+    }
+    function closeDispatch() {
+        if (!dlLayer.classList.contains('is-open')) return;
+        dlLayer.classList.remove('is-open');
+        dlLayer.setAttribute('aria-hidden', 'true');
+        dlSheet.style.transform = '';
+        syncLock();
+    }
+
+    function moveStore(from, to) {
+        if (from === to) return;
+        const [item] = S.route.splice(from, 1);
+        S.route.splice(to, 0, item);
+        saveOrder();
+        renderDispatchList();
+        renderHomeStores(item.key);          // 홈 화면 즉시 반영
+        document.dispatchEvent(new CustomEvent('drv:route', { detail: S.route.slice() }));
+    }
+
+    $('#drv-open-dl').addEventListener('click', openDispatch);
+    dlLayer.addEventListener('click', e => { if (e.target.closest('[data-dl-close]')) closeDispatch(); });
+    enableDrag('[data-drag="dl"]', dlSheet, () => { dlSheet.style.transform = ''; closeDispatch(); });
+
+    /* ---------- 드래그 정렬 : 〓 는 즉시, 매장 상자는 길게 눌러 시작 ---------- */
+    (function initReorder() {
+        const LONG_PRESS = 260;
+        let st = null;
+
+        function cleanupPending() {
+            if (!st) return;
+            clearTimeout(st.timer);
+            st.row.classList.remove('is-pressing');
+            st = null;
+        }
+
+        function begin() {
+            const rows = $$('.drv-dl-row', dlList);
+            const from = rows.indexOf(st.row);
+            if (from < 0) { cleanupPending(); return; }
+            st.rows = rows;
+            st.rects = rows.map(r => r.getBoundingClientRect());
+            st.from = st.to = from;
+            st.maxTo = rows.filter(r => !r.classList.contains('is-done')).length - 1;   // 완료 매장 아래로는 이동 불가
+            st.gap = rows.length > 1 ? (st.rects[1].top - st.rects[0].bottom) : 10;
+            st.scroll0 = dlScroll.scrollTop;
+            st.lastY = st.y;
+            st.active = true;
+            st.row.classList.remove('is-pressing');
+            st.row.classList.add('is-lift');
+            dlList.classList.add('is-sorting');
+            vibrate(15);
+            try { st.row.setPointerCapture(st.pid); } catch (e) {}
+            st.raf = requestAnimationFrame(autoScroll);
+            update();
+        }
+
+        function update() {
+            const dy = (st.lastY - st.y) + (dlScroll.scrollTop - st.scroll0);
+            st.row.style.transform = `translateY(${dy}px) scale(1.02)`;
+            const r0 = st.rects[st.from];
+            const center = r0.top + r0.height / 2 + dy;
+            let to = 0;
+            st.rects.forEach((r, i) => { if (i !== st.from && (r.top + r.height / 2) < center) to++; });
+            to = Math.min(to, st.maxTo);
+            st.to = to;
+            const shift = r0.height + st.gap;
+            st.rows.forEach((el, i) => {
+                if (i === st.from) return;
+                let t = 0;
+                if (st.from < to && i > st.from && i <= to) t = -shift;
+                else if (st.from > to && i >= to && i < st.from) t = shift;
+                el.style.transform = t ? `translateY(${t}px)` : '';
+            });
+            if (to !== st.prevTo) { if (st.prevTo != null) vibrate(5); st.prevTo = to; }
+        }
+
+        function autoScroll() {
+            if (!st || !st.active) return;
+            const box = dlScroll.getBoundingClientRect();
+            const EDGE = 70;
+            let v = 0;
+            if (st.lastY < box.top + EDGE) v = -Math.ceil((box.top + EDGE - st.lastY) / 6);
+            else if (st.lastY > box.bottom - EDGE) v = Math.ceil((st.lastY - (box.bottom - EDGE)) / 6);
+            if (v) { const prev = dlScroll.scrollTop; dlScroll.scrollTop += v; if (dlScroll.scrollTop !== prev) update(); }
+            st.raf = requestAnimationFrame(autoScroll);
+        }
+
+        function finish() {
+            const s2 = st; st = null;
+            cancelAnimationFrame(s2.raf);
+            const { from, to, rects, row } = s2;
+            // 놓은 자리로 스냅 후 데이터 반영
+            const target = to > from ? rects[to].bottom - rects[from].bottom : rects[to].top - rects[from].top;
+            row.style.transition = 'transform .2s cubic-bezier(0.32, 0.72, 0, 1), box-shadow .2s';
+            row.style.transform = `translateY(${target}px)`;
+            setTimeout(() => {
+                dlList.classList.remove('is-sorting');
+                row.classList.remove('is-lift');
+                s2.rows.forEach(el => { el.style.transform = ''; el.style.transition = ''; });
+                if (from !== to) moveStore(from, to); else renderDispatchList();
+            }, 200);
+        }
+
+        dlList.addEventListener('pointerdown', e => {
+            if (e.button > 0 || st) return;
+            const row = e.target.closest('.drv-dl-row');
+            if (!row || row.classList.contains('is-done') || e.target.closest('.drv-call')) return;
+            st = { row, pid: e.pointerId, x: e.clientX, y: e.clientY, active: false, timer: null, prevTo: null };
+            if (e.target.closest('.drv-dl-handle')) { e.preventDefault(); begin(); }
+            else { row.classList.add('is-pressing'); st.timer = setTimeout(() => { if (st && !st.active) begin(); }, LONG_PRESS); }
+        });
+        document.addEventListener('pointermove', e => {
+            if (!st || e.pointerId !== st.pid) return;
+            if (!st.active) {
+                if (Math.hypot(e.clientX - st.x, e.clientY - st.y) > 8) cleanupPending();   // 스크롤 의도 → 취소
+                return;
+            }
+            e.preventDefault();
+            st.lastY = e.clientY;
+            update();
+        }, { passive: false });
+        const up = e => {
+            if (!st || e.pointerId !== st.pid) return;
+            if (st.active) finish(); else cleanupPending();
+        };
+        document.addEventListener('pointerup', up);
+        document.addEventListener('pointercancel', up);
+        // 정렬 중에는 시트 스크롤/길게누르기 메뉴 차단
+        dlList.addEventListener('touchmove', e => { if (st && st.active) e.preventDefault(); }, { passive: false });
+        dlList.addEventListener('contextmenu', e => e.preventDefault());
+    })();
+
+    window.addEventListener('popstate', () => {
+        if (S.ignorePop) { S.ignorePop = false; return; }
+        if (S.agreeMode === 'forced') { S.agreeHistory = false; forceLogout('back'); }
+    });
+
+    /* =========================================================
+       3) 로그인 이후 셸
+       ========================================================= */
+    function renderHome() {
+        const s = S.session;
+        if (!s) return;
+        $('#drv-home-name').textContent = s.name;
+        $('#drv-home-hon').textContent = CONFIG.HONORIFIC;
+        $('#drv-home-car').textContent = s.carFull || s.car4 || '-';
+        $('#drv-home-stores').textContent = `${s.stores || 0}개 매장`;
+        $('#drv-home-signed').textContent = s.signedAt || '';
+        loadRoute();
+    }
+
+    $('#drv-exit').addEventListener('click', async () => {
+        const ok = await iosAlert({
+            title: '로그아웃',
+            message: '로그아웃 하시겠습니까?',
+            buttons: [{ text: '취소', value: false }, { text: '로그아웃', style: 'danger', value: true }]
+        });
+        if (ok) { logout(); toast('로그아웃되었습니다'); }
+    });
+    $('#drv-view-agree').addEventListener('click', () => { if (S.session) openAgreement('view'); });
+
+    /* ---------- 세션 유지시간 (v32 driverTimeout) ---------- */
+    function isExpired() {
+        return S.session && (Date.now() - S.session.loginTs > S.settings.driverTimeout * 60 * 1000);
+    }
+    let timeoutShowing = false;
+    async function handleTimeout() {
+        if (timeoutShowing) return;
+        timeoutShowing = true;
+        logout();
+        await iosAlert({ icon: '⏱️', title: '로그인이 필요합니다', message: '로그인 유효시간이 초과되었습니다.\n다시 로그인해 주세요.' });
+        timeoutShowing = false;
+    }
+    document.addEventListener('click', e => {
+        if (!S.session || S.alertOpen) return;
+        if (isExpired()) { e.preventDefault(); e.stopPropagation(); handleTimeout(); return; }
+        if (CONFIG.AGREEMENT_POLICY === 'daily' && S.session.agreedKey !== resetKey()) { e.preventDefault(); e.stopPropagation(); checkAgreementCycle(); }
+    }, true);
+    setInterval(() => { if (isExpired()) handleTimeout(); else checkAgreementCycle(); }, 30000);
+
+    // 로그인 상태에서 19:00 가 지나면 사용 동의서 재서명 필요 → 로그아웃 후 재로그인·서명
+    let cycleShowing = false;
+    async function checkAgreementCycle() {
+        if (!S.session || cycleShowing || CONFIG.AGREEMENT_POLICY !== 'daily') return false;
+        if (S.session.agreedKey === resetKey()) return false;
+        cycleShowing = true;
+        const name = S.session.name;
+        logout();
+        await iosAlert({ icon: '🔒', title: '사용 동의서 재서명 필요', message: `매일 ${p2(CONFIG.AGREEMENT_RESET_HM[0])}:${p2(CONFIG.AGREEMENT_RESET_HM[1])} 에 사용 동의서가 초기화됩니다.\n다시 로그인 후 서명해 주세요.` });
+        cycleShowing = false;
+        searchInput.value = name; renderList();
+        return true;
+    }
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return;
+        if (isExpired()) handleTimeout(); else checkAgreementCycle();
+        if (!S.session) renderList();   // 조회 제한 시간 진입/해제 반영
+        flushOutbox();
+    });
+    setInterval(() => { if (!S.session && !isPwOpen()) { const wasDisabled = searchInput.disabled; if (wasDisabled !== isRestricted()) renderList(); } }, 60000);
+
+    /* ---------- 세션 복원 (새로고침 시) : 동의 완료 세션만 복원 ---------- */
+    function restoreSession() {
+        try {
+            const raw = sessionStorage.getItem(CONFIG.SESSION_KEY);
+            if (!raw) return false;
+            const s = JSON.parse(raw);
+            S.session = s;
+            if (isExpired() || (CONFIG.AGREEMENT_POLICY === 'daily' && s.agreedKey !== resetKey())) { clearSession(); return false; }
+            renderHome();
+            showScreen('drv-home');
+            const detail = Object.assign({}, s);
+            document.dispatchEvent(new CustomEvent('drv:login', { detail }));
+            if (typeof window.DriverApp.onLogin === 'function') { try { window.DriverApp.onLogin(detail, $('#drv-home-slot')); } catch (e) {} }
+            return true;
+        } catch (e) { clearSession(); return false; }
+    }
+
+    /* =========================================================
+       통합용 공개 API
+       ========================================================= */
+    window.DriverApp = Object.assign(window.DriverApp || {}, {
+        config: CONFIG,
+        agreement: AGREEMENT,
+        getSession: () => (S.session ? Object.assign({}, S.session) : null),
+        logout,
+        reload: async () => { await loadAll(); renderList(); },
+        alert: iosAlert,
+        toast,
+        getTimeline,                                                    // 다음 매장 도착 예상시간 계산용 기록
+        getPendingRecords: () => outboxLoad(),                          // 서버 미전송 기록
+        flush: () => flushOutbox(),
+        setEntryNotices: list => { S.entryNotices = Array.isArray(list) ? list : []; if (enLayer.classList.contains('is-open')) renderNotices(); }
+        // onLogin(session, slotElement) / onLogout() / navigate(center) 는 통합 시 외부에서 지정
+    });
+
+    /* =========================================================
+       시작
+       ========================================================= */
+    /* ---------- 로그인 상자 위치 고정 ---------- */
+    let frozenW = 0;
+    function freezeLoginTop(force) {
+        const top = $('.drv-spacer.is-top');
+        if (!top) return;
+        if (!force && (window.innerWidth === frozenW || isPwOpen() || searchInput.value.trim())) return;   // 키보드로 높이만 바뀐 경우 무시
+        top.style.flex = '';
+        const h = top.getBoundingClientRect().height;
+        top.style.flex = `0 0 ${Math.round(h)}px`;
+        frozenW = window.innerWidth;
+    }
+    window.addEventListener('resize', () => freezeLoginTop(false));   // 화면 회전 등 너비가 바뀔 때만 다시 계산
+
+    (async function boot() {
+        renderList();
+        showHUD('배차 정보를 불러오는 중');
+        await loadAll();
+        hideHUD();
+        if (!restoreSession()) renderList();
+        freezeLoginTop(true);
+        flushOutbox();
+    })();
+})();
+</script>
+</body>
+</html>
