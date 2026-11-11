@@ -2251,46 +2251,89 @@
               </div>
             </div>
 
-            <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200/80 space-y-4">
-              <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1.5">업로드 내역 유지기간</label>
-                <div class="flex items-center space-x-3">
-                  <input type="number" id="retentionUploadInput" min="1" max="365" value="14" class="w-24 px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-bold text-center text-[#007AFF]">
+            <div class="space-y-2.5">
+              <div class="ret-card bg-white rounded-2xl border border-gray-200/80 overflow-hidden" data-ret="upload">
+                <button type="button" onclick="retToggle('upload')" class="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-gray-50">
+                  <span class="w-8 h-8 rounded-lg bg-blue-50 text-[#007AFF] flex items-center justify-center flex-none"><i class="ph-bold ph-cloud-arrow-up text-base"></i></span>
+                  <span class="flex-1 min-w-0 text-[13.5px] font-bold text-gray-900 truncate">업로드 내역 유지기간</span>
+                  <span id="retSum_upload" class="text-[13px] font-extrabold text-[#007AFF] whitespace-nowrap"></span>
+                  <i class="ph-bold ph-caret-down text-gray-400 transition-transform duration-200" data-ret-caret></i>
+                </button>
+                <div class="hidden px-3.5 pb-3.5 pt-1 border-t border-gray-100 bg-gray-50/60" data-ret-body>
+                <div class="pt-2"><div class="flex items-center space-x-3">
+                  <input type="number" id="retentionUploadInput" min="1" max="365" value="14" oninput="retRefreshSummary()" class="w-24 px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-bold text-center text-[#007AFF]">
                   <span class="text-sm font-semibold text-gray-700">일 후 자동 삭제</span>
                 </div>
-                <p class="text-[11px] text-gray-400 mt-1">제품 특이사항 접수 내역과 첨부 사진이 삭제됩니다. (기본 14일)</p>
+                <p class="text-[11px] text-gray-400 mt-1.5 leading-relaxed">제품 특이사항 접수 내역과 첨부 사진이 삭제됩니다. (기본 14일)</p></div>
+                </div>
               </div>
-              <div class="border-t border-gray-200 pt-4">
-                <label class="block text-xs font-bold text-gray-700 mb-1.5">실시간 대시보드 유지기간</label>
-                <div class="flex items-center space-x-3">
-                  <input type="number" id="retentionDashboardInput" min="1" max="365" value="14" class="w-24 px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-bold text-center text-[#007AFF]">
+              <div class="ret-card bg-white rounded-2xl border border-gray-200/80 overflow-hidden" data-ret="dashboard">
+                <button type="button" onclick="retToggle('dashboard')" class="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-gray-50">
+                  <span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-none"><i class="ph-bold ph-gauge text-base"></i></span>
+                  <span class="flex-1 min-w-0 text-[13.5px] font-bold text-gray-900 truncate">실시간 대시보드 유지기간</span>
+                  <span id="retSum_dashboard" class="text-[13px] font-extrabold text-[#007AFF] whitespace-nowrap"></span>
+                  <i class="ph-bold ph-caret-down text-gray-400 transition-transform duration-200" data-ret-caret></i>
+                </button>
+                <div class="hidden px-3.5 pb-3.5 pt-1 border-t border-gray-100 bg-gray-50/60" data-ret-body>
+                <div class="pt-2"><div class="flex items-center space-x-3">
+                  <input type="number" id="retentionDashboardInput" min="1" max="365" value="14" oninput="retRefreshSummary()" class="w-24 px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-bold text-center text-[#007AFF]">
                   <span class="text-sm font-semibold text-gray-700">일 후 자동 삭제</span>
                 </div>
-                <p class="text-[11px] text-gray-400 mt-1">구간차량 관리 &gt; 실시간 대시보드 설계 후 적용됩니다. (기본 14일, 설정값은 미리 저장)</p>
+                <p class="text-[11px] text-gray-400 mt-1.5 leading-relaxed">구간차량 관리 &gt; 실시간 대시보드 설계 후 적용됩니다. (기본 14일, 설정값은 미리 저장)</p></div>
+                </div>
               </div>
-              <div class="border-t border-gray-200 pt-4">
-                <label class="block text-xs font-bold text-gray-700 mb-1.5">비용관리 영수증 유지기간</label>
-                <div class="flex items-center space-x-3">
-                  <input type="number" id="retentionReceiptInput" min="1" max="365" value="90" class="w-24 px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-bold text-center text-[#007AFF]">
+              <div class="ret-card bg-white rounded-2xl border border-gray-200/80 overflow-hidden" data-ret="receipt">
+                <button type="button" onclick="retToggle('receipt')" class="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-gray-50">
+                  <span class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-none"><i class="ph-bold ph-receipt text-base"></i></span>
+                  <span class="flex-1 min-w-0 text-[13.5px] font-bold text-gray-900 truncate">비용관리 영수증 유지기간</span>
+                  <span id="retSum_receipt" class="text-[13px] font-extrabold text-[#007AFF] whitespace-nowrap"></span>
+                  <i class="ph-bold ph-caret-down text-gray-400 transition-transform duration-200" data-ret-caret></i>
+                </button>
+                <div class="hidden px-3.5 pb-3.5 pt-1 border-t border-gray-100 bg-gray-50/60" data-ret-body>
+                <div class="pt-2"><div class="flex items-center space-x-3">
+                  <input type="number" id="retentionReceiptInput" min="1" max="365" value="90" oninput="retRefreshSummary()" class="w-24 px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-bold text-center text-[#007AFF]">
                   <span class="text-sm font-semibold text-gray-700">일 후 자동 삭제</span>
                 </div>
-                <p class="text-[11px] text-gray-400 mt-1">영수증 내역과 사진이 삭제되며, 해당 금액은 계정 사용금액에서도 빠집니다. (기본 90일)</p>
+                <p class="text-[11px] text-gray-400 mt-1.5 leading-relaxed">영수증 내역과 사진이 삭제되며, 해당 금액은 계정 사용금액에서도 빠집니다. (기본 90일)</p></div>
+                </div>
               </div>
-              <div class="border-t border-gray-200 pt-4">
-                <label class="block text-xs font-bold text-gray-700 mb-1.5">로그인 유지 시간 (새로고침해도 유지)</label>
-                <div class="space-y-2">
+              <div class="ret-card bg-white rounded-2xl border border-gray-200/80 overflow-hidden" data-ret="issue">
+                <button type="button" onclick="retToggle('issue')" class="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-gray-50">
+                  <span class="w-8 h-8 rounded-lg bg-rose-50 text-[#FF2D55] flex items-center justify-center flex-none"><i class="ph-bold ph-chats-circle text-base"></i></span>
+                  <span class="flex-1 min-w-0 text-[13.5px] font-bold text-gray-900 truncate">특이사항 관리 채팅 · 수정 기록 유지기간</span>
+                  <span id="retSum_issue" class="text-[13px] font-extrabold text-[#007AFF] whitespace-nowrap"></span>
+                  <i class="ph-bold ph-caret-down text-gray-400 transition-transform duration-200" data-ret-caret></i>
+                </button>
+                <div class="hidden px-3.5 pb-3.5 pt-1 border-t border-gray-100 bg-gray-50/60" data-ret-body>
+                <div class="pt-2"><div class="flex items-center space-x-3">
+                  <input type="number" id="retentionIssueChatInput" min="1" max="365" value="60" oninput="retRefreshSummary()" class="w-24 px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-bold text-center text-[#007AFF]">
+                  <span class="text-sm font-semibold text-gray-700">일 후 자동 삭제</span>
+                </div>
+                <p class="text-[11px] text-gray-400 mt-1.5 leading-relaxed">특이사항 관리의 채팅 메시지와 수정 기록이 이 기간이 지나면 삭제됩니다. 특이사항 표(데이터)는 삭제되지 않습니다. (기본 60일)</p></div>
+                </div>
+              </div>
+              <div class="ret-card bg-white rounded-2xl border border-gray-200/80 overflow-hidden" data-ret="login">
+                <button type="button" onclick="retToggle('login')" class="w-full flex items-center gap-3 px-3.5 py-3 text-left active:bg-gray-50">
+                  <span class="w-8 h-8 rounded-lg bg-purple-50 text-[#AF52DE] flex items-center justify-center flex-none"><i class="ph-bold ph-sign-in text-base"></i></span>
+                  <span class="flex-1 min-w-0 text-[13.5px] font-bold text-gray-900 truncate">로그인 유지 시간 (새로고침해도 유지)</span>
+                  <span id="retSum_login" class="text-[13px] font-extrabold text-[#007AFF] whitespace-nowrap"></span>
+                  <i class="ph-bold ph-caret-down text-gray-400 transition-transform duration-200" data-ret-caret></i>
+                </button>
+                <div class="hidden px-3.5 pb-3.5 pt-1 border-t border-gray-100 bg-gray-50/60" data-ret-body>
+                <div class="space-y-2 pt-2">
                   <div class="flex items-center space-x-3">
                     <span class="w-24 text-[13px] font-semibold text-gray-600">사무실</span>
-                    <input type="number" id="loginKeepOfficeInput" min="5" max="1440" value="90" class="w-24 px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-bold text-center text-[#007AFF]">
+                    <input type="number" id="loginKeepOfficeInput" min="5" max="1440" value="90" oninput="retRefreshSummary()" class="w-24 px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-bold text-center text-[#007AFF]">
                     <span class="text-sm font-semibold text-gray-700">분</span>
                   </div>
                   <div class="flex items-center space-x-3">
                     <span class="w-24 text-[13px] font-semibold text-gray-600">현장 관리자</span>
-                    <input type="number" id="loginKeepFieldInput" min="5" max="1440" value="90" class="w-24 px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-bold text-center text-[#007AFF]">
+                    <input type="number" id="loginKeepFieldInput" min="5" max="1440" value="90" oninput="retRefreshSummary()" class="w-24 px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-bold text-center text-[#007AFF]">
                     <span class="text-sm font-semibold text-gray-700">분</span>
                   </div>
                 </div>
-                <p class="text-[11px] text-gray-400 mt-1">마지막 사용 후 이 시간 안에 새로고침하면 로그인이 유지됩니다. (기본 90분, 5~1440분)</p>
+                <p class="text-[11px] text-gray-400 mt-1.5 leading-relaxed">마지막 사용 후 이 시간 안에 새로고침하면 로그인이 유지됩니다. (기본 90분, 5~1440분)</p>
+                </div>
               </div>
             </div>
           </div>
@@ -6235,7 +6278,7 @@
     }
 
     let currentDataManageTab = 'menu';
-    let retentionSettings = { uploadHistoryDays: 14, dashboardDays: 14, receiptDays: 90, loginKeepOfficeMin: 90, loginKeepFieldMin: 90 };
+    let retentionSettings = { uploadHistoryDays: 14, dashboardDays: 14, receiptDays: 90, issueChatDays: 60, loginKeepOfficeMin: 90, loginKeepFieldMin: 90 };
 
     const dataManagementModal = document.getElementById('dataManagementModal');
     const dataManagementModalBox = document.getElementById('dataManagementModalBox');
@@ -6251,6 +6294,7 @@
     const retentionUploadInput = document.getElementById('retentionUploadInput');
     const retentionDashboardInput = document.getElementById('retentionDashboardInput');
     const retentionReceiptInput = document.getElementById('retentionReceiptInput');
+    const retentionIssueChatInput = document.getElementById('retentionIssueChatInput');
     const loginKeepOfficeInput = document.getElementById('loginKeepOfficeInput');
     const loginKeepFieldInput = document.getElementById('loginKeepFieldInput');
 
@@ -6264,11 +6308,34 @@
       if (retentionReceiptInput) retentionReceiptInput.value = retentionSettings.receiptDays;
       if (loginKeepOfficeInput) loginKeepOfficeInput.value = retentionSettings.loginKeepOfficeMin;
       if (loginKeepFieldInput) loginKeepFieldInput.value = retentionSettings.loginKeepFieldMin;
+      if (retentionIssueChatInput) retentionIssueChatInput.value = retentionSettings.issueChatDays;
+      document.querySelectorAll('.ret-card').forEach(c => retToggle(c.dataset.ret, false));
+      retRefreshSummary();
 
       dataManagementModal.classList.remove('pointer-events-none', 'opacity-0');
       dataManagementModal.classList.add('opacity-100');
       dataManagementModalBox.classList.remove('scale-95');
       dataManagementModalBox.classList.add('scale-100');
+    }
+
+    // 유지기간 카드 : 누르면 아래로 펼쳐져 값을 바꿀 수 있음
+    function retToggle(key, force) {
+      const card = document.querySelector(`.ret-card[data-ret="${key}"]`); if (!card) return;
+      const body = card.querySelector('[data-ret-body]');
+      const open = force === undefined ? body.classList.contains('hidden') : force;
+      body.classList.toggle('hidden', !open);
+      card.querySelector('[data-ret-caret]').style.transform = open ? 'rotate(180deg)' : '';
+      card.classList.toggle('ring-2', open); card.classList.toggle('ring-blue-100', open);
+      if (open) { const inp = body.querySelector('input'); if (inp) setTimeout(() => inp.focus(), 60); }
+    }
+    function retRefreshSummary() {
+      const v = (el, unit) => { const n = parseInt(el && el.value, 10); return Number.isInteger(n) ? `${n}${unit}` : '-'; };
+      const set = (k, t) => { const e = document.getElementById('retSum_' + k); if (e) e.textContent = t; };
+      set('upload', v(retentionUploadInput, '일'));
+      set('dashboard', v(retentionDashboardInput, '일'));
+      set('receipt', v(retentionReceiptInput, '일'));
+      set('issue', v(retentionIssueChatInput, '일'));
+      set('login', `${v(loginKeepOfficeInput, '분')} · ${v(loginKeepFieldInput, '분')}`);
     }
 
     function closeDataManagementModal() {
@@ -6393,6 +6460,7 @@
           retentionSettings = {
             uploadHistoryDays: clamp(v.upload_history_days), dashboardDays: clamp(v.realtime_dashboard_days),
             receiptDays: Math.min(365, Math.max(1, parseInt(v.receipt_days, 10) || 90)),
+            issueChatDays: Math.min(365, Math.max(1, parseInt(v.issue_chat_log_days, 10) || 60)),
             loginKeepOfficeMin: keep(v.login_keep_office_min, 90), loginKeepFieldMin: keep(v.login_keep_field_min, 90)
           };
           try { localStorage.setItem('logi_keep_cache', JSON.stringify({ office: retentionSettings.loginKeepOfficeMin, field: retentionSettings.loginKeepFieldMin })); } catch (e) { /* 무시 */ }
@@ -6436,6 +6504,8 @@
       try {
         await sweep(INCIDENT_TABLE, INCIDENT_BUCKET, retentionSettings.uploadHistoryDays);
         await sweep(COST_RECEIPT_TABLE, COST_RECEIPT_BUCKET, retentionSettings.receiptDays);
+        // 특이사항 관리 채팅 · 수정 기록 (서버 함수가 지정 일수보다 오래된 것만 삭제)
+        await supabaseClient.rpc('purge_issue_sheet_history', { keep_days: retentionSettings.issueChatDays }).then(() => {}, () => {});
       } catch (e) { console.warn('유지기간 정리 실패(무시):', e); }
     }
 
@@ -6448,6 +6518,7 @@
       const up = clamp(retentionUploadInput, '업로드 내역'); if (up === null) return;
       const db = clamp(retentionDashboardInput, '실시간 대시보드'); if (db === null) return;
       const rc = clamp(retentionReceiptInput, '영수증'); if (rc === null) return;
+      const ic = clamp(retentionIssueChatInput, '특이사항 채팅·수정 기록'); if (ic === null) return;
       const keepVal = (el, label) => {
         const n = parseInt(el && el.value, 10);
         if (!Number.isInteger(n) || n < 5 || n > 1440) { showIosAutoToast(label + ' 로그인 유지 시간은 5~1440분으로 입력해주세요.'); return null; }
@@ -6458,14 +6529,14 @@
       showBusy('저장 중...');
       const res = await dbRun('설정 저장', async () => {
         await settingsSave([
-          { key: 'retention', value: { upload_history_days: up, realtime_dashboard_days: db, receipt_days: rc, login_keep_office_min: koff, login_keep_field_min: kfld } },
+          { key: 'retention', value: { upload_history_days: up, realtime_dashboard_days: db, receipt_days: rc, issue_chat_log_days: ic, login_keep_office_min: koff, login_keep_field_min: kfld } },
           { key: 'navigation_menus', value: navigationMenus.map(m => ({ id: m.id, visible: m.visible })) },
           { key: 'managed_reasons', value: managedReasons }
         ]);
       });
       hideBusy();
       if (!res.ok) return;
-      retentionSettings = { uploadHistoryDays: up, dashboardDays: db, receiptDays: rc, loginKeepOfficeMin: koff, loginKeepFieldMin: kfld };
+      retentionSettings = { uploadHistoryDays: up, dashboardDays: db, receiptDays: rc, issueChatDays: ic, loginKeepOfficeMin: koff, loginKeepFieldMin: kfld };
       try { localStorage.setItem('logi_keep_cache', JSON.stringify({ office: koff, field: kfld })); } catch (e) { /* 무시 */ }
       renderDynamicNavMenus();
       closeDataManagementModal();
@@ -10079,6 +10150,7 @@
     // ==========================================
     // [특이사항 관리] 채팅 · @태그 알림 · 수정 기록
     // ==========================================
+    function isKeepCutoff() { return new Date(Date.now() - (retentionSettings.issueChatDays || 60) * 86400000).toISOString(); }
     function isRowLabel(r) { return [r.store_name || r.store_code, r.product_name || r.product_code].filter(Boolean).join(' / ') || `#${r.id}`; }
     function isFmtChat(ts) {
       const d = new Date(ts); if (isNaN(d)) return '';
@@ -10088,12 +10160,7 @@
     }
     // ----- 패널 열고 닫기 -----
     function isApplyPanels() {
-      if (!isState.panels) {
-        let saved = null; try { saved = JSON.parse(localStorage.getItem(IS_PANEL_KEY) || 'null'); } catch (e) {}
-        const w = window.innerWidth;
-        isState.panels = saved || { chat: w >= 1100, log: w >= 1500 };
-        if (w < 768) isState.panels = { chat: false, log: false };
-      }
+      if (!isState.panels) isState.panels = { chat: false, log: false };
       [['chat', 'isChatPanel', 'isChatBtn'], ['log', 'isLogPanel', 'isLogBtn']].forEach(([k, pid, bid]) => {
         const on = !!isState.panels[k];
         isEl(pid).classList.toggle('hidden', !on);
@@ -10104,14 +10171,13 @@
     function isTogglePanel(k) {
       isState.panels[k] = !isState.panels[k];
       if (window.innerWidth < 768 && isState.panels[k]) isState.panels[k === 'chat' ? 'log' : 'chat'] = false;
-      try { localStorage.setItem(IS_PANEL_KEY, JSON.stringify(isState.panels)); } catch (e) {}
       isApplyPanels();
       if (k === 'chat' && isState.panels.chat) { isScrollChat(true); setTimeout(() => isEl('isChatInput').focus(), 50); }
     }
     // ----- 채팅 불러오기 / 그리기 -----
     async function isLoadChat() {
       if (!supabaseClient) return;
-      const { data, error } = await supabaseClient.from(IS_MSG_TABLE).select('*').order('id', { ascending: false }).limit(300);
+      const { data, error } = await supabaseClient.from(IS_MSG_TABLE).select('*').gte('created_at', isKeepCutoff()).order('id', { ascending: false }).limit(300);
       isState.chatMissing = isMissingErr(error);
       const n = isEl('isChatNotice');
       n.classList.toggle('hidden', !isState.chatMissing);
@@ -10120,6 +10186,18 @@
       await isLoadRead();
       isRenderChat();
       isScrollChat(true);
+      // 나를 태그한 새 메시지가 있으면 채팅창을 열어서 보여줌
+      if (isUnreadMentions().length && !isState.panels.chat) {
+        isState.panels.chat = true;
+        if (window.innerWidth < 768) isState.panels.log = false;
+        isApplyPanels();
+        setTimeout(isJumpMentionView, 80);
+      }
+    }
+    function isJumpMentionView() {
+      const first = isUnreadMentions()[0]; if (!first) return;
+      const el = document.querySelector(`#isChatList [data-msg="${first.id}"]`);
+      if (el) el.scrollIntoView({ block: 'center' });
     }
     async function isLoadRead() {
       if (!isState.me || !supabaseClient) { isState.lastRead = null; return; }
@@ -10287,7 +10365,7 @@
     // ----- 수정 기록 -----
     async function isLoadLogs() {
       if (!supabaseClient) return;
-      const { data, error } = await supabaseClient.from(IS_LOG_TABLE).select('*').order('id', { ascending: false }).limit(500);
+      const { data, error } = await supabaseClient.from(IS_LOG_TABLE).select('*').gte('created_at', isKeepCutoff()).order('id', { ascending: false }).limit(500);
       isState.logMissing = isMissingErr(error);
       const n = isEl('isLogNotice');
       n.classList.toggle('hidden', !isState.logMissing);
@@ -10358,6 +10436,7 @@
       document.getElementById('specialNotesViewArea').classList.add('hidden');
       document.getElementById('issueSheetViewArea').classList.remove('hidden');
       headerPageTitle.textContent = '특이사항 관리';
+      isState.panels = { chat: false, log: false };     // 들어올 때마다 기본은 접힘
       isApplyPanels();
       isRender();
       isLoad();
