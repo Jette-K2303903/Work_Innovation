@@ -1115,9 +1115,13 @@
         <div class="flex items-center gap-2 flex-none">
           <div id="isAvatars" class="flex items-center -space-x-2"></div>
           <button type="button" id="isMeBtn" onclick="isOpenUserPicker()" class="ios-btn-tap px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-[12px] font-bold whitespace-nowrap">사용자 선택</button>
+          <button type="button" id="isChatBtn" onclick="isTogglePanel('chat')" class="ios-btn-tap relative px-3 py-1.5 rounded-xl text-[12px] font-bold whitespace-nowrap flex items-center gap-1"><i class="ph-bold ph-chats-circle text-sm"></i>채팅<span id="isChatBadge" class="hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#FF3B30] text-white text-[10.5px] font-extrabold leading-[18px] text-center shadow"></span></button>
+          <button type="button" id="isLogBtn" onclick="isTogglePanel('log')" class="ios-btn-tap px-3 py-1.5 rounded-xl text-[12px] font-bold whitespace-nowrap flex items-center gap-1"><i class="ph-bold ph-clock-counter-clockwise text-sm"></i>수정 기록</button>
         </div>
       </div>
       <div id="isNotice" class="hidden mb-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[12px] font-semibold text-amber-800 leading-relaxed"></div>
+      <div class="flex-1 min-h-0 flex gap-3">
+      <div class="flex-1 min-w-0 min-h-0 flex flex-col">
       <div class="flex flex-wrap items-center gap-2 mb-2">
         <input type="search" id="isSearch" oninput="isState.q = this.value.trim(); isRender()" placeholder="매장 · 제품 · 내용 검색" class="flex-1 min-w-[160px] px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-blue-200">
         <div id="isStatusFilter" class="flex bg-gray-200/80 p-1 rounded-xl"></div>
@@ -1132,6 +1136,42 @@
         </div>
       </div>
       <p class="mt-1.5 text-[11px] text-gray-400 leading-relaxed">셀을 한 번 더 누르거나 바로 입력 · Enter 아래 칸 · Tab 오른쪽 칸 · 엑셀에서 여러 칸 복사 후 붙여넣기 가능 · 매장코드/제품코드를 입력하면 이름이 자동으로 채워집니다</p>
+      </div>
+
+      <!-- 채팅 · 메시지 -->
+      <section id="isChatPanel" class="hidden w-[300px] flex-none min-h-0 flex flex-col bg-white rounded-[18px] border border-gray-200/80 ios-card-shadow overflow-hidden max-md:fixed max-md:inset-0 max-md:z-40 max-md:w-auto max-md:rounded-none">
+        <div class="flex items-center gap-2 px-3.5 py-2.5 border-b border-gray-100 flex-none">
+          <i class="ph-bold ph-chats-circle text-[#007AFF] text-lg"></i>
+          <h4 class="text-[14px] font-bold text-gray-900">채팅 · 메시지</h4>
+          <button type="button" id="isMentionPill" onclick="isJumpMention()" class="hidden ml-1 px-2 py-0.5 rounded-full bg-[#FF3B30] text-white text-[11px] font-extrabold">@나 0</button>
+          <button type="button" onclick="isTogglePanel('chat')" class="ml-auto w-7 h-7 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center" title="닫기"><i class="ph-bold ph-x text-xs"></i></button>
+        </div>
+        <div id="isChatNotice" class="hidden mx-3 mt-2 px-2.5 py-2 rounded-lg bg-amber-50 text-[11.5px] font-semibold text-amber-800"></div>
+        <div id="isChatList" class="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-2.5"></div>
+        <div class="relative border-t border-gray-100 p-2.5 flex-none">
+          <div id="isMentionBox" class="hidden absolute left-2.5 right-2.5 bottom-full mb-1 max-h-[220px] overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-xl p-1 z-10"></div>
+          <div class="flex items-end gap-2">
+            <textarea id="isChatInput" rows="2" placeholder="메시지 입력 · @이름 으로 태그 · Enter 전송" class="flex-1 resize-none px-3 py-2 rounded-xl bg-gray-100 border border-gray-200 text-[13px] leading-snug outline-none focus:bg-white focus:ring-2 focus:ring-blue-200 max-h-[120px]"></textarea>
+            <button type="button" onclick="isSendChat()" class="ios-btn-tap w-10 h-10 flex-none rounded-xl bg-[#007AFF] text-white flex items-center justify-center" title="보내기"><i class="ph-fill ph-paper-plane-right text-lg"></i></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 수정 기록 (누가 무엇을 바꿨는지) -->
+      <section id="isLogPanel" class="hidden w-[290px] flex-none min-h-0 flex flex-col bg-white rounded-[18px] border border-gray-200/80 ios-card-shadow overflow-hidden max-md:fixed max-md:inset-0 max-md:z-40 max-md:w-auto max-md:rounded-none">
+        <div class="flex items-center gap-2 px-3.5 py-2.5 border-b border-gray-100 flex-none">
+          <i class="ph-bold ph-clock-counter-clockwise text-[#AF52DE] text-lg"></i>
+          <h4 class="text-[14px] font-bold text-gray-900">수정 기록</h4>
+          <button type="button" onclick="isTogglePanel('log')" class="ml-auto w-7 h-7 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center" title="닫기"><i class="ph-bold ph-x text-xs"></i></button>
+        </div>
+        <div class="flex gap-1.5 px-3 pt-2.5 flex-none">
+          <select id="isLogWho" onchange="isRenderLogs()" class="w-[96px] px-2 py-1.5 rounded-lg bg-gray-100 border border-gray-200 text-[12px] font-semibold outline-none"></select>
+          <input type="search" id="isLogSearch" oninput="isRenderLogs()" placeholder="매장 · 내용 검색" class="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-gray-100 border border-gray-200 text-[12px] outline-none">
+        </div>
+        <div id="isLogNotice" class="hidden mx-3 mt-2 px-2.5 py-2 rounded-lg bg-amber-50 text-[11.5px] font-semibold text-amber-800"></div>
+        <div id="isLogList" class="flex-1 min-h-0 overflow-y-auto px-3 py-2.5 space-y-1.5"></div>
+      </section>
+      </div>
       <datalist id="isTypeList"></datalist>
     </main>
 
@@ -1971,7 +2011,7 @@
                 </div>
                 <span class="text-[16px] font-medium text-gray-800">특이사항 관리</span>
               </div>
-              <i class="ph-bold ph-caret-right text-gray-300"></i>
+              <div class="flex items-center gap-2"><span id="issueMenuBadge" class="hidden min-w-[22px] h-[22px] px-1.5 rounded-full bg-[#FF3B30] text-white text-[11.5px] font-extrabold leading-[22px] text-center" title="나를 태그한 메시지"></span><i class="ph-bold ph-caret-right text-gray-300"></i></div>
             </a>
           </div>
         </div>
@@ -6172,6 +6212,7 @@
       if (_costCard) _costCard.classList.toggle('hidden', !(isLoggedIn && currentRole === 'office'));
       const _issueCard = document.getElementById('issueMenuCard');
       if (_issueCard) _issueCard.classList.toggle('hidden', !(isLoggedIn && currentRole === 'office'));
+      setTimeout(() => { try { isRefreshMentionBadge(); } catch (e) {} }, 0);
       
       const filtered = navigationMenus.filter(m => {
         const isOfficeUser = isLoggedIn && currentRole === 'office';
@@ -9482,8 +9523,12 @@
       rows: [], loaded: false, missing: false, q: '', status: 'all', sel: null, edit: null, checked: new Set(), miss: new Set(),
       me: (() => { try { return localStorage.getItem(IS_USER_KEY) || ''; } catch (e) { return ''; } })(),
       cid: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-      ch: null, dbCh: null, peers: [], cursors: new Map(), users: [], cache: { store: new Map(), product: new Map() }
+      ch: null, dbCh: null, peers: [], roster: new Map(), cursors: new Map(), users: [], cache: { store: new Map(), product: new Map() },
+      msgs: [], logs: [], lastRead: null, chatMissing: false, logMissing: false, panels: null, mBox: null
     };
+    const IS_MSG_TABLE = 'issue_sheet_messages', IS_LOG_TABLE = 'issue_sheet_logs', IS_READ_TABLE = 'issue_sheet_reads';
+    const IS_PANEL_KEY = 'issue_sheet_panels_v1';
+    const isMissingErr = (err) => !!err && (err.code === 'PGRST205' || err.code === '42P01' || /Could not find the table|does not exist/i.test(err.message || ''));
     const isEl = (id) => document.getElementById(id);
     const isVisible = () => !isEl('issueSheetViewArea').classList.contains('hidden');
     const isToday = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -9519,8 +9564,7 @@
       isState.rows.forEach(r => { cnt[r.status || '접수'] = (cnt[r.status || '접수'] || 0) + 1; });
       isEl('isStatusFilter').innerHTML = [['all', `전체 ${isState.rows.length}`], ...IS_STATUS.map(t => [t, `${t} ${cnt[t] || 0}`])].map(([k, l]) =>
         `<button type="button" onclick="isState.status='${k}'; isRender()" class="px-2.5 py-1 rounded-lg text-[11.5px] font-bold ${isState.status === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}">${l}</button>`).join('');
-      const people = new Set(isState.peers.map(p => p.name)); if (isState.me) people.add(isState.me);
-      isEl('isMeta').textContent = isState.missing ? '서버 준비 필요' : `총 ${isState.rows.length}건 · 접속 ${people.size}명${isState.me ? ` · 나 : ${isState.me}` : ' · 사용자 선택 전 (보기만 가능)'}`;
+      isRenderMeta();
       const body = isEl('isBody');
       if (!rows.length) {
         body.innerHTML = `<tr><td colspan="${IS_COLS.length + 1}" class="is-ro" style="height:120px;text-align:center;white-space:normal;cursor:default">${isState.missing ? '서버에 특이사항 표가 아직 없습니다.' : !isState.loaded ? '불러오는 중…' : isState.rows.length ? '조건에 맞는 기록이 없습니다.' : "아직 기록이 없습니다. '행 추가'를 눌러 시작하세요."}</td></tr>`;
@@ -9726,6 +9770,8 @@
       Object.assign(row, data);
       isRender();
       isBroadcast('row', { row: data });
+      const changes = Object.keys(patch).filter(k => IS_EDIT.includes(k) && String(before[k] ?? '') !== String(data[k] ?? ''));
+      isLog(changes.map(k => ({ action: '수정', row_id: data.id, field_key: k, field: (IS_COLS.find(c => c.k === k) || {}).h || k, old_value: String(before[k] ?? ''), new_value: String(data[k] ?? ''), row_label: isRowLabel(data) })));
       return true;
     }
     async function isAddRow(fields) {
@@ -9739,6 +9785,7 @@
       ['store_code', 'product_code'].forEach(k => { if (isState.miss.has('new|' + k)) { isState.miss.delete('new|' + k); isState.miss.add(data.id + '|' + k); } });
       isRender();
       isBroadcast('row', { row: data });
+      isLog([{ action: '추가', row_id: data.id, field_key: '', field: '', old_value: '', new_value: '', row_label: isRowLabel(data) }]);
       if (!fields) { isSelect(data.id, 'store_code'); isBeginEdit(); }
       return data;
     }
@@ -9747,8 +9794,10 @@
       const ids = [...isState.checked].filter(id => isState.rows.some(r => r.id === id));
       if (!ids.length) { showToastNotification('선택 필요', '삭제할 행을 왼쪽 체크박스로 선택해 주세요.', 'warning'); return; }
       if (!confirm(`선택한 ${ids.length}건을 삭제하시겠습니까? 되돌릴 수 없습니다.`)) return;
+      const delRows = isState.rows.filter(r => ids.includes(r.id));
       const { error } = await supabaseClient.from(IS_TABLE).delete().in('id', ids);
       if (error) { showToastNotification('삭제 실패', dbErrorMessage(error), 'warning'); return; }
+      isLog(delRows.map(r => ({ action: '삭제', row_id: r.id, field_key: '', field: '', old_value: [r.issue_type, r.detail].filter(Boolean).join(' · '), new_value: '', row_label: isRowLabel(r) })));
       isState.rows = isState.rows.filter(r => !ids.includes(r.id));
       isState.checked.clear();
       if (isState.sel && ids.includes(isState.sel.id)) isState.sel = null;
@@ -9799,45 +9848,93 @@
       else if (!isState.rows[i].updated_at || !row.updated_at || row.updated_at >= isState.rows[i].updated_at) isState.rows[i] = { ...isState.rows[i], ...row };
     }
     function isBroadcast(event, payload) { if (isState.ch) isState.ch.send({ type: 'broadcast', event, payload }).catch(() => {}); }
-    let isTrackTimer = null;
+    // 접속자 표시: Realtime presence 와 함께, 주기적인 '여기 있음' 신호(broadcast)도 사용
+    //  → 연결이 잠시 끊겼다 붙거나 presence 동기화가 늦어도, 먼저 들어온 사람에게 나중에 들어온 사람이 새로고침 없이 보이도록
+    let isTrackTimer = null, isBeatTimer = null, isRejoinTimer = null;
+    function isMyPresence() { return { cid: isState.cid, name: isState.me, sel: isState.sel, editing: !!isState.edit, at: Date.now() }; }
     function isTrack() {
       clearTimeout(isTrackTimer);
       isTrackTimer = setTimeout(() => {
         if (!isState.ch || !isState.me) return;
-        isState.ch.track({ cid: isState.cid, name: isState.me, sel: isState.sel, editing: !!isState.edit, at: Date.now() }).catch(() => {});
+        const me = isMyPresence();
+        isState.ch.track(me).catch(() => {});
+        isBroadcast('here', me);
       }, 120);
     }
     function isSyncPeers() {
-      const st = isState.ch ? isState.ch.presenceState() : {};
-      isState.peers = Object.values(st).map(arr => arr[arr.length - 1]).filter(p => p && p.name);
-      isRender();
+      const map = new Map();
+      try {
+        const st = isState.ch ? isState.ch.presenceState() : {};
+        Object.values(st).forEach(arr => { const p = arr[arr.length - 1]; if (p && p.name && p.cid) map.set(p.cid, p); });
+      } catch (e) {}
+      const now = Date.now();
+      isState.roster.forEach((p, cid) => { if (now - p.seen > 50000) isState.roster.delete(cid); else if (!map.has(cid)) map.set(cid, p); });
+      map.delete(isState.cid);
+      isState.peers = [...map.values()];
+      isRenderAvatars();
+      isDrawLayer();
+      const m = isEl('isMeta'); if (m && !isState.missing) isRenderMeta();
+    }
+    function isRenderMeta() {
+      const people = new Set(isState.peers.map(p => p.name)); if (isState.me) people.add(isState.me);
+      isEl('isMeta').textContent = isState.missing ? '서버 준비 필요' : `총 ${isState.rows.length}건 · 접속 ${people.size}명${isState.me ? ` · 나 : ${isState.me}` : ' · 사용자 선택 전 (보기만 가능)'}`;
     }
     function isJoin() {
       if (!supabaseClient || isState.ch || typeof supabaseClient.channel !== 'function') return;
-      isState.ch = supabaseClient.channel('issue-sheet', { config: { presence: { key: isState.cid }, broadcast: { self: false } } })
-        .on('presence', { event: 'sync' }, isSyncPeers)
+      const ch = supabaseClient.channel('issue-sheet', { config: { presence: { key: isState.cid }, broadcast: { self: false } } });
+      isState.ch = ch;
+      ch.on('presence', { event: 'sync' }, isSyncPeers)
+        .on('presence', { event: 'join' }, isSyncPeers)
+        .on('presence', { event: 'leave' }, isSyncPeers)
+        .on('broadcast', { event: 'here' }, ({ payload }) => {
+          if (!payload || !payload.cid || payload.cid === isState.cid) return;
+          const known = isState.roster.has(payload.cid) || isState.peers.some(p => p.cid === payload.cid);
+          isState.roster.set(payload.cid, { ...payload, seen: Date.now() });
+          if (!known) isTrack();          // 새로 들어온 사람에게 나도 바로 알림
+          isSyncPeers();
+        })
+        .on('broadcast', { event: 'bye' }, ({ payload }) => { if (payload && payload.cid) { isState.roster.delete(payload.cid); isState.cursors.delete(payload.cid); isSyncPeers(); } })
         .on('broadcast', { event: 'cursor' }, ({ payload }) => {
           if (!payload || payload.cid === isState.cid) return;
           if (payload.hide) isState.cursors.delete(payload.cid); else isState.cursors.set(payload.cid, { ...payload, t: Date.now() });
+          if (payload.name && !payload.hide) { const r = isState.roster.get(payload.cid); if (r) r.seen = Date.now(); }
           isDrawLayer();
         })
         .on('broadcast', { event: 'row' }, ({ payload }) => { if (payload && payload.row) { isMerge(payload.row); isRender(); } })
         .on('broadcast', { event: 'del' }, ({ payload }) => { if (payload && payload.ids) { isState.rows = isState.rows.filter(r => !payload.ids.includes(r.id)); isRender(); } })
-        .subscribe((status) => { if (status === 'SUBSCRIBED') isTrack(); });
+        .on('broadcast', { event: 'msg' }, ({ payload }) => { if (payload && payload.msg) isAddMsg(payload.msg, true); })
+        .on('broadcast', { event: 'log' }, ({ payload }) => { if (payload && payload.logs) { payload.logs.forEach(isAddLog); isRenderLogs(); } })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') { isTrack(); isBroadcast('here', { ...isMyPresence(), ask: true }); }
+          else if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') && isState.ch === ch && isVisible()) {
+            clearTimeout(isRejoinTimer);
+            isRejoinTimer = setTimeout(() => { if (isState.ch !== ch || !isVisible()) return; try { supabaseClient.removeChannel(ch); } catch (e) {} isState.ch = null; isJoin(); }, 3000);
+          }
+        });
+      clearInterval(isBeatTimer);
+      isBeatTimer = setInterval(() => { if (isVisible()) { isTrack(); isSyncPeers(); } }, 20000);
       // DB 변경 구독은 별도 채널 (표가 없거나 실시간 등록 전이어도 접속자 표시는 동작하도록)
-      isState.dbCh = supabaseClient.channel('issue-sheet-db')
-        .on('postgres_changes', { event: '*', schema: 'public', table: IS_TABLE }, (pl) => {
-          if (pl.eventType === 'DELETE') { const id = pl.old && pl.old.id; if (id != null) isState.rows = isState.rows.filter(r => r.id !== id); }
-          else isMerge(pl.new);
-          isRender();
-        })
-        .subscribe();
+      if (!isState.dbCh) {
+        isState.dbCh = supabaseClient.channel('issue-sheet-db')
+          .on('postgres_changes', { event: '*', schema: 'public', table: IS_TABLE }, (pl) => {
+            if (pl.eventType === 'DELETE') { const id = pl.old && pl.old.id; if (id != null) isState.rows = isState.rows.filter(r => r.id !== id); }
+            else isMerge(pl.new);
+            isRender();
+          })
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: IS_MSG_TABLE }, (pl) => isAddMsg(pl.new, true))
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: IS_LOG_TABLE }, (pl) => { isAddLog(pl.new); isRenderLogs(); })
+          .subscribe();
+      }
     }
     function isLeave() {
       isCloseEditor(false);
+      if (isState.ch && isState.me) isBroadcast('bye', { cid: isState.cid });
+      clearInterval(isBeatTimer); clearTimeout(isRejoinTimer);
       [isState.ch, isState.dbCh].forEach(c => { if (c) { try { c.untrack && c.untrack(); } catch (e) {} try { supabaseClient.removeChannel(c); } catch (e) {} } });
-      isState.ch = null; isState.dbCh = null; isState.peers = []; isState.cursors.clear();
+      isState.ch = null; isState.dbCh = null; isState.peers = []; isState.roster.clear(); isState.cursors.clear();
     }
+    window.addEventListener('pagehide', () => { if (isState.ch && isState.me) isBroadcast('bye', { cid: isState.cid }); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && isVisible()) { if (!isState.ch) isJoin(); else isTrack(); } });
     let isCursorAt = 0;
     function isOnMouse(e) {
       if (!isState.ch || !isState.me || Date.now() - isCursorAt < 45) return;
@@ -9876,14 +9973,17 @@
       m.classList.remove('opacity-0', 'pointer-events-none'); m.classList.add('opacity-100');
       isEl('isUserSearch').value = '';
       isEl('isUserList').innerHTML = '<div class="py-6 text-center text-[13px] text-gray-400">불러오는 중…</div>';
+      await isLoadUsers();
+      isRenderUserList();
+      setTimeout(() => isEl('isUserSearch').focus(), 120);
+    }
+    async function isLoadUsers() {
       try {
         const { data, error } = await supabaseClient.from('contacts').select('name,role').eq('category', 'office').order('name').limit(1000);
         if (error) throw error;
         const seen = new Set();
         isState.users = (data || []).filter(c => c.name && !seen.has(c.name) && seen.add(c.name));
       } catch (e) { isState.users = []; }
-      isRenderUserList();
-      setTimeout(() => isEl('isUserSearch').focus(), 120);
     }
     function isRenderUserList() {
       const q = isEl('isUserSearch').value.trim();
@@ -9907,6 +10007,7 @@
       isCloseUserPicker();
       isTrack();
       isRender();
+      isLoadRead().then(() => { isRenderChat(); isRefreshMentionBadge(true); });
       showToastNotification('사용자 선택 완료', `${isState.me} 님으로 입력합니다.`, 'success');
     });
 
@@ -9975,6 +10076,272 @@
     // 화면을 떠나면 실시간 연결 종료
     new MutationObserver(() => { if (!isVisible() && isState.ch) isLeave(); }).observe(isEl('issueSheetViewArea'), { attributes: true, attributeFilter: ['class'] });
 
+    // ==========================================
+    // [특이사항 관리] 채팅 · @태그 알림 · 수정 기록
+    // ==========================================
+    function isRowLabel(r) { return [r.store_name || r.store_code, r.product_name || r.product_code].filter(Boolean).join(' / ') || `#${r.id}`; }
+    function isFmtChat(ts) {
+      const d = new Date(ts); if (isNaN(d)) return '';
+      const p = (v) => String(v).padStart(2, '0'), t = new Date();
+      const hm = `${d.getHours() < 12 ? '오전' : '오후'} ${((d.getHours() + 11) % 12) + 1}:${p(d.getMinutes())}`;
+      return d.toDateString() === t.toDateString() ? hm : `${d.getMonth() + 1}/${d.getDate()} ${hm}`;
+    }
+    // ----- 패널 열고 닫기 -----
+    function isApplyPanels() {
+      if (!isState.panels) {
+        let saved = null; try { saved = JSON.parse(localStorage.getItem(IS_PANEL_KEY) || 'null'); } catch (e) {}
+        const w = window.innerWidth;
+        isState.panels = saved || { chat: w >= 1100, log: w >= 1500 };
+        if (w < 768) isState.panels = { chat: false, log: false };
+      }
+      [['chat', 'isChatPanel', 'isChatBtn'], ['log', 'isLogPanel', 'isLogBtn']].forEach(([k, pid, bid]) => {
+        const on = !!isState.panels[k];
+        isEl(pid).classList.toggle('hidden', !on);
+        isEl(bid).className = 'ios-btn-tap relative px-3 py-1.5 rounded-xl text-[12px] font-bold whitespace-nowrap flex items-center gap-1 ' + (on ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-700');
+      });
+      requestAnimationFrame(() => { isPlaceEditor(); isDrawLayer(); });
+    }
+    function isTogglePanel(k) {
+      isState.panels[k] = !isState.panels[k];
+      if (window.innerWidth < 768 && isState.panels[k]) isState.panels[k === 'chat' ? 'log' : 'chat'] = false;
+      try { localStorage.setItem(IS_PANEL_KEY, JSON.stringify(isState.panels)); } catch (e) {}
+      isApplyPanels();
+      if (k === 'chat' && isState.panels.chat) { isScrollChat(true); setTimeout(() => isEl('isChatInput').focus(), 50); }
+    }
+    // ----- 채팅 불러오기 / 그리기 -----
+    async function isLoadChat() {
+      if (!supabaseClient) return;
+      const { data, error } = await supabaseClient.from(IS_MSG_TABLE).select('*').order('id', { ascending: false }).limit(300);
+      isState.chatMissing = isMissingErr(error);
+      const n = isEl('isChatNotice');
+      n.classList.toggle('hidden', !isState.chatMissing);
+      if (isState.chatMissing) n.textContent = "채팅 표가 서버에 아직 없습니다. '특이사항관리_채팅_기록_DB.sql' 을 실행해 주세요.";
+      if (!error) isState.msgs = (data || []).reverse();
+      await isLoadRead();
+      isRenderChat();
+      isScrollChat(true);
+    }
+    async function isLoadRead() {
+      if (!isState.me || !supabaseClient) { isState.lastRead = null; return; }
+      try {
+        const { data } = await supabaseClient.from(IS_READ_TABLE).select('last_read_at').eq('user_name', isState.me).limit(1);
+        isState.lastRead = (data && data[0] && data[0].last_read_at) || null;
+      } catch (e) { isState.lastRead = null; }
+    }
+    const isMentionsMe = (m) => !!isState.me && m.author !== isState.me && (m.mentions || []).includes(isState.me);
+    function isUnreadMentions() { const t = isState.lastRead ? new Date(isState.lastRead).getTime() : 0; return isState.msgs.filter(m => isMentionsMe(m) && new Date(m.created_at).getTime() > t); }
+    function isMsgHtml(body) {
+      let h = svEsc(body || '');
+      const names = isState.users.map(u => u.name).concat(isState.msgs.map(m => m.author)).filter(Boolean);
+      [...new Set(names)].sort((a, b) => b.length - a.length).forEach(n => {
+        const e = svEsc('@' + n);
+        h = h.split(e).join(`\u0000${n}\u0001`);
+      });
+      return h.replace(/\u0000([^\u0001]*)\u0001/g, (_, n) => `<span class="font-extrabold ${n === isState.me ? 'text-[#FF3B30]' : 'text-[#007AFF]'}">@${n}</span>`).replace(/\n/g, '<br>');
+    }
+    function isRenderChat() {
+      const list = isEl('isChatList'); if (!list) return;
+      const unread = new Set(isUnreadMentions().map(m => m.id));
+      list.innerHTML = !isState.msgs.length
+        ? `<div class="h-full flex flex-col items-center justify-center text-center text-[12.5px] text-gray-400 leading-relaxed"><i class="ph-duotone ph-chats-circle text-4xl mb-2 text-gray-300"></i>아직 메시지가 없습니다.<br>@이름 으로 담당자를 태그할 수 있어요.</div>`
+        : isState.msgs.map((m, i) => {
+          const mine = m.author === isState.me, prev = isState.msgs[i - 1];
+          const head = !prev || prev.author !== m.author || (new Date(m.created_at) - new Date(prev.created_at)) > 5 * 60000;
+          const tagged = isMentionsMe(m), isNew = unread.has(m.id);
+          return `<div data-msg="${m.id}" class="flex ${mine ? 'justify-end' : 'justify-start'} gap-2 ${head ? 'pt-1' : '-mt-1.5'}">
+            ${!mine ? (head ? `<span class="is-ava flex-none" style="background:${isColor(m.author)};width:26px;height:26px;font-size:9.5px;border:0">${svEsc(isShort(m.author))}</span>` : '<span class="w-[26px] flex-none"></span>') : ''}
+            <div class="max-w-[78%] min-w-0">
+              ${head ? `<div class="text-[10.5px] text-gray-400 mb-0.5 ${mine ? 'text-right' : ''}">${mine ? '' : `<b class="text-gray-700">${svEsc(m.author)}</b> · `}${isFmtChat(m.created_at)}</div>` : ''}
+              <div class="px-3 py-2 rounded-2xl text-[13px] leading-snug break-words ${mine ? 'bg-[#007AFF] text-white rounded-tr-md [&_span]:!text-white [&_span]:underline' : tagged ? 'bg-red-50 text-gray-900 border border-red-200 rounded-tl-md' : 'bg-gray-100 text-gray-900 rounded-tl-md'}">${isMsgHtml(m.body)}</div>
+              ${isNew ? '<div class="text-[10px] font-extrabold text-[#FF3B30] mt-0.5">나를 태그함 · 새 메시지</div>' : ''}
+            </div>
+          </div>`;
+        }).join('');
+      isRenderBadges();
+    }
+    function isRenderBadges() {
+      const n = isUnreadMentions().length;
+      const b = isEl('isChatBadge'); b.textContent = n > 99 ? '99+' : n; b.classList.toggle('hidden', !n);
+      const pill = isEl('isMentionPill'); pill.textContent = `@나 ${n}`; pill.classList.toggle('hidden', !n);
+      const mb = isEl('issueMenuBadge'); if (mb) { mb.textContent = n > 99 ? '99+' : n; mb.classList.toggle('hidden', !n); }
+    }
+    function isScrollChat(force) {
+      const l = isEl('isChatList'); if (!l) return;
+      const near = l.scrollHeight - l.scrollTop - l.clientHeight < 120;
+      if (force || near) requestAnimationFrame(() => { l.scrollTop = l.scrollHeight; });
+    }
+    function isJumpMention() {
+      const first = isUnreadMentions()[0]; if (!first) return;
+      const el = document.querySelector(`#isChatList [data-msg="${first.id}"]`);
+      if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      isMarkRead();
+    }
+    // 태그 알림 읽음 처리 : 채팅창을 직접 누르거나 입력할 때 (화면만 열어서는 숫자가 사라지지 않음)
+    let isReadBusy = false;
+    async function isMarkRead() {
+      if (!isState.me || isReadBusy || !isUnreadMentions().length) return;
+      isReadBusy = true;
+      // 서버 시각 기준 (마지막 메시지 시각) — 컴퓨터마다 시계가 달라도 정확하게
+      const at = isState.msgs.reduce((mx, m) => (new Date(m.created_at) > new Date(mx) ? m.created_at : mx), new Date(0).toISOString());
+      isState.lastRead = at;
+      isRenderChat();
+      try { await supabaseClient.from(IS_READ_TABLE).upsert({ user_name: isState.me, last_read_at: at }, { onConflict: 'user_name' }); } catch (e) {}
+      isReadBusy = false;
+    }
+    function isAddMsg(m, live) {
+      if (!m || m.id == null || isState.msgs.some(x => x.id === m.id)) return;
+      isState.msgs.push(m);
+      isState.msgs.sort((a, b) => a.id - b.id);
+      isRenderChat();
+      isScrollChat(m.author === isState.me);
+      if (live && isMentionsMe(m)) {
+        showToastNotification('태그 알림', `${m.author} 님이 회원님을 태그했습니다: ${String(m.body).slice(0, 40)}`, 'info');
+        if (!isVisible()) isRefreshMentionBadge(true);
+      }
+    }
+    async function isSendChat() {
+      if (!isState.me) { isOpenUserPicker(); return; }
+      if (isState.chatMissing) { showToastNotification('서버 준비 필요', "채팅 표를 만든 뒤(SQL 실행) 사용할 수 있습니다.", 'warning'); return; }
+      const el = isEl('isChatInput'); const body = el.value.trim();
+      if (!body) return;
+      const names = [...new Set(isState.users.map(u => u.name))];
+      const mentions = names.filter(n => body.includes('@' + n));
+      el.value = ''; isCloseMentionBox();
+      const { data, error } = await supabaseClient.from(IS_MSG_TABLE).insert({ author: isState.me, body, mentions }).select().single();
+      if (error) { el.value = body; showToastNotification('전송 실패', dbErrorMessage(error), 'warning'); return; }
+      isAddMsg(data, false);
+      isBroadcast('msg', { msg: data });
+      isScrollChat(true);
+    }
+    // ----- @태그 자동완성 -----
+    function isMentionQuery() {
+      const el = isEl('isChatInput');
+      const before = el.value.slice(0, el.selectionStart);
+      const m = before.match(/(^|\s)@([^\s@]*)$/);
+      return m ? { q: m[2], start: before.length - m[2].length - 1 } : null;
+    }
+    function isOpenMentionBox() {
+      const mq = isMentionQuery();
+      if (!mq) { isCloseMentionBox(); return; }
+      const list = isState.users.filter(u => u.name !== isState.me && u.name.includes(mq.q)).slice(0, 8);
+      if (!list.length) { isCloseMentionBox(); return; }
+      const idx = isState.mBox && isState.mBox.q === mq.q ? Math.min(isState.mBox.idx, list.length - 1) : 0;
+      isState.mBox = { ...mq, list, idx };
+      const box = isEl('isMentionBox');
+      const online = new Set(isState.peers.map(p => p.name));
+      box.innerHTML = '<div class="px-2 pt-1 pb-1.5 text-[10.5px] font-bold text-gray-400">태그할 사람 (사무실 연락처)</div>' + list.map((u, i) => `<button type="button" data-mention="${i}" class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left ${i === idx ? 'bg-blue-50' : ''}">
+          <span class="is-ava flex-none" style="background:${isColor(u.name)};width:24px;height:24px;font-size:9px;border:0">${svEsc(isShort(u.name))}</span>
+          <span class="flex-1 min-w-0 text-[13px] font-bold text-gray-900 truncate">${svEsc(u.name)}</span>
+          ${online.has(u.name) ? '<span class="text-[10px] font-bold text-emerald-600">접속 중</span>' : ''}
+        </button>`).join('');
+      box.classList.remove('hidden');
+    }
+    function isCloseMentionBox() { isState.mBox = null; const b = isEl('isMentionBox'); if (b) b.classList.add('hidden'); }
+    function isPickMention(i) {
+      const mb = isState.mBox; if (!mb || !mb.list[i]) return;
+      const el = isEl('isChatInput'), name = mb.list[i].name;
+      const after = el.value.slice(el.selectionStart);
+      el.value = el.value.slice(0, mb.start) + '@' + name + ' ' + after.replace(/^\S*/, '');
+      const pos = mb.start + name.length + 2;
+      el.setSelectionRange(pos, pos);
+      el.focus();
+      isCloseMentionBox();
+    }
+    isEl('isChatInput').addEventListener('input', () => { isOpenMentionBox(); isMarkRead(); });
+    isEl('isChatInput').addEventListener('click', isOpenMentionBox);
+    isEl('isChatInput').addEventListener('keydown', (e) => {
+      if (e.isComposing || e.keyCode === 229) return;
+      const mb = isState.mBox;
+      if (mb) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); mb.idx = (mb.idx + (e.key === 'ArrowDown' ? 1 : -1) + mb.list.length) % mb.list.length; isOpenMentionBox(); return; }
+        if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); isPickMention(mb.idx); return; }
+        if (e.key === 'Escape') { e.preventDefault(); isCloseMentionBox(); return; }
+      }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); isSendChat(); }
+    });
+    isEl('isChatInput').addEventListener('blur', () => setTimeout(isCloseMentionBox, 150));
+    isEl('isMentionBox').addEventListener('mousedown', (e) => { const b = e.target.closest('[data-mention]'); if (b) { e.preventDefault(); isPickMention(+b.dataset.mention); } });
+    isEl('isChatPanel').addEventListener('pointerdown', () => isMarkRead());
+    isEl('isChatList').addEventListener('wheel', () => isMarkRead(), { passive: true });
+
+    // ----- 메뉴 카드 알림 숫자 (특이사항 관리 화면 밖에서도) -----
+    let isBadgeAt = 0;
+    async function isRefreshMentionBadge(force) {
+      const mb = isEl('issueMenuBadge'); if (!mb) return;
+      if (!(isLoggedIn && currentRole === 'office' && isState.me && supabaseClient)) { mb.classList.add('hidden'); return; }
+      if (isVisible()) { isRenderBadges(); return; }
+      if (!force && Date.now() - isBadgeAt < 20000) return;
+      isBadgeAt = Date.now();
+      try {
+        await isLoadRead();
+        let q = supabaseClient.from(IS_MSG_TABLE).select('id,author,mentions,created_at').contains('mentions', [isState.me]).order('id', { ascending: false }).limit(100);
+        if (isState.lastRead) q = q.gt('created_at', isState.lastRead);
+        const { data, error } = await q;
+        if (error) { mb.classList.add('hidden'); return; }
+        const n = (data || []).filter(m => m.author !== isState.me).length;
+        mb.textContent = n > 99 ? '99+' : n; mb.classList.toggle('hidden', !n);
+      } catch (e) { mb.classList.add('hidden'); }
+    }
+    setInterval(() => { if (!isVisible()) isRefreshMentionBadge(); }, 60000);
+
+    // ----- 수정 기록 -----
+    async function isLoadLogs() {
+      if (!supabaseClient) return;
+      const { data, error } = await supabaseClient.from(IS_LOG_TABLE).select('*').order('id', { ascending: false }).limit(500);
+      isState.logMissing = isMissingErr(error);
+      const n = isEl('isLogNotice');
+      n.classList.toggle('hidden', !isState.logMissing);
+      if (isState.logMissing) n.textContent = "수정 기록 표가 서버에 아직 없습니다. '특이사항관리_채팅_기록_DB.sql' 을 실행해 주세요.";
+      if (!error) isState.logs = data || [];
+      isRenderLogs();
+    }
+    function isAddLog(l) {
+      if (!l || l.id == null || isState.logs.some(x => x.id === l.id)) return;
+      isState.logs.unshift(l);
+      isState.logs.sort((a, b) => b.id - a.id);
+      if (isState.logs.length > 800) isState.logs.length = 800;
+    }
+    async function isLog(entries) {
+      if (!entries || !entries.length || isState.logMissing || !supabaseClient) return;
+      const rows = entries.map(e => ({ actor: isState.me, ...e }));
+      const { data, error } = await supabaseClient.from(IS_LOG_TABLE).insert(rows).select();
+      if (error) { if (isMissingErr(error)) { isState.logMissing = true; isLoadLogs(); } return; }
+      (data || []).forEach(isAddLog);
+      isRenderLogs();
+      isBroadcast('log', { logs: data || [] });
+    }
+    function isRenderLogs() {
+      const list = isEl('isLogList'); if (!list) return;
+      const whoSel = isEl('isLogWho'), cur = whoSel.value;
+      const names = [...new Set(isState.logs.map(l => l.actor).filter(Boolean))].sort();
+      whoSel.innerHTML = '<option value="">전체</option>' + names.map(n => `<option ${n === cur ? 'selected' : ''}>${svEsc(n)}</option>`).join('');
+      const q = isEl('isLogSearch').value.trim().toLowerCase();
+      const logs = isState.logs.filter(l => (!cur || l.actor === cur) && (!q || [l.row_label, l.field, l.old_value, l.new_value, l.actor].join(' ').toLowerCase().includes(q))).slice(0, 300);
+      const tag = { '추가': 'bg-emerald-50 text-emerald-700', '수정': 'bg-blue-50 text-[#007AFF]', '삭제': 'bg-red-50 text-red-600' };
+      const cut = (v) => { v = String(v ?? ''); return v.length > 40 ? v.slice(0, 40) + '…' : v; };
+      list.innerHTML = !logs.length
+        ? `<div class="py-10 text-center text-[12.5px] text-gray-400">${isState.logs.length ? '조건에 맞는 기록이 없습니다.' : '아직 수정 기록이 없습니다.'}</div>`
+        : logs.map(l => `<button type="button" data-log="${l.id}" class="w-full text-left px-2.5 py-2 rounded-xl border border-gray-100 hover:bg-gray-50 active:bg-gray-100">
+            <div class="flex items-center gap-1.5 text-[11px]">
+              <span class="w-2 h-2 rounded-full flex-none" style="background:${isColor(l.actor || '?')}"></span>
+              <b class="text-gray-800 truncate">${svEsc(l.actor || '-')}</b>
+              <span class="is-pill ${tag[l.action] || 'bg-gray-100 text-gray-600'}" style="padding:1px 6px;font-size:10px">${svEsc(l.action || '')}</span>
+              <span class="ml-auto text-gray-400 flex-none">${isFmtChat(l.created_at)}</span>
+            </div>
+            <div class="mt-1 text-[12px] font-semibold text-gray-900 truncate">${svEsc(l.row_label || '')}</div>
+            ${l.action === '수정' ? `<div class="mt-0.5 text-[11.5px] text-gray-600 leading-snug break-words"><b class="text-gray-700">${svEsc(l.field || '')}</b> : <span class="line-through text-gray-400">${svEsc(cut(l.old_value) || '(빈칸)')}</span> → <span class="text-gray-900 font-semibold">${svEsc(cut(l.new_value) || '(빈칸)')}</span></div>`
+              : l.action === '삭제' && l.old_value ? `<div class="mt-0.5 text-[11.5px] text-gray-500 truncate">${svEsc(cut(l.old_value))}</div>` : ''}
+          </button>`).join('');
+    }
+    isEl('isLogList').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-log]'); if (!b) return;
+      const l = isState.logs.find(x => x.id === +b.dataset.log); if (!l) return;
+      if (!isState.rows.some(r => r.id === l.row_id)) { showToastNotification('수정 기록', '이 행은 삭제되었거나 현재 검색 조건에 없습니다.', 'warning'); return; }
+      if (!isRowsView().some(r => r.id === l.row_id)) { isState.q = ''; isEl('isSearch').value = ''; isState.status = 'all'; isRender(); }
+      isSelect(l.row_id, l.field_key || 'store_code');
+      if (window.innerWidth < 768) isTogglePanel('log');
+    });
+
     function showIssueSheetView() {
       if (!(isLoggedIn && currentRole === 'office')) {
         showToastNotification('접근 제한', '사무실 담당자 로그인 후 이용할 수 있습니다.', 'warning');
@@ -9991,8 +10358,12 @@
       document.getElementById('specialNotesViewArea').classList.add('hidden');
       document.getElementById('issueSheetViewArea').classList.remove('hidden');
       headerPageTitle.textContent = '특이사항 관리';
+      isApplyPanels();
       isRender();
       isLoad();
+      isLoadUsers();
+      isLoadChat();
+      isLoadLogs();
       isJoin();
       if (!isState.me) setTimeout(isOpenUserPicker, 250);
     }
