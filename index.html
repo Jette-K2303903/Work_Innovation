@@ -29,6 +29,15 @@
       overflow: hidden;
     }
 
+    /* [모바일 화면 깨짐 방지] 안드로이드 크롬·네이버 앱에서 키보드가 올라올 때 화면이 하얗게 비는 현상 대응
+       - 닫혀 있는(opacity-0) 전체 화면 팝업은 아예 그리지 않음 (투명해도 흐림 효과 층이 남아 그래픽 메모리를 차지)
+       - 터치 기기에서는 흐림(backdrop-blur) 효과를 끔 (배경색은 그대로라 모양은 거의 같음) */
+    .fixed.opacity-0.pointer-events-none { visibility: hidden; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+    @media (hover: none), (pointer: coarse) {
+      .backdrop-blur-sm, .backdrop-blur, .backdrop-blur-md, .backdrop-blur-lg, .backdrop-blur-xl, .backdrop-blur-2xl, .backdrop-blur-3xl,
+      [class*="backdrop-blur-["] { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+    }
+
     /* iOS 탭 스프링 애니메이션 */
     .ios-btn-tap {
       transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.12s ease;
@@ -2019,7 +2028,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.013</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.019</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
