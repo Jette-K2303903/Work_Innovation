@@ -239,6 +239,12 @@
     .pallet-table tr.new-inline-row {
       background-color: #FAFCFF;
     }
+    /* 구간차량 관리 배차 목록 : 상자 폭에 맞춰 칸을 나눔 (가로 스크롤 없음) */
+    .sv-fit { table-layout: fixed; width: 100%; }
+    .sv-fit th { padding: 9px 4px; font-size: 11.5px; white-space: normal; line-height: 1.25; }
+    .sv-fit td { padding: 6px 4px; font-size: 12.5px; white-space: normal; word-break: break-all; overflow-wrap: anywhere; }
+    .sv-fit .inline-cell-input { width: 100%; min-width: 0; padding: 5px 4px; font-size: 12px; }
+    .sv-fit select.inline-cell-input { padding: 5px 2px; }
     .inline-cell-input {
       background-color: #FFFFFF;
       border: 1px solid #E5E5EA;
@@ -1003,9 +1009,10 @@
             </button>
           </div>
           <div id="svAddrWarnBadge" title="카카오 주소 검색에서 찾아지지 않는 주소입니다. (카카오에 연결할 수 없을 때는 주소 형식 검사 기준)" class="hidden mb-2 text-[12px] font-bold text-red-700 bg-yellow-100 border border-yellow-300 rounded-xl px-3 py-1.5"></div>
-          <div class="ios-horizontal-scroll rounded-2xl border border-gray-200/80">
-            <table class="w-full pallet-table min-w-[1100px]">
-              <thead><tr><th class="w-10"><input type="checkbox" id="svRowCheckAll" onchange="svToggleAllRows(this.checked)" title="전체 선택" class="w-4 h-4 align-middle cursor-pointer"></th><th>센터명</th><th>기사명<br>차량번호</th><th>매장코드<br>매장명</th><th>순서</th><th>주소</th><th>시간</th><th>연락처<br>(기사 / 매장)</th><th>양식지정</th></tr></thead>
+          <div class="rounded-2xl border border-gray-200/80 overflow-hidden">
+            <table class="pallet-table sv-fit">
+              <colgroup><col style="width:3.5%"><col style="width:8%"><col style="width:11%"><col style="width:11.5%"><col style="width:4.5%"><col style="width:24%"><col style="width:9%"><col style="width:17%"><col style="width:11.5%"></colgroup>
+              <thead><tr><th><input type="checkbox" id="svRowCheckAll" onchange="svToggleAllRows(this.checked)" title="전체 선택" class="w-4 h-4 align-middle cursor-pointer"></th><th>센터명</th><th>기사명<br>차량번호</th><th>매장코드<br>매장명</th><th>순서</th><th>주소</th><th>시간</th><th>연락처<br>(기사 / 매장)</th><th>양식지정</th></tr></thead>
               <tbody id="svRowsTableBody"></tbody>
             </table>
           </div>
@@ -7830,6 +7837,21 @@
     // 로그인 사용자가 수정 가능한 항목 (수정 후 '변경사항 일괄 저장'으로 저장)
     const SV_EDIT_KEYS = ['driver', 'vehicleNo', 'address', 'departTime', 'driverPhone', 'storePhone', 'storePhone2', 'formatType'];
     // 양식지정 선택지 = '미지정' + 문자 양식(템플릿)의 양식 구분명
+    const svTplKnown = (name) => !name || name === '미지정' || svTemplates.some(t => t.category === name);
+    // 문자 양식 (Supabase sms_templates) 불러오기
+    const SV_TPL_TABLE = 'sms_templates';
+    let svTplDb = true;            // 표가 없으면 false (화면 메모리에만 저장)
+    async function svLoadTemplates() {
+      if (!supabaseClient) return;
+      const { data, error } = await supabaseClient.from(SV_TPL_TABLE).select('*').order('sort_order', { ascending: true }).order('id', { ascending: true });
+      if (error) {
+        svTplDb = false;
+        if (!/does not exist|Could not find|PGRST205|42P01/i.test((error.code || '') + (error.message || ''))) console.warn('문자 양식 불러오기 실패', error);
+        return;
+      }
+      svTplDb = true;
+      svTemplates = (data || []).map(t => ({ id: t.id, category: t.category || '', title: t.title || '', sender: t.sender || '', body: t.body || '' }));
+    }
     function svFormatOptions(extra) {
       const list = ['미지정', ...svTemplates.map(t => t.category)];
       if (extra && !list.includes(extra)) list.push(extra);
@@ -7924,7 +7946,7 @@
       return list.map((r, i) => {
         const dk = (r.driver_name || '') + '|' + (r.vehicle_no || '');
         seqByDriver[dk] = (seqByDriver[dk] || 0) + 1;
-        const fmt = r.format_type || r.sms_template;
+        const fmt = String(r.format_type || r.sms_template || '').trim();
         const row = {
           id: 'svr-' + (r.id != null ? r.id : 'u' + (i + 1)),
           dbId: r.id != null ? r.id : null,
@@ -7940,7 +7962,7 @@
           driverPhone: r.driver_phone || '',
           storePhone: r.store_phone || '',
           storePhone2: r.store_phone2 || '',
-          formatType: svTemplates.some(t => t.category === fmt) ? fmt : '미지정',
+          formatType: fmt || '미지정',          // 배차 업로드의 문자템플릿 값을 그대로 사용 (문자 양식의 '양식 구분명'과 같으면 매칭)
           completed: false,
           // 화면에는 표시하지 않지만 보관하는 업로드 항목
           dispatchDate: r.delivery_date, centerCode: r.center_code, centerName: r.center_name, regionType: r.region_type,
@@ -8006,6 +8028,7 @@
         const list = [...latestBy.values()].sort((a, b) => a.id - b.id);
         await svLoadCenters();
         await svEnsureCenters(list);
+        try { await svLoadTemplates(); } catch (e) { console.warn(e); }
         svDispatchDate = date;
         svRows = svBuildRows(list);
         svCheckedDrivers = new Set();
@@ -8054,7 +8077,7 @@
         { id: 'ctr-5', name: '중부 종합물류센터', address: '대전광역시 대덕구 ○○로 90' },
         { id: 'ctr-6', name: '천안(원앤원)', address: '충청남도 천안시 서북구 ○○로 11' }
       ];
-      svTemplates = [
+      if (!supabaseClient) svTemplates = [
         { id: 'tpl-1', category: '출발 안내', title: '[배송 출발 안내]', sender: '1588-0000', body: '안녕하세요. #{매장명} 점장님, #{기사명} 기사님이 #{도착예상시간}경 도착 예정입니다.' },
         { id: 'tpl-2', category: '도착 임박', title: '[도착 임박 안내]', sender: '1588-0000', body: '#{매장명} 점장님, 잠시 후 #{기사명} 기사님이 도착합니다. 수령 준비 부탁드립니다.' }
       ];
@@ -8538,23 +8561,23 @@
         const inp = (field, cls, ph, type = 'text') =>
           `<input type="${type}" data-f="${field}" value="${svEsc(r[field])}" placeholder="${ph}" oninput="svSetField('${r.id}','${field}',this.value)" onchange="svSetField('${r.id}','${field}',this.value)" class="inline-cell-input ${cls}">`;
         const phoneLine = (label, field) => canEdit
-          ? `<div class="flex items-center space-x-1"><span class="text-[10px] text-gray-400 w-10 flex-shrink-0">${label}</span>${inp(field, 'w-[118px] font-mono text-xs', label)}</div>`
+          ? `<div class="flex items-center gap-1 min-w-0"><span class="text-[10px] text-gray-400 w-9 flex-shrink-0 text-left">${label}</span><div class="flex-1 min-w-0">${inp(field, 'font-mono text-xs', label)}</div></div>`
           : `<div class="flex items-center space-x-1"><span class="text-[10px] text-gray-400 w-10 flex-shrink-0">${label}</span>${r[field] ? `<a href="tel:${svEsc(r[field])}" class="font-mono text-[12px] font-semibold text-[#007AFF]">${svEsc(r[field])}</a>` : '<span class="text-gray-400">-</span>'}</div>`;
         return `
           <tr id="svRow_${r.id}" class="${svIsDirty(r) ? 'bg-amber-50/70' : ''} transition-colors align-middle">
             <td><input type="checkbox" data-row-check="${r.id}" ${svCheckedRows.has(r.id) ? 'checked' : ''} onchange="svToggleRow('${r.id}', this.checked)" class="w-4 h-4 align-middle cursor-pointer"></td>
             <td class="font-semibold text-gray-800">${txt(r.center)}</td>
             <td>${canEdit
-              ? `<div class="flex flex-col items-center space-y-1">${inp('driver', 'w-[110px] font-semibold', '기사명')}${inp('vehicleNo', 'w-[110px] font-mono text-xs', '차량번호')}</div>`
+              ? `<div class="flex flex-col items-stretch space-y-1">${inp('driver', 'font-semibold', '기사명')}${inp('vehicleNo', 'font-mono text-xs', '차량번호')}</div>`
               : `<div class="font-semibold text-gray-900">${txt(r.driver)}</div><div class="font-mono text-xs text-gray-500">${txt(r.vehicleNo)}</div>`}</td>
             <td><div class="font-mono text-xs text-gray-500">${txt(r.storeCode)}</div><div class="font-semibold text-gray-900">${txt(r.storeName)}</div></td>
             <td class="font-mono font-semibold text-gray-700">${r.seq ?? '-'}</td>
-            <td class="text-left" title="${svEsc(r.address)}"><div class="flex flex-col items-start space-y-1">${canEdit ? inp('address', 'w-[220px] text-left' + (addrOk ? '' : ' req-error'), '주소') : `<span class="text-gray-600 ${addrOk ? '' : 'bg-yellow-100 px-1 rounded'}">${txt(r.address)}</span>`}<span id="svAddrBadge_${r.id}" class="${addrOk ? 'hidden' : 'inline-flex'} items-center px-1.5 py-0.5 rounded-md bg-yellow-200 text-red-700 text-[11px] font-bold">수정 필요</span></div></td>
-            <td>${canEdit ? inp('departTime', 'w-[100px] font-mono', '', 'time') : `<span class="font-mono font-semibold text-gray-700">${txt(r.departTime)}</span>`}</td>
+            <td class="text-left" title="${svEsc(r.address)}"><div class="flex flex-col items-stretch space-y-1">${canEdit ? inp('address', 'text-left' + (addrOk ? '' : ' req-error'), '주소') : `<span class="text-gray-600 ${addrOk ? '' : 'bg-yellow-100 px-1 rounded'}">${txt(r.address)}</span>`}<span id="svAddrBadge_${r.id}" class="${addrOk ? 'hidden' : 'inline-flex'} self-start items-center px-1.5 py-0.5 rounded-md bg-yellow-200 text-red-700 text-[11px] font-bold">수정 필요</span></div></td>
+            <td>${canEdit ? inp('departTime', 'font-mono', '', 'time') : `<span class="font-mono font-semibold text-gray-700">${txt(r.departTime)}</span>`}</td>
             <td class="text-left"><div class="space-y-1">${phoneLine('기사', 'driverPhone')}${phoneLine('매장', 'storePhone')}${(canEdit || r.storePhone2) ? phoneLine('연락처2', 'storePhone2') : ''}</div></td>
             <td>${canEdit
-              ? `<select onchange="svSetField('${r.id}','formatType',this.value)" class="inline-cell-input w-[90px] font-semibold">${svFormatOptions(r.formatType).map(o => `<option value="${svEsc(o)}" ${o === r.formatType ? 'selected' : ''}>${svEsc(o)}</option>`).join('')}</select>`
-              : `<span class="text-xs font-semibold text-gray-700">${txt(r.formatType)}</span>`}</td>
+              ? `<select onchange="svSetField('${r.id}','formatType',this.value); svRenderTable()" class="inline-cell-input font-semibold ${svTplKnown(r.formatType) ? '' : 'req-error'}" title="${svTplKnown(r.formatType) ? '' : '도착안내 문자 > 문자 양식에 등록되지 않은 양식입니다'}">${svFormatOptions(r.formatType).map(o => `<option value="${svEsc(o)}" ${o === r.formatType ? 'selected' : ''}>${svEsc(o)}${svTplKnown(o) ? '' : ' (미등록)'}</option>`).join('')}</select>`
+              : `<span class="text-xs font-semibold ${svTplKnown(r.formatType) ? 'text-gray-700' : 'text-red-600'}">${txt(r.formatType)}</span>`}</td>
           </tr>`;
       }).join('');
       svUpdateSaveLabel();
@@ -11153,6 +11176,12 @@
       const list = document.getElementById('svTplList');
       if (!list) return;
       document.getElementById('svTplCount').textContent = `${svTemplates.length}개`;
+      // 배차 업로드의 문자템플릿 중 문자 양식에 없는 것 → 안내 + 바로 등록
+      const unknown = [...new Set(svRows.map(r => r.formatType).filter(n => n && !svTplKnown(n)))];
+      let warn = document.getElementById('svTplUnknown');
+      if (!warn) { warn = document.createElement('div'); warn.id = 'svTplUnknown'; list.parentNode.insertBefore(warn, list); }
+      warn.className = unknown.length ? 'mb-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[12px] text-amber-900' : 'hidden';
+      warn.innerHTML = unknown.length ? `<b class="block mb-1.5">배차 업로드에 있지만 등록되지 않은 양식 ${unknown.length}개</b><div class="flex flex-wrap gap-1.5">${unknown.map(n => `<button type="button" data-tpl-new="${svEsc(n)}" class="px-2.5 py-1 rounded-full bg-white border border-amber-300 font-bold text-[11.5px] active:scale-95">+ ${svEsc(n)}</button>`).join('')}</div><span class="block mt-1.5 text-[11px] text-amber-700">누르면 양식 구분명이 채워집니다. 나머지를 입력하고 등록하면 해당 배차에 자동으로 매칭됩니다.</span>` : '';
       if (svTemplates.length === 0) {
         list.innerHTML = `<div class="py-10 text-center text-xs text-gray-400 bg-gray-50/60 rounded-2xl border border-dashed border-gray-200">등록된 양식이 없습니다.<br>왼쪽에서 새 양식을 추가해주세요.</div>`;
         return;
@@ -11186,6 +11215,12 @@
           </div>`;
       }).join('');
     }
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-tpl-new]'); if (!b) return;
+      svResetTplForm();
+      document.getElementById('svTplCategory').value = b.dataset.tplNew;
+      document.getElementById('svTplTitle').focus();
+    });
     function svToggleTemplate(id) {
       const body = document.getElementById('svTplBody_' + id);
       const caret = document.getElementById('svTplCaret_' + id);
@@ -11223,7 +11258,7 @@
       svRenderTemplates();
       document.getElementById('svTplCategory').focus();
     }
-    function svSaveTemplate() {
+    async function svSaveTemplate() {
       const category = document.getElementById('svTplCategory').value.trim();
       const title = document.getElementById('svTplTitle').value.trim();
       const sender = document.getElementById('svTplSender').value.trim();
@@ -11241,10 +11276,20 @@
         showToastNotification('중복 양식', '이미 사용 중인 양식 구분명입니다.', 'warning');
         return;
       }
-      // TODO(Supabase): sms_templates 테이블 insert / update
       if (svTplEditingId) {
         const t = svTemplates.find(x => x.id === svTplEditingId);
         const oldName = t.category;
+        if (supabaseClient && svTplDb) {
+          const res = await dbRun('문자 양식 수정', async () => {
+            const { error } = await supabaseClient.from(SV_TPL_TABLE).update({ category, title, sender, body, updated_at: new Date().toISOString() }).eq('id', t.id);
+            if (error) throw error;
+            if (oldName !== category) {          // 배차에 지정된 양식 이름도 함께 변경
+              await supabaseClient.from('dispatch_data').update({ format_type: category }).eq('format_type', oldName);
+              await supabaseClient.from('dispatch_data').update({ sms_template: category }).eq('sms_template', oldName);
+            }
+          });
+          if (!res.ok) return;
+        }
         Object.assign(t, { category, title, sender, body });
         if (oldName !== category) {
           svRows.forEach(r => {
@@ -11254,7 +11299,18 @@
         }
         showToastNotification('수정 완료', `${category} 양식이 수정되었습니다.`, 'success');
       } else {
-        svTemplates.push({ id: 'tpl-' + Date.now(), category, title, sender, body });
+        let row = { id: 'tpl-' + Date.now(), category, title, sender, body };
+        if (supabaseClient && svTplDb) {
+          let saved = null;
+          const res = await dbRun('문자 양식 등록', async () => {
+            const { data, error } = await supabaseClient.from(SV_TPL_TABLE).insert({ category, title, sender, body, sort_order: svTemplates.length + 1 }).select().single();
+            if (error) throw error;
+            saved = data;
+          });
+          if (!res.ok) return;
+          row = { id: saved.id, category, title, sender, body };
+        } else if (supabaseClient) showToastNotification('임시 저장', "서버에 문자 양식 표가 없어 이 화면에만 저장됩니다. '도착안내문자_양식_DB.sql' 을 실행해 주세요.", 'warning');
+        svTemplates.push(row);
         showToastNotification('등록 완료', `${category} 양식이 등록되었습니다.`, 'success');
       }
       svResetTplForm();
@@ -11264,8 +11320,14 @@
     function svDeleteTemplate(id) {
       const t = svTemplates.find(x => x.id === id);
       if (!t) return;
-      showConfirmModal(() => {
-        // TODO(Supabase): sms_templates 테이블 delete
+      showConfirmModal(async () => {
+        if (supabaseClient && svTplDb) {
+          const res = await dbRun('문자 양식 삭제', async () => {
+            const { error } = await supabaseClient.from(SV_TPL_TABLE).delete().eq('id', t.id);
+            if (error) throw error;
+          });
+          if (!res.ok) return;
+        }
         svTemplates = svTemplates.filter(x => x.id !== id);
         svExpandedTpl.delete(id);
         svRows.forEach(r => {
