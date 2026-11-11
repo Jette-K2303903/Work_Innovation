@@ -7187,11 +7187,12 @@
           d.stores.set(key, st);
         });
         // 위치 공유에 동의한 기사의 마지막 위치 (표가 아직 없으면 건너뜀)
-        const locBy = new Map();
+        const locBy = new Map(), locStatusBy = new Map();
         svDashHasLocTable = true;
         try {
           const loc = await supabaseClient.from('driver_locations').select('*');
           if (loc.error) throw loc.error;
+          (loc.data || []).forEach(l => { if (l.delivery_date === svDrvDate || !l.delivery_date) locStatusBy.set(l.driver_name, String(l.status || '')); });
           (loc.data || []).forEach(l => { if (l.lat != null && l.lng != null) locBy.set(l.driver_name, { lat: +l.lat, lng: +l.lng, acc: l.accuracy, at: l.device_at ? Date.parse(l.device_at) : 0, date: l.delivery_date }); });
         } catch (e) { svDashHasLocTable = false; }
         svDashHasEtaCol = all.length > 0 && ('eta_ts' in all[0]);
@@ -7203,7 +7204,7 @@
           const next = at || stores.find(x => !x.done) || null;
           const loc = locBy.get(d.name);
           return { name: d.name, vehicleNo: d.vehicleNo, phone: d.phone, center: d.center, vehicleType: d.vehicleType, total: stores.length, done, started: d.started,
-                   startedAt: svHm(d.startedTs, d.started), atStore: at ? at.name : '', stores, next, loc: loc && loc.date === svDrvDate ? loc : null };
+                   startedAt: svHm(d.startedTs, d.started), atStore: at ? at.name : '', stores, next, loc: loc && loc.date === svDrvDate ? loc : null, locStatus: locStatusBy.get(d.name) || '' };
         }).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
         const notice = document.getElementById('svDrvNotice');
         const noCols = all.length > 0 && !('is_completed' in all[0]);
@@ -7294,7 +7295,16 @@
               <i class="ph-bold ph-map-pin flex-none"></i><span class="truncate">${fresh ? '실시간' : '마지막 위치'} · ${svEsc(reg || '위치 수신')} · ${svHmMs(d.loc.at)}${fresh ? '' : ` (${ageMin >= 60 ? Math.floor(ageMin / 60) + '시간 ' : ''}${ageMin % 60}분 전)`}</span>
               <a href="https://map.kakao.com/link/map/${encodeURIComponent(d.name)},${d.loc.lat},${d.loc.lng}" target="_blank" rel="noopener" class="flex-none text-[#007AFF] underline" onclick="event.stopPropagation()">지도</a></div>`;
         } else if (svDashHasLocTable) {
-          gps = `<div class="mt-1 text-[11.5px] font-semibold text-gray-400"><i class="ph-bold ph-map-pin-line"></i> 위치 공유 없음 (미동의 또는 화면 꺼짐)</div>`;
+          // 위치가 안 보이는 이유 (기사 휴대폰이 알려준 상태)
+          const st = d.locStatus, inApp = st.includes('앱 내 브라우저') ? ' · 카카오톡 등 앱 안에서 열어 사용 중' : '';
+          const why = st.startsWith('denied') ? ['휴대폰/브라우저에서 위치 권한이 차단됨', 'text-rose-600']
+            : st.startsWith('unavailable') ? ['휴대폰 위치(GPS)가 꺼져 있거나 신호 없음', 'text-rose-600']
+            : st.startsWith('timeout') ? ['위치를 잡는 중 (실내·신호 약함)', 'text-amber-600']
+            : st.startsWith('unsupported') ? ['위치를 지원하지 않는 브라우저', 'text-rose-600']
+            : st.startsWith('declined') ? ['기사님이 위치 공유에 동의하지 않음(또는 끔)', 'text-gray-500']
+            : st.startsWith('on') ? ['위치 수신 대기 중', 'text-gray-500']
+            : ['위치 정보 없음 (오늘 로그인 전이거나 동의 창 응답 전)', 'text-gray-400'];
+          gps = `<div class="mt-1 text-[11.5px] font-semibold ${why[1]}"><i class="ph-bold ph-map-pin-line"></i> ${why[0]}${inApp}</div>`;
         }
         const nextEta = d.next && !d.atStore ? svDashEta(d.next, now) : '';
         const list = !open ? '' : `<div class="mt-3 pt-3 border-t border-gray-100 space-y-1.5">

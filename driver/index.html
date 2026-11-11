@@ -343,6 +343,7 @@
         .drv-nt-foot { flex: none; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #F3F4F6; background: #F9FAFB; }
         .drv-nt-foot button { height: 50px; font-size: 13px; font-weight: 800; color: #4B5563; }
         .drv-nt-foot button + button { border-left: 1px solid #F3F4F6; color: var(--drv-primary); font-size: 15px; font-weight: 900; }
+        .drv-loc span { min-width: 0; word-break: keep-all; }
         .drv-loc { display: none; margin-top: 10px; padding: 10px 14px; border-radius: var(--drv-btn-radius); background: var(--drv-fill-2); border: 1px solid #F3F4F6; color: #4B5563; font-size: 12px; font-weight: 800; line-height: 1.5; align-items: center; justify-content: space-between; gap: 8px; }
         .drv-loc.is-show { display: flex; }
         .drv-loc.is-on { background: #EFF6FF; border-color: #DBEAFE; color: var(--drv-primary); }
@@ -3056,7 +3057,7 @@
            - 서버에는 기사별 '마지막 위치 1건'만 저장 (이동 경로 이력은 저장하지 않음)
            - 모든 배송이 끝나거나 로그아웃하면 자동으로 멈춤
        ========================================================= */
-    const LOC = { watch: null, lastSent: 0, lastPos: null, off: false };
+    const LOC = { watch: null, lastSent: 0, lastPos: null, off: false, status: '', gotFix: false };
     const locKey = () => `drv_loc_consent|${S.session ? S.session.name : ''}`;
     function locConsent() { try { return JSON.parse(localStorage.getItem(locKey()) || 'null'); } catch (e) { return null; } }
     function locSetConsent(v) { try { localStorage.setItem(locKey(), JSON.stringify({ v, at: new Date().toISOString(), cycle: resetKey() })); } catch (e) {} }
@@ -3071,31 +3072,65 @@
         $('#drv-loc-btn').textContent = on ? '끄기' : '켜기';
     }
     function distM(a, b) { const R = 6371000, r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r; const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLng / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
+    // 위치가 안 잡히는 이유를 서버에도 남겨 사무실(실시간 대시보드)에서 확인할 수 있게 함
+    //   on = 정상 수신 · denied = 휴대폰/브라우저에서 위치 권한 차단 · unavailable = 위치(GPS) 꺼짐/신호 없음
+    //   timeout = 위치를 잡는 중 · declined = 기사가 동의 안 함/끔 · unsupported = 위치를 못 쓰는 브라우저
+    const LOC_HELP = {
+        denied: '📍 위치 권한이 막혀 있습니다 · 주소창 왼쪽 자물쇠(또는 휴대폰 설정 > 브라우저 > 위치)에서 "허용"으로 바꾼 뒤 새로고침해 주세요',
+        unavailable: '📍 위치를 찾을 수 없습니다 · 휴대폰의 위치(GPS)가 켜져 있는지 확인해 주세요',
+        timeout: '📍 위치를 잡는 중입니다… (실내에서는 시간이 걸릴 수 있어요)',
+        unsupported: '📍 이 브라우저에서는 위치 공유를 쓸 수 없습니다 · 크롬/사파리로 열어 주세요'
+    };
+    const inAppBrowser = () => /KAKAOTALK|NAVER\(inapp|Line\/|FBAN|FBAV|Instagram/i.test(navigator.userAgent || '');
+    async function locReport(status) {
+        if (!canWrite() || LOC.status === status) return;
+        LOC.status = status;
+        const row = { driver_name: S.session.name, delivery_date: S.latestDate || null, vehicle_no: S.session.carFull || null, status: status + (inAppBrowser() ? ' (앱 내 브라우저)' : ''), updated_at: new Date().toISOString() };
+        try {
+            const { error } = await withTimeout(S.sb.from(CONFIG.LOCATION.TABLE).upsert(row, { onConflict: 'driver_name' }), CONFIG.FETCH_TIMEOUT_MS);
+            if (error && isMissingTable(error)) { LOC.off = true; locStop(); locRender(); }
+        } catch (e) { /* 무시 */ }
+    }
     async function locSend(pos, clear) {
         if (!canWrite()) return;
         const c = locConsent() || {};
         const row = { driver_name: S.session.name, delivery_date: S.latestDate || null, vehicle_no: S.session.carFull || null,
             lat: clear ? null : pos.lat, lng: clear ? null : pos.lng, accuracy: clear ? null : pos.acc,
             device_at: new Date().toISOString(), consent_at: clear ? null : (c.at || null), updated_at: new Date().toISOString() };
+        const st = clear ? 'declined' : 'on';
         try {
-            const { error } = await withTimeout(S.sb.from(CONFIG.LOCATION.TABLE).upsert(row, { onConflict: 'driver_name' }), CONFIG.FETCH_TIMEOUT_MS);
+            let { error } = await withTimeout(S.sb.from(CONFIG.LOCATION.TABLE).upsert(Object.assign({ status: st }, row), { onConflict: 'driver_name' }), CONFIG.FETCH_TIMEOUT_MS);
+            if (error && missingColumn(error) === 'status') ({ error } = await withTimeout(S.sb.from(CONFIG.LOCATION.TABLE).upsert(row, { onConflict: 'driver_name' }), CONFIG.FETCH_TIMEOUT_MS));   // status 칸이 아직 없으면 위치만 저장
             if (error && isMissingTable(error)) { LOC.off = true; locStop(); locRender(); }
+            else if (!error) LOC.status = st;
         } catch (e) { /* 다음 위치 때 다시 시도 */ }
     }
-    function locStart() {
-        if (LOC.watch != null || LOC.off || !S.session || S.session.admin || S.session.demo || !('geolocation' in navigator)) return;
+    function locStart(lowAccuracy) {
+        if (LOC.watch != null || LOC.off || !S.session || S.session.admin || S.session.demo) return;
+        if (!('geolocation' in navigator)) { locReport('unsupported'); locRender(LOC_HELP.unsupported); return; }
         if (S.route.length && !S.route.some(r => !isDone(r))) return;       // 이미 전부 완료
+        LOC.gotFix = false;
         LOC.watch = navigator.geolocation.watchPosition(p => {
             const pos = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
             const now = Date.now();
+            if (!LOC.gotFix) { LOC.gotFix = true; locRender(); }
             if (LOC.lastPos && now - LOC.lastSent < CONFIG.LOCATION.MIN_INTERVAL_MS) return;
             if (LOC.lastPos && distM(LOC.lastPos, pos) < CONFIG.LOCATION.MIN_MOVE_M && now - LOC.lastSent < 120000) return;   // 정차 중에는 2분마다
             LOC.lastPos = pos; LOC.lastSent = now;
             locSend(pos);
         }, err => {
-            if (err && err.code === 1) { locStop(); locRender('📍 위치 권한이 꺼져 있습니다 (브라우저 설정에서 허용)'); }
-        }, { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 });
-        locRender();
+            const code = err && err.code;
+            if (code === 1) {                                   // 권한 차단 : 브라우저가 묻지도 않고 거부한 경우 포함
+                locStop(); locReport('denied');
+                locRender(LOC_HELP.denied + (inAppBrowser() ? ' · 카카오톡 등 앱 안에서 열었다면 오른쪽 위 ⋮ 메뉴의 "다른 브라우저로 열기"를 눌러 주세요' : ''));
+            } else if (code === 3 && !lowAccuracy) {            // 시간 초과 : 정밀 위치 대신 대략 위치로 다시 시도
+                locStop(); locReport('timeout'); locStart(true); locRender(LOC_HELP.timeout);
+            } else if (!LOC.gotFix) {
+                locReport(code === 2 ? 'unavailable' : 'timeout');
+                locRender(code === 2 ? LOC_HELP.unavailable : LOC_HELP.timeout);
+            }
+        }, { enableHighAccuracy: !lowAccuracy, maximumAge: 15000, timeout: lowAccuracy ? 60000 : 30000 });
+        locRender(LOC_HELP.timeout.replace('… (실내에서는 시간이 걸릴 수 있어요)', '…'));
     }
     function locStop() { if (LOC.watch != null) { try { navigator.geolocation.clearWatch(LOC.watch); } catch (e) {} } LOC.watch = null; LOC.lastPos = null; LOC.lastSent = 0; }
     async function locAsk() {
@@ -3104,20 +3139,21 @@
             buttons: [{ text: '동의 안 함', value: false }, { text: '동의', style: 'bold', value: true }] });
         if (!S.session) return;
         locSetConsent(ok ? 'yes' : 'no');
-        if (ok) locStart(); else locRender();
+        if (ok) locStart(); else { locReport('declined'); locRender(); }
     }
     async function locInit() {
         if (!S.session || S.session.admin || S.session.demo || !('geolocation' in navigator)) { locRender(); return; }
         const c = locConsent();
         if (c && c.v === 'yes') { locStart(); locRender(); }
-        else if (c && c.v === 'no' && c.cycle === resetKey()) locRender();     // 오늘 이미 거절 → 다시 묻지 않음
+        else if (c && c.v === 'no' && c.cycle === resetKey()) { locReport('declined'); locRender(); }     // 오늘 이미 거절 → 다시 묻지 않음
         else { await sleep(900); if (S.session && !S.alertOpen && !agreeLayer.classList.contains('is-open')) locAsk(); else locRender(); }
     }
     $('#drv-loc-btn').addEventListener('click', () => {
         if (LOC.watch != null) { locStop(); locSetConsent('no'); locSend(null, true); locRender(); toast('위치 공유를 껐습니다'); }
+        else if ((locConsent() || {}).v === 'yes') { LOC.status = ''; locStart(); }
         else locAsk();
     });
-    document.addEventListener('drv:login', async () => { LOC.off = false; await ntShowForDriver(); locInit(); });   // 공지 → (닫은 뒤) 위치 동의
+    document.addEventListener('drv:login', async () => { LOC.off = false; LOC.status = ''; await ntShowForDriver(); locInit(); });   // 공지 → (닫은 뒤) 위치 동의
     document.addEventListener('drv:logout', () => { ntClose(); locStop(); $('#drv-loc').classList.remove('is-show'); });
     document.addEventListener('drv:unload', () => { if (!S.route.some(r => !isDone(r))) { locStop(); locRender('📍 배송 완료 · 위치 공유가 종료되었습니다'); } });
 
