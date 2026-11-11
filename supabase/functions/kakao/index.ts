@@ -5,6 +5,8 @@
 // 요청 (POST, JSON)
 //   { "action": "route",  "points": [ {x,y} 또는 {address}, {x,y}, ... ] }   → { durations: [초...], distances: [m...], origin: {x,y} }
 //   { "action": "region", "x": 경도, "y": 위도 }                              → { name: "부산 해운대구 우동" }
+//   { "action": "geocode", "addresses": ["주소1", "주소2", ...] }  (최대 50개)   → { results: [ { ok, x, y, matched, via } ] }
+//        주소 검증용. 전체 주소로 못 찾으면 괄호·층·상호 등 뒤쪽 상세를 떼고 건물 주소까지만 다시 검색 (via: "full" | "trimmed")
 
 const KEY = Deno.env.get("KAKAO_REST_KEY") ?? "";
 const ALLOWED = ["https://work-innovation.onrender.com", "http://localhost"];   // 호출을 허용할 사이트
@@ -32,6 +34,31 @@ async function geocode(address: string): Promise<{ x: number; y: number } | null
   if (!r.ok) return null;
   const d = (await r.json()).documents?.[0];
   return d ? { x: parseFloat(d.x), y: parseFloat(d.y) } : null;
+}
+
+// 주소 검증 : 전체 주소 → 괄호 제거 → 도로명+건물번호(또는 동/리+번지)까지만 순서로 검색
+function addressCandidates(addr: string): string[] {
+  const s = String(addr ?? "").replace(/\s+/g, " ").trim();
+  if (!s) return [];
+  const out = [s];
+  const noParen = s.replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+  out.push(noParen);
+  const road = noParen.match(/^(.*?(?:로|길)\s*\d+(?:-\d+)?(?:번길\s*\d+(?:-\d+)?)?)/);
+  if (road) out.push(road[1]);
+  const lot = noParen.match(/^(.*?(?:동|리|가|읍|면)\s*(?:산\s*)?\d+(?:-\d+)?)/);
+  if (lot) out.push(lot[1]);
+  return [...new Set(out.filter(Boolean))];
+}
+async function verifyAddress(addr: string) {
+  const list = addressCandidates(addr);
+  for (let i = 0; i < list.length; i++) {
+    const r = await kakao("https://dapi.kakao.com/v2/local/search/address.json?size=1&query=" + encodeURIComponent(list[i]));
+    if (r.status === 429) throw new Error("kakao rate limit");
+    if (!r.ok) continue;
+    const d = (await r.json()).documents?.[0];
+    if (d) return { ok: true, x: parseFloat(d.x), y: parseFloat(d.y), matched: d.address_name ?? list[i], via: i === 0 ? "full" : "trimmed" };
+  }
+  return { ok: false };
 }
 
 // 한 번에 출발지 + 경유지 30 + 목적지 = 32개 지점까지. 그보다 많으면 나눠서 호출.
@@ -65,6 +92,15 @@ Deno.serve(async (req) => {
       const docs = (await r.json()).documents ?? [];
       const d = docs.find((x: { region_type: string }) => x.region_type === "H") ?? docs[0];
       return json(req, { name: d?.address_name ?? "" });
+    }
+    if (b.action === "geocode") {
+      const list: string[] = Array.isArray(b.addresses) ? b.addresses.slice(0, 50).map((a: unknown) => String(a ?? "")) : [];
+      const results: unknown[] = new Array(list.length);
+      let next = 0;
+      await Promise.all(Array.from({ length: Math.min(5, list.length) }, async () => {   // 동시에 5개씩
+        while (next < list.length) { const i = next++; results[i] = await verifyAddress(list[i]); }
+      }));
+      return json(req, { results });
     }
     if (b.action === "route") {
       const pts: Pt[] = Array.isArray(b.points) ? b.points : [];
