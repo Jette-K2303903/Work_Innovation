@@ -2874,15 +2874,25 @@
 
     async function fetchStoreSuggestions(kw) {
       if (!supabaseClient) return { items: mockSupabaseStores.filter(i => i.name.includes(kw)), source: 'mock' };
-      const { data, error } = await supabaseClient.from('order_data')
-        .select('store_name,store_code,center_name')
-        .ilike('store_name', `%${homeLikeEsc(kw)}%`)
+      // 최신 배차 업로드(dispatch_data) 기준 · 배차에 없으면 주문 업로드(order_data)에서 찾음 — 각 매장의 가장 최근 배송일을 함께 가져옴
+      const like = `%${homeLikeEsc(kw)}%`;
+      const d = await supabaseClient.from('dispatch_data')
+        .select('business_name,business_code,main_center,center_name,delivery_date')
+        .ilike('business_name', like)
         .order('delivery_date', { ascending: false }).limit(300);
-      if (error) {
-        if (DEV_OFFLINE_FALLBACK && isNetworkError(error)) return { items: mockSupabaseStores.filter(i => i.name.includes(kw)), source: 'offline' };
-        throw error;
+      if (d.error) {
+        if (DEV_OFFLINE_FALLBACK && isNetworkError(d.error)) return { items: mockSupabaseStores.filter(i => i.name.includes(kw)), source: 'offline' };
+        throw d.error;
       }
-      const items = (data || []).filter(r => r.store_name).map(r => ({ name: r.store_name, code: r.store_code || '', center: r.center_name || '' }));
+      let items = (d.data || []).filter(r => r.business_name).map(r => ({ name: r.business_name, code: r.business_code || '', center: r.main_center || r.center_name || '', date: r.delivery_date || '' }));
+      const o = await supabaseClient.from('order_data')
+        .select('store_name,store_code,center_name,delivery_date')
+        .ilike('store_name', like)
+        .order('delivery_date', { ascending: false }).limit(300);
+      if (!o.error) {
+        const known = new Set(items.map(i => i.code + '|' + i.name));
+        items = items.concat((o.data || []).filter(r => r.store_name && !known.has((r.store_code || '') + '|' + r.store_name)).map(r => ({ name: r.store_name, code: r.store_code || '', center: r.center_name || '', date: r.delivery_date || '' })));
+      }
       return { items: homeDedupe(items, i => i.code + '|' + i.name, kw), source: 'supabase' };
     }
     // 입고센터 표시 규칙: order_data.item_designation (주문 업로드 M열 · 품목지정) 값 → 표시명
@@ -2903,7 +2913,7 @@
       const storeCode = storeCodeInput.value.trim();     // 매장이 매칭된 경우 해당 매장이 주문한 제품만
       if (!supabaseClient) return { items: mockSupabaseProducts.filter(i => i.name.includes(kw)), source: 'mock', scoped: false };
       let q = supabaseClient.from('order_data')
-        .select('product_name,product_code,item_designation,unit')
+        .select('product_name,product_code,item_designation,unit,delivery_date')
         .order('delivery_date', { ascending: false }).limit(300);
       if (kw) q = q.ilike('product_name', `%${homeLikeEsc(kw)}%`);
       if (storeCode) q = q.eq('store_code', storeCode);
@@ -2912,7 +2922,7 @@
         if (DEV_OFFLINE_FALLBACK && isNetworkError(error)) return { items: mockSupabaseProducts.filter(i => i.name.includes(kw)), source: 'offline', scoped: false };
         throw error;
       }
-      const items = (data || []).filter(r => r.product_name).map(r => ({ name: r.product_name, code: r.product_code || '', inboundCenter: inboundCenterLabel(r.item_designation), unit: r.unit || '' }));
+      const items = (data || []).filter(r => r.product_name).map(r => ({ name: r.product_name, code: r.product_code || '', inboundCenter: inboundCenterLabel(r.item_designation), unit: r.unit || '', date: r.delivery_date || '' }));
       return { items: homeDedupe(items, i => i.code + '|' + i.name, kw), source: 'supabase', scoped: !!storeCode };
     }
     async function fetchDriverForStore(code) {
@@ -2937,8 +2947,18 @@
       mainCenterInput.value = '';
       storeAutoWrapper.classList.remove('expanded');
     }
+    // 매장·제품을 고르면 작성일자를 그 업로드의 배송일로 자동 변경
+    function homeSetDocDate(date) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return;
+      const el = document.getElementById('docDate');
+      if (el.value === date) return;
+      el.value = date;
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      el.classList.add('text-[#007AFF]'); setTimeout(() => el.classList.remove('text-[#007AFF]'), 1500);
+    }
     function applyStoreMatch(store) {
       homeMatchedStoreName = store.name;
+      if (store.date) homeSetDocDate(store.date);
       storeNameInput.value = store.name;
       storeCodeInput.value = store.code || '';
       storeAutoWrapper.classList.add('expanded');
@@ -2954,6 +2974,7 @@
       fetchDriverForStore(code).then(row => {
         if (storeCodeInput.value !== code) return;          // 그 사이 다른 매장으로 바뀐 경우
         if (row) {
+          if (!store.date) homeSetDocDate(row.delivery_date);
           driverInput.value = `${row.driver_name || '-'}${row.driver_phone ? ` (${row.driver_phone})` : ''}`;
           mainCenterInput.value = row.main_center || row.center_name || store.center || '';
         } else {
@@ -3017,6 +3038,7 @@
 
     // ----- 제품명 -----
     function applyProductMatch(product) {
+      if (product.date) homeSetDocDate(product.date);
       productNameInput.value = product.name;
       productCodeInput.value = product.code || '';
       inboundCenterInput.value = product.inboundCenter || '';
