@@ -396,7 +396,17 @@
       body.office-mode #menuOpenBtn,
       body.office-mode #menuCloseBtn { display: none !important; }
     }
-  </style>
+      /* 동시 입력 스테퍼 (iOS 스타일 눌림/숫자 전환/펼침 효과) */
+    .ios-stepper-btn { -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none; -webkit-user-select: none;
+      transition: transform .14s cubic-bezier(.2,.8,.2,1), background-color .14s ease, opacity .2s ease, box-shadow .2s ease; }
+    .ios-stepper-btn:not(:disabled):active, .ios-stepper-btn.pressed { transform: scale(.86); background-color: #D1D1D6; box-shadow: none; }
+    .ios-stepper-btn:disabled { cursor: default; }
+    @keyframes stepperBump { 0% { transform: scale(1); opacity: .4; } 45% { transform: scale(1.22); opacity: 1; } 100% { transform: scale(1); } }
+    .stepper-bump { animation: stepperBump .28s cubic-bezier(.2,.9,.3,1.2); }
+    @keyframes xpEnter { from { opacity: 0; transform: translateY(-10px) scale(.97); } to { opacity: 1; transform: none; } }
+    .xp-enter { animation: xpEnter .32s cubic-bezier(.2,.8,.2,1); }
+    @media (prefers-reduced-motion: reduce) { .stepper-bump, .xp-enter { animation: none; } .ios-stepper-btn { transition: none; } }
+</style>
 </head>
 <body class="flex justify-center items-center">
 
@@ -540,8 +550,16 @@
 
         <!-- 섹션 3: 입고 및 제품 정보 -->
         <div>
-          <div class="px-3 pb-1">
+          <div class="px-3 pb-1 flex items-center justify-between">
             <span class="text-[12px] font-medium text-gray-500 uppercase tracking-wider">입고 및 제품 정보</span>
+            <div id="productCountWrap" class="flex items-center">
+              <div class="flex items-center bg-gray-100 rounded-full p-0.5">
+                <button type="button" id="productCountMinus" aria-label="제품 줄이기" class="ios-stepper-btn w-8 h-8 rounded-full flex items-center justify-center text-[#007AFF] bg-white shadow-sm disabled:opacity-30 disabled:shadow-none"><i class="ph-bold ph-minus text-xs"></i></button>
+                <span id="productCountLabel" class="w-10 text-center text-[13px] font-semibold text-gray-800 tabular-nums">1개</span>
+                <button type="button" id="productCountPlus" aria-label="제품 늘리기" class="ios-stepper-btn w-8 h-8 rounded-full flex items-center justify-center text-[#007AFF] bg-white shadow-sm disabled:opacity-30 disabled:shadow-none"><i class="ph-bold ph-plus text-xs"></i></button>
+              </div>
+              <input type="hidden" id="productCountSelect" value="1">
+            </div>
           </div>
           <div class="bg-white rounded-2xl border border-gray-200/80 ios-card-shadow overflow-visible relative">
             <div class="relative flex items-center px-4 py-3">
@@ -591,6 +609,8 @@
             </div>
 
           </div>
+          <!-- 동시 입력 제품 #2~#5 (JS 로 생성) -->
+          <div id="extraProductsContainer"></div>
         </div>
 
         <!-- 섹션 4: 비고 / 상세내용 -->
@@ -1716,7 +1736,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">밀양센터 전산시스템 v2.1</p>
+            <p class="text-xs text-gray-500 mt-0.5">물류 현장 시스템 v1.5</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -2211,7 +2231,8 @@
     const editModeBanner = document.getElementById('editModeBanner');
     const submitBtn = document.getElementById('submitBtn');
     const submitBtnLabel = document.getElementById('submitBtnLabel');
-    let newSubmitLock = false, pendingNewRecordId = null;   // 작성완료 중복 클릭 방지 / 재시도 시 같은 ID 재사용
+    let newSubmitLock = false;   // 작성완료 중복 클릭 방지
+    let pendingGroupId = null, pendingNewRecordIds = [], savedNewIds = new Set();   // 재시도 시 같은 ID 재사용(중복 저장 방지)
 
     const storeNameInput = document.getElementById('storeName');
     const storeSuggestBox = document.getElementById('storeSuggestBox');
@@ -2604,6 +2625,170 @@
       }
     });
 
+    // ----- 동시 입력: 제품 #2 ~ #5 -----
+    const productCountSelect = document.getElementById('productCountSelect');
+    const productCountWrap = document.getElementById('productCountWrap');
+    const extraProductsContainer = document.getElementById('extraProductsContainer');
+    extraProductsContainer.innerHTML = [2, 3, 4, 5].map(n => `
+      <div class="xp-block hidden mt-3 bg-white rounded-2xl border border-gray-200/80 ios-card-shadow overflow-visible relative" data-xp="${n}">
+        <div class="relative flex items-center px-4 py-3">
+          <label class="w-24 text-[15px] font-normal text-[#3C3C43]/70">제품명*</label>
+          <input type="text" class="xp-name flex-1 font-medium text-[15px]" placeholder="제품명을 입력해주세요" autocomplete="off">
+          <div class="xp-suggest hidden absolute left-0 right-0 top-full mt-1.5 mx-2 bg-white/95 backdrop-blur-xl rounded-xl border border-gray-200/90 shadow-xl z-30 max-h-48 overflow-y-auto no-scrollbar divide-y divide-gray-100"></div>
+        </div>
+        <div class="xp-top accordion-collapse border-t border-[#E5E5EA]">
+          <div class="accordion-content divide-y divide-[#E5E5EA] bg-gray-50/70">
+            <div class="flex items-center px-4 py-3">
+              <div class="w-24 flex items-center space-x-1 text-[#3C3C43]/60"><span class="text-[15px]">제품코드</span><i class="ph-bold ph-lock-key text-xs text-gray-400"></i></div>
+              <input type="text" class="xp-code flex-1 font-medium text-[15px] text-gray-700 cursor-not-allowed select-none" readonly>
+            </div>
+            <div class="flex items-center px-4 py-3">
+              <div class="w-24 flex items-center space-x-1 text-[#3C3C43]/60"><span class="text-[15px]">입고센터</span><i class="ph-bold ph-lock-key text-xs text-gray-400"></i></div>
+              <input type="text" class="xp-center flex-1 font-medium text-[15px] text-gray-700 cursor-not-allowed select-none" readonly>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center px-4 py-3 border-t border-[#E5E5EA]">
+          <label class="w-24 text-[15px] font-normal text-[#3C3C43]/70">제품수량</label>
+          <input type="number" class="xp-qty flex-1 font-semibold text-[15px]" placeholder="0">
+        </div>
+        <div class="xp-bottom accordion-collapse border-t border-[#E5E5EA]">
+          <div class="accordion-content bg-gray-50/70">
+            <div class="flex items-center px-4 py-3">
+              <div class="w-24 flex items-center space-x-1 text-[#3C3C43]/60"><span class="text-[15px]">제품단위</span><i class="ph-bold ph-lock-key text-xs text-gray-400"></i></div>
+              <input type="text" class="xp-unit flex-1 font-medium text-[15px] text-gray-700 cursor-not-allowed select-none" readonly>
+            </div>
+          </div>
+        </div>
+      </div>`).join('');
+    function xpBlocks() { return [...extraProductsContainer.querySelectorAll('.xp-block')]; }
+    function xpApplyCount() {
+      const n = parseInt(productCountSelect.value, 10) || 1;
+      xpBlocks().forEach(b => {
+        const show = +b.dataset.xp <= n, was = !b.classList.contains('hidden');
+        b.classList.toggle('hidden', !show);
+        if (show && !was) {            // 새로 나타나는 블록: 위에서 부드럽게 펼쳐지는 효과
+          b.classList.remove('xp-enter'); void b.offsetWidth; b.classList.add('xp-enter');
+          b.addEventListener('animationend', () => b.classList.remove('xp-enter'), { once: true });
+        }
+      });
+      const lbl = document.getElementById('productCountLabel');
+      if (lbl.textContent !== n + '개') { lbl.textContent = n + '개'; lbl.classList.remove('stepper-bump'); void lbl.offsetWidth; lbl.classList.add('stepper-bump'); }
+      document.getElementById('productCountMinus').disabled = n <= 1;
+      document.getElementById('productCountPlus').disabled = n >= 5;
+    }
+    function xpStep(d) {
+      const n = Math.min(5, Math.max(1, (parseInt(productCountSelect.value, 10) || 1) + d));
+      if (String(n) === productCountSelect.value) return;
+      productCountSelect.value = String(n);
+      xpApplyCount();
+      try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {}      // 지원하는 기기에서 가벼운 햅틱
+    }
+    // 누르는 즉시 반응 + 길게 누르면 연속 증가/감소 (iOS 스테퍼와 동일)
+    [['productCountMinus', -1], ['productCountPlus', 1]].forEach(([id, d]) => {
+      const btn = document.getElementById(id);
+      let t1 = null, t2 = null;
+      const stop = () => { clearTimeout(t1); clearInterval(t2); t1 = t2 = null; btn.classList.remove('pressed'); };
+      btn.addEventListener('pointerdown', (e) => {
+        if (btn.disabled || (e.pointerType === 'mouse' && e.button !== 0)) return;
+        btn.classList.add('pressed');
+        xpStep(d);
+        t1 = setTimeout(() => { t2 = setInterval(() => { xpStep(d); if (btn.disabled) stop(); }, 170); }, 450);
+      });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => btn.addEventListener(ev, stop));
+      btn.addEventListener('contextmenu', (e) => e.preventDefault());
+      btn.addEventListener('click', (e) => { if (e.detail === 0) xpStep(d); });     // 키보드 조작
+    });
+    function resetProductBlocks() {
+      productCountSelect.value = '1';
+      productCountWrap.classList.remove('hidden');
+      xpBlocks().forEach(b => {
+        b.querySelectorAll('input').forEach(i => { i.value = ''; });
+        b.querySelector('.xp-suggest').classList.add('hidden');
+        b.querySelector('.xp-top').classList.remove('expanded'); b.querySelector('.xp-bottom').classList.remove('expanded');
+        b._items = []; b._seq = 0; b._matched = '';
+      });
+      xpApplyCount();
+    }
+    function collectExtraProducts() {
+      const n = parseInt(productCountSelect.value, 10) || 1;
+      return xpBlocks().filter(b => +b.dataset.xp <= n).map(b => ({
+        productName: b.querySelector('.xp-name').value.trim(),
+        productCode: b.querySelector('.xp-code').value.trim(),
+        inboundCenter: b.querySelector('.xp-center').value.trim(),
+        unitDisplay: b.querySelector('.xp-unit').value.trim(),
+        productQuantity: parseInt(b.querySelector('.xp-qty').value || '0', 10)
+      }));
+    }
+    function xpApply(block, item) {
+      block.querySelector('.xp-name').value = item.name;
+      block.querySelector('.xp-code').value = item.code || '';
+      block.querySelector('.xp-center').value = item.inboundCenter || '';
+      block.querySelector('.xp-unit').value = item.unit || '';
+      block.querySelector('.xp-top').classList.add('expanded'); block.querySelector('.xp-bottom').classList.add('expanded');
+      block._matched = item.name;
+      block.querySelector('.xp-suggest').classList.add('hidden');
+    }
+    function xpClearMatch(block) {
+      block.querySelector('.xp-code').value = ''; block.querySelector('.xp-center').value = ''; block.querySelector('.xp-unit').value = ''; block._matched = '';
+      block.querySelector('.xp-top').classList.remove('expanded'); block.querySelector('.xp-bottom').classList.remove('expanded');
+    }
+    const XP_HINT = `<div class="px-4 py-1.5 text-[10.5px] text-[#007AFF] bg-blue-50">전체 제품 조회, 검색하고자 하는 제품을 입력해주세요.</div>`;
+    async function xpSearch(block, keyword) {
+      const box = block.querySelector('.xp-suggest');
+      const my = block._seq = (block._seq || 0) + 1;
+      try {
+        const { items, source, scoped } = await fetchProductSuggestions(keyword);
+        if (my !== block._seq || block.querySelector('.xp-name').value.trim() !== keyword) return;
+        block._items = items;
+        const note = scoped ? `<div class="px-4 py-1.5 text-[10.5px] text-[#007AFF] bg-blue-50">‘${homeEsc(storeNameInput.value.trim())}’ 매장이 주문한 제품만 표시 중</div>` : (source === 'mock' ? '' : XP_HINT);
+        if (!items.length) {
+          if (scoped || (!keyword && note)) { box.innerHTML = note + (scoped ? `<div class="px-4 py-2.5 text-[12px] text-gray-500">${keyword ? '일치하는' : '주문 내역이 있는'} 제품이 없습니다.</div>` : ''); box.classList.remove('hidden'); }
+          else box.classList.add('hidden');
+          return;
+        }
+        box.innerHTML = note + items.map((item, i) => `
+          <div class="px-4 py-2.5 hover:bg-blue-50 active:bg-blue-100 flex items-center justify-between gap-2 cursor-pointer transition-colors" data-idx="${i}">
+            <div class="flex items-center space-x-2 min-w-0"><i class="ph-bold ph-package text-gray-400 text-sm flex-shrink-0"></i><span class="text-[14px] text-gray-800 truncate">${homeHighlight(item.name, keyword)}</span></div>
+            <span class="text-[11px] text-gray-400 font-mono flex-shrink-0">${homeEsc(item.code)}</span>
+          </div>`).join('') + homeSourceNote(source);
+        box.classList.remove('hidden');
+        const exact = keyword && items.find(m => m.name === keyword);
+        if (exact) xpApply(block, exact);
+      } catch (err) {
+        console.error('제품 검색 오류:', err);
+        if (my === block._seq) { box.innerHTML = `<div class="px-4 py-2.5 text-[12px] text-red-600">검색 중 오류가 발생했습니다. (${homeEsc(err.message || '')})</div>`; box.classList.remove('hidden'); }
+      }
+    }
+    function xpHint(block) {
+      const inp = block.querySelector('.xp-name');
+      if (inp.value.trim()) return;
+      if (storeCodeInput.value.trim()) { xpSearch(block, ''); return; }
+      if (!supabaseClient) return;
+      block._seq = (block._seq || 0) + 1;
+      const box = block.querySelector('.xp-suggest'); box.innerHTML = XP_HINT; box.classList.remove('hidden');
+    }
+    extraProductsContainer.addEventListener('input', (e) => {
+      if (!e.target.classList.contains('xp-name')) return;
+      const block = e.target.closest('.xp-block'), kw = e.target.value.trim();
+      clearTimeout(block._t);
+      if (block._matched && kw !== block._matched) xpClearMatch(block);
+      if (!kw) { block._seq = (block._seq || 0) + 1; block.querySelector('.xp-suggest').classList.add('hidden'); xpHint(block); return; }
+      block._t = setTimeout(() => xpSearch(block, kw), 250);
+    });
+    extraProductsContainer.addEventListener('focusin', (e) => { if (e.target.classList.contains('xp-name')) xpHint(e.target.closest('.xp-block')); });
+    extraProductsContainer.addEventListener('click', (e) => {
+      if (e.target.classList.contains('xp-name')) xpHint(e.target.closest('.xp-block'));
+      const itemEl = e.target.closest('.xp-suggest [data-idx]');
+      if (!itemEl) return;
+      const block = itemEl.closest('.xp-block');
+      const item = (block._items || [])[+itemEl.getAttribute('data-idx')];
+      if (item) xpApply(block, item);
+    });
+    document.addEventListener('click', (e) => {
+      xpBlocks().forEach(b => { if (!b.contains(e.target)) b.querySelector('.xp-suggest').classList.add('hidden'); });
+    });
+
     // 2. 사진 업로드 (최대 5장) & 큐빅 형태 썸네일 관리
     const MAX_PHOTOS = 5;
     let uploadedPhotos = [];
@@ -2880,7 +3065,7 @@
         id: row.id, docDate: row.doc_date, author: row.author, reason: row.reason || '',
         storeName: row.store_name || '', driver: row.driver || '', storeCode: row.store_code || '', mainCenter: row.main_center || '',
         productName: row.product_name || '', productCode: row.product_code || '', inboundCenter: row.inbound_center || '',
-        deliveryDate: row.delivery_date || '', clientCode: row.client_code || '', clientName: row.client_name || '', temperature: row.temperature || '',
+        groupId: row.group_id || null, deliveryDate: row.delivery_date || '', clientCode: row.client_code || '', clientName: row.client_name || '', temperature: row.temperature || '',
         itemDesignation: row.item_designation || '', stockType: row.stock_type || '', orderQty: row.order_qty ?? null,
         productQuantity: row.product_quantity || 0, unitDisplay: row.unit_display || '', detailContent: row.detail_content || '',
         historyLogs: Array.isArray(row.history_logs) ? row.history_logs : [],
@@ -2895,6 +3080,7 @@
         id: r.id, doc_date: r.docDate, author: r.author, reason: r.reason || null,
         store_name: r.storeName, store_code: r.storeCode || null, driver: r.driver || null, main_center: r.mainCenter || null,
         product_name: r.productName, product_code: r.productCode || null, inbound_center: r.inboundCenter || null,
+        ...(r.groupId ? { group_id: r.groupId } : {}),
         delivery_date: r.deliveryDate || null, client_code: r.clientCode || null, client_name: r.clientName || null, temperature: r.temperature || null,
         item_designation: r.itemDesignation || null, stock_type: r.stockType || null, order_qty: r.orderQty ?? null,
         unit_display: r.unitDisplay || null, product_quantity: r.productQuantity || 0, detail_content: r.detailContent || null,
@@ -3413,8 +3599,10 @@
           const row = ws.addRow(uhMainRow(r));
           row.getCell(17).alignment = { wrapText: true, vertical: 'top' };
           row.getCell(16).alignment = { wrapText: true, vertical: 'top' };
-          const nm = nameOf.get(r.id);
-          if (nm) { row.getCell(15).value = { text: r.reason || `사진 ${r.photos.length}장`, hyperlink: `#'${nm.replace(/'/g, "''")}'!A1` }; row.getCell(15).font = { color: { argb: 'FF0563C1' }, underline: true }; }
+          // 사진이 있으면 자기 사진 시트로, 동시입력 건이면 대표(사진이 있는) 건의 시트로 연결
+          const grpRep = r.groupId ? withPhotos.find(x => x.groupId === r.groupId) : null;
+          const nm = nameOf.get(r.id) || (grpRep ? nameOf.get(grpRep.id) : null);
+          if (nm) { row.getCell(15).value = { text: r.reason || (r.photos && r.photos.length ? `사진 ${r.photos.length}장` : '사진 보기(대표)'), hyperlink: `#'${nm.replace(/'/g, "''")}'!A1` }; row.getCell(15).font = { color: { argb: 'FF0563C1' }, underline: true }; }
         });
         withPhotos.forEach(r => {
           const sh = wb.addWorksheet(nameOf.get(r.id));
@@ -3521,6 +3709,7 @@
       headerPageTitle.textContent = '내역 수정';
       editModeBanner.classList.remove('hidden');
       submitBtnLabel.textContent = '수정 내용 저장';
+      productCountSelect.value = '1'; xpApplyCount(); productCountWrap.classList.add('hidden');   // 수정 중에는 동시 입력 없음
 
       mainScrollArea.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -3860,11 +4049,12 @@
       const productQuantity = document.getElementById('productQuantity').value.trim();
       const detailContent = document.getElementById('detailContent').value.trim();
       
-      return author || reason || storeName || productName || productQuantity || detailContent || uploadedPhotos.length > 0;
+      return author || reason || storeName || productName || productQuantity || detailContent || uploadedPhotos.length > 0 || (parseInt(productCountSelect.value, 10) > 1);
     }
 
     function resetToHome() {
-      pendingNewRecordId = null;
+      pendingGroupId = null; pendingNewRecordIds = []; savedNewIds = new Set();
+      resetProductBlocks();
       palletViewArea.classList.add('hidden');
       contactsViewArea.classList.add('hidden');
       uploadHistoryViewArea.classList.add('hidden');
@@ -8818,52 +9008,55 @@
           detailContent
         });
       } else {
-        // 신규 내역 등록 (연속 클릭/재시도 시 중복 등록 방지)
+        // 신규 내역 등록 (연속 클릭/재시도 시 중복 등록 방지). 제품이 여러 개면 제품별로 1건씩 저장
         if (newSubmitLock) return;
+        const extras = collectExtraProducts();
+        const missingIdx = extras.findIndex(x => !x.productName);
+        if (missingIdx >= 0) { showIosAutoToast(`${missingIdx + 2}번째 제품의 제품명을 입력해주세요.`); return; }
         newSubmitLock = true;
         submitBtn.disabled = true;
         try {
-        showBusy('발주 정보 확인 중...');
-        const orderInfo = await fetchOrderInfo(storeCode, productCode, docDate);
-        hideBusy();
-        if (!pendingNewRecordId) pendingNewRecordId = incidentNewId();   // 저장 실패 후 다시 눌러도 같은 ID → 서버에서 한 건으로 처리
-        const newRecord = {
-          ...orderInfo,
-          id: pendingNewRecordId,
-          docDate,
-          author,
-          reason,
-          storeName,
-          driver,
-          storeCode,
-          mainCenter,
-          productName,
-          productCode,
-          inboundCenter,
-          unitDisplay,
-          productQuantity,
-          detailContent,
-          historyLogs: [
-            { time: nowTimestamp, author: author, reason: '최초 등록' }
-          ],
-          status: 'active',
-          deleteRequestedBy: null,
-          deleteRequestedAt: null,
-          photos: uploadedPhotos.map(p => ({ ...p }))
-        };
-
-        showBusy(newRecord.photos.length ? '사진 업로드 및 저장 중...' : '저장 중...');
-        const res = await incidentPersistNew(newRecord);
-        hideBusy();
-        if (!res.ok) return;
-        pendingNewRecordId = null;
-        if (!uploadHistoryRecords.some(r => r.id === newRecord.id)) uploadHistoryRecords.unshift(newRecord);
-        showToastNotification('등록 완료', '작성하신 내용이 업로드 내역에 저장되었습니다.', 'success');
-        resetToHome();
-        // 업로드 내역 뷰로 즉시 이동하여 결과 확인
-        setTimeout(() => {
-          showUploadHistoryView();
-        }, 300);
+          const products = [{ productName, productCode, inboundCenter, unitDisplay, productQuantity }, ...extras.slice(0)];
+          const total = products.length;
+          if (total > 1 && !pendingGroupId) pendingGroupId = incidentNewId();
+          while (pendingNewRecordIds.length < total) pendingNewRecordIds.push(incidentNewId());
+          showBusy('발주 정보 확인 중...');
+          const infos = await Promise.all(products.map(pr => fetchOrderInfo(storeCode, pr.productCode, docDate)));
+          hideBusy();
+          const savedRecs = [];
+          let okCount = 0;
+          for (let i = 0; i < total; i++) {
+            const id = pendingNewRecordIds[i];
+            if (savedNewIds.has(id)) { okCount++; continue; }     // 이전 시도에서 이미 저장된 건
+            const pr = products[i];
+            const rec = {
+              ...infos[i],
+              id,
+              groupId: total > 1 ? pendingGroupId : null,
+              docDate, author, reason, storeName, driver, storeCode, mainCenter,
+              productName: pr.productName, productCode: pr.productCode, inboundCenter: pr.inboundCenter, unitDisplay: pr.unitDisplay, productQuantity: pr.productQuantity,
+              detailContent: total > 1 ? ((detailContent ? detailContent + ' ' : '') + `[동시입력${i + 1}/${total}]`) : detailContent,
+              historyLogs: [{ time: nowTimestamp, author: author, reason: '최초 등록' }],
+              status: 'active', deleteRequestedBy: null, deleteRequestedAt: null,
+              photos: i === 0 ? uploadedPhotos.map(p => ({ ...p })) : []      // 사진은 첫 번째 제품 건에만 대표로 저장
+            };
+            showBusy(total > 1 ? `저장 중... (${i + 1}/${total})` : (rec.photos.length ? '사진 업로드 및 저장 중...' : '저장 중...'));
+            const res = await incidentPersistNew(rec);
+            hideBusy();
+            if (!res.ok) break;                                         // 오류 안내는 incidentRun 에서 표시
+            savedNewIds.add(id); okCount++; savedRecs.push(rec);
+          }
+          savedRecs.reverse().forEach(r => { if (!uploadHistoryRecords.some(x => x.id === r.id)) uploadHistoryRecords.unshift(r); });
+          if (okCount < total) {
+            if (total > 1) showToastNotification('일부만 저장됨', `${total}건 중 ${okCount}건 저장되었습니다. 작성완료를 다시 누르면 나머지만 저장됩니다.`, 'warning');
+            return;
+          }
+          showToastNotification('등록 완료', total > 1 ? `제품 ${total}건이 업로드 내역에 저장되었습니다.` : '작성하신 내용이 업로드 내역에 저장되었습니다.', 'success');
+          resetToHome();
+          // 업로드 내역 뷰로 즉시 이동하여 결과 확인
+          setTimeout(() => {
+            showUploadHistoryView();
+          }, 300);
         } finally { newSubmitLock = false; submitBtn.disabled = false; }
       }
     });
