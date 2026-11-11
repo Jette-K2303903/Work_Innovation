@@ -45,6 +45,12 @@
     .is-table td.is-dirty { background: #FFF7E0 !important; color: #92400E; font-weight: 700; }
     .is-table td.is-rdirty { background: #F5F0FF !important; box-shadow: inset 2px 0 0 #AF52DE; }
     .is-table tr.is-newrow td.is-gut { color: #FF9500; font-weight: 800; }
+    .is-th-btn { margin-left: 2px; width: 16px; height: 16px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; color: #9CA3AF; vertical-align: middle; }
+    .is-th-btn:hover { background: #E5E7EB; color: #374151; }
+    .is-th-btn.on { background: #007AFF; color: #fff; }
+    #isSuggest { position: absolute; z-index: 8; background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,.14); max-height: 260px; overflow-y: auto; padding: 4px; min-width: 260px; }
+    #isSuggest .it { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 8px; cursor: pointer; font-size: 12.5px; }
+    #isSuggest .it.on, #isSuggest .it:hover { background: #EFF6FF; }
     #issueSheetViewArea.is-full { position: fixed !important; inset: 0; z-index: 45; background: #F2F2F7; padding: 12px 16px !important; }
     .is-pv th, .is-pv td { border: 1px solid #E5E7EB; padding: 7px 10px; font-size: 12px; white-space: nowrap; }
     .is-pv thead th { background: #F3F4F6; color: #374151; font-weight: 800; }
@@ -1144,6 +1150,7 @@
         <input type="search" id="isSearch" oninput="isState.q = this.value.trim(); isRender()" placeholder="거래처 · 제품 · 내용 검색" class="flex-1 min-w-[160px] px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-blue-200">
         <button type="button" onclick="isAddRow()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-plus"></i>행 추가</button>
         <button type="button" id="isSaveBtn" onclick="isSaveDrafts()" class="ios-btn-tap px-3.5 py-2 rounded-xl bg-[#007AFF] text-white text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-floppy-disk"></i><span>저장</span></button>
+        <button type="button" id="isFilterReset" onclick="isClearFilter()" class="hidden ios-btn-tap px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-funnel-x"></i><span>필터 초기화</span></button>
         <button type="button" id="isDelBtn" onclick="isDeleteChecked()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-red-600 text-[12.5px] font-bold">선택 삭제</button>
         <button type="button" onclick="isDownload()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-microsoft-excel-logo"></i>엑셀</button>
         <button type="button" id="isFullBtn" onclick="isToggleFull()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1" title="크게 보기"><i class="ph-bold ph-arrows-out"></i><span>확대</span></button>
@@ -1194,6 +1201,17 @@
       </div>
       <datalist id="isTypeList"></datalist>
       <datalist id="isOpt_content"></datalist><datalist id="isOpt_subject"></datalist><datalist id="isOpt_fault"></datalist>
+      <!-- 칸별 필터 -->
+      <div id="isFilterPop" class="hidden fixed z-[46] w-[240px] bg-white rounded-2xl border border-gray-200 shadow-2xl p-3">
+        <div class="flex items-center justify-between mb-2"><b id="isFpTitle" class="text-[13px] text-gray-900"></b><button type="button" onclick="isCloseFilter()" class="w-6 h-6 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"><i class="ph-bold ph-x text-[10px]"></i></button></div>
+        <input type="search" id="isFpSearch" placeholder="값 검색" class="w-full px-2.5 py-1.5 rounded-lg bg-gray-100 border border-gray-200 text-[12px] outline-none mb-2">
+        <label class="flex items-center gap-2 px-1 py-1 text-[12px] font-bold text-gray-700 border-b border-gray-100"><input type="checkbox" id="isFpAll" class="w-3.5 h-3.5">전체 선택</label>
+        <div id="isFpList" class="max-h-[220px] overflow-y-auto py-1"></div>
+        <div class="grid grid-cols-2 gap-2 mt-2">
+          <button type="button" onclick="isClearFilter(isFp.k)" class="py-1.5 rounded-lg bg-gray-100 text-gray-700 text-[12px] font-bold">이 칸 초기화</button>
+          <button type="button" onclick="isApplyFilter()" class="py-1.5 rounded-lg bg-[#007AFF] text-white text-[12px] font-bold">적용</button>
+        </div>
+      </div>
     </main>
 
     <!-- [특이사항 관리 : 탭 추가] -->
@@ -9820,9 +9838,9 @@
       { k: 'client_code', h: '고객사코드', w: 72, auto: true },
       { k: 'client_name', h: '고객사명', w: 82, auto: true },
       { k: 'store_code', h: '거래처코드', w: 74, lookup: 'store' },
-      { k: 'store_name', h: '거래처명', w: 96, auto: true },
+      { k: 'store_name', h: '거래처명', w: 96, suggest: 'store' },
       { k: 'product_code', h: '제품코드', w: 74, lookup: 'product' },
-      { k: 'product_name', h: '제품명', w: 118, auto: true },
+      { k: 'product_name', h: '제품명', w: 118, suggest: 'product' },
       { k: 'temperature', h: '온도', w: 46, auto: true },
       { k: 'unit', h: '단위', w: 44, auto: true },
       { k: 'stock_type', h: '재고타입', w: 60, auto: true },
@@ -9839,7 +9857,7 @@
     const IS_SAVE_KEYS = IS_COLS.map(c => c.k);
     const IS_NODATA = '데이터 없음';
     // 자동 칸이지만 코드를 찾지 못한('데이터 없음') 경우 직접 입력 가능한 칸
-    const IS_NODATA_EDIT = { store_name: 'store', product_name: 'product', temperature: 'product', unit: 'product', stock_type: 'product' };
+    const IS_NODATA_EDIT = { temperature: 'product', unit: 'product', stock_type: 'product' };
     const isNoDataNow = (row, g) => !!row && ((g === 'store' ? row.store_name : row.product_name) === IS_NODATA || isState.miss.has(row.id + '|' + (g === 'store' ? 'store_code' : 'product_code')));
     async function isNoDataEditable(row, col) {
       const g = IS_NODATA_EDIT[col.k]; if (!g || !row) return false;
@@ -9862,7 +9880,7 @@
       cid: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
       ch: null, dbCh: null, peers: [], roster: new Map(), cursors: new Map(), users: [], cache: { store: new Map(), product: new Map() },
       msgs: [], logs: [], lastRead: null, chatMissing: false, logMissing: false, panels: null, mBox: null,
-      tab: 'home', tabs: []
+      tab: 'home', tabs: [], filters: {}, autoVals: new Map(), sug: null
     };
     const IS_MSG_TABLE = 'issue_sheet_messages', IS_LOG_TABLE = 'issue_sheet_logs', IS_READ_TABLE = 'issue_sheet_reads';
     const isMissingErr = (err) => !!err && (err.code === 'PGRST205' || err.code === '42P01' || /Could not find the table|does not exist/i.test(err.message || ''));
@@ -9895,7 +9913,8 @@
     function isFindRow(id) { return isRowsAll().find(r => r.id === id); }
     function isRowsView() {
       const q = isState.q.toLowerCase();
-      return isRowsAll().filter(r => r._new || !q || IS_SAVE_KEYS.some(k => String(r[k] ?? '').toLowerCase().includes(q)))
+      const fs = Object.entries(isState.filters);
+      return isRowsAll().filter(r => r._new || ((!q || IS_SAVE_KEYS.some(k => String(r[k] ?? '').toLowerCase().includes(q))) && fs.every(([k, set]) => set.has(String(r[k] ?? '')))))
         .sort((a, b) => (a._new - b._new) || (a._new ? a._t - b._t : a.id - b.id));
     }
 
@@ -9905,7 +9924,8 @@
       isEl('isCols').innerHTML = `<col style="width:${IS_GUT_W}px">` + IS_COLS.map(c => `<col style="width:${c.w}px">`).join('');
       Object.assign(isEl('isTable').style, { width: '100%', minWidth: total + 'px' });
       isEl('isHead').innerHTML = `<th class="is-gut"><input type="checkbox" id="isCheckAll" class="w-3.5 h-3.5 align-middle cursor-pointer" title="전체 선택"></th>`
-        + IS_COLS.map(c => `<th title="${svEsc(c.h)}${c.auto ? ' (자동)' : ''}" style="${c.auto ? 'color:#9CA3AF' : ''}">${svEsc(c.h)}</th>`).join('');
+        + IS_COLS.map(c => `<th title="${svEsc(c.h)}${c.auto ? ' (자동)' : ''}" style="${c.auto ? 'color:#9CA3AF' : ''}">${svEsc(c.h)}<button type="button" class="is-th-btn" data-is-filter="${c.k}" title="${svEsc(c.h)} 필터"><i class="ph-bold ph-caret-down text-[10px]"></i></button></th>`).join('');
+      isEl('isHead').addEventListener('click', (e) => { const b = e.target.closest('[data-is-filter]'); if (b) { e.stopPropagation(); isOpenFilter(b.dataset.isFilter, b); } });
       isEl('isCheckAll').addEventListener('change', (e) => { isRowsView().forEach(r => { if (e.target.checked) isState.checked.add(r.id); else isState.checked.delete(r.id); }); isRender(); });
     }
     function isRender() {
@@ -9918,10 +9938,11 @@
         body.innerHTML = `<tr><td colspan="${IS_COLS.length + 1}" class="is-ro" style="height:120px;text-align:center;white-space:normal;cursor:default">${isState.missing ? '서버에 특이사항 표가 아직 없습니다.' : !isState.loaded ? '불러오는 중…' : isState.rows.length ? '조건에 맞는 기록이 없습니다.' : "아직 기록이 없습니다. '행 추가'를 눌러 시작하세요."}</td></tr>`;
       } else {
         body.innerHTML = rows.map((r) => {
-          const label = r._new ? '새' : ++no;
+          const mineNew = r._new && isState.drafts.has(r.id);
+          const label = mineNew ? `<button type="button" data-is-cancel="${r.id}" class="px-1 rounded text-[10.5px] font-extrabold text-[#FF3B30] hover:bg-red-50" title="추가한 행 취소">취소</button>` : r._new ? '<span class="text-[10px] text-[#AF52DE]" title="다른 사람이 작성 중">작성중</span>' : ++no;
           const remTitle = r._rem ? `${r._rem.name} 님이 수정 중 (저장 전)` : '';
           return `<tr data-id="${r.id}" class="${isState.checked.has(r.id) ? 'is-checked' : ''} ${r._new ? 'is-newrow' : ''}">
-          <td class="is-gut"><label class="flex items-center justify-center gap-1.5 cursor-pointer"><input type="checkbox" data-is-check="${r.id}" ${isState.checked.has(r.id) ? 'checked' : ''} class="w-3.5 h-3.5"><span class="w-5 text-left">${label}</span></label></td>
+          <td class="is-gut"><label class="${r._new ? 'inline-flex mr-1' : 'flex'} items-center justify-center gap-1.5 cursor-pointer"><input type="checkbox" data-is-check="${r.id}" ${isState.checked.has(r.id) ? 'checked' : ''} class="w-3.5 h-3.5">${mineNew || r._new ? '' : `<span class="w-5 text-left">${label}</span>`}</label>${mineNew || r._new ? label : ''}</td>
           ${IS_COLS.map(c => {
             const mine = r._mine.has(c.k), rem = !mine && r._rem && (r._rem.keys.has(c.k) || r._rem.isNew);
             const nodata = c.ro && IS_NODATA_EDIT[c.k] && isNoDataNow(r, IS_NODATA_EDIT[c.k]);
@@ -9936,6 +9957,10 @@
       const all = isEl('isCheckAll');
       if (all) { const n = rows.filter(r => isState.checked.has(r.id)).length; all.checked = rows.length > 0 && n === rows.length; all.indeterminate = n > 0 && n < rows.length; }
       isEl('isDelBtn').textContent = isState.checked.size ? `선택 삭제 (${isState.checked.size})` : '선택 삭제';
+      document.querySelectorAll('#isHead [data-is-filter]').forEach(b => b.classList.toggle('on', !!isState.filters[b.dataset.isFilter]));
+      const nf = Object.keys(isState.filters).length;
+      isEl('isFilterReset').classList.toggle('hidden', !nf);
+      isEl('isFilterReset').querySelector('span').textContent = `필터 초기화 (${nf})`;
       const nd = isState.drafts.size;
       const sb = isEl('isSaveBtn');
       sb.querySelector('span').textContent = nd ? `저장 (${nd})` : '저장';
@@ -10029,7 +10054,7 @@
       const row = isFindRow(sel.id);
       if (!row || !(await isCanEdit(row, col))) return;
       if (isState.sel !== sel || isState.edit) return;
-      if (col.ro && initial == null && row[col.k] === IS_NODATA) initial = '';       // '데이터 없음'은 지우고 입력 시작
+      if (initial == null && row[col.k] === IS_NODATA) initial = '';       // '데이터 없음'은 지우고 입력 시작
       isCloseEditor(false);
       const el = document.createElement('input');
       el.type = col.type === 'date' ? 'date' : 'text';
@@ -10040,13 +10065,21 @@
       el.addEventListener('keydown', (e) => {
         e.stopPropagation();                                      // 시트 단축키로 중복 처리되지 않도록
         if (e.isComposing || e.keyCode === 229) return;          // 한글 조합 중에는 무시
+        const sg = isState.sug;
+        if (sg && sg.items.length) {
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); sg.idx = (sg.idx + (e.key === 'ArrowDown' ? 1 : -1) + sg.items.length + 1) % (sg.items.length + 1); if (sg.idx === sg.items.length) sg.idx = -1; isSugRender(); return; }
+          if (e.key === 'Enter' && sg.idx >= 0) { e.preventDefault(); isSugPick(sg.idx); return; }
+          if (e.key === 'Escape') { e.preventDefault(); isSugClose(); return; }
+        }
         if (e.key === 'Enter') { e.preventDefault(); isCommit(el.value, 'down'); }
         else if (e.key === 'Tab') { e.preventDefault(); isCommit(el.value, e.shiftKey ? 'left' : 'right'); }
         else if (e.key === 'Escape') { e.preventDefault(); isCloseEditor(true); }
       });
       el.addEventListener('blur', () => { if (isState.edit && isState.edit.el === el) isCommit(el.value, null); });
+      if (col.suggest) { el.addEventListener('input', isSugInput); el.addEventListener('compositionend', isSugInput); }
       isEl('isInner').appendChild(el);
-      isState.edit = { id: row.id, col: col.k, el, orig: row[col.k] ?? '' };
+      isState.edit = { id: row.id, col: col.k, el, orig: row[col.k] ?? '', row };
+      if (col.suggest && el.value && el.value !== IS_NODATA) isSugInput();
       isPlaceEditor();
       el.focus();
       if (el.type === 'text') { const n = el.value.length; el.setSelectionRange(n, n); }
@@ -10062,6 +10095,7 @@
     }
     function isCloseEditor(refocus) {
       const ed = isState.edit; if (!ed) return;
+      isSugClose();
       isState.edit = null;
       ed.el.remove();
       if (refocus) isEl('isWrap').focus({ preventScroll: true });
@@ -10096,8 +10130,8 @@
           const { data } = await q.order('delivery_date', { ascending: false }).limit(1);
           return data && data[0];
         };
-        const d = (date && await pickD(true)) || await pickD(false);
-        const o = (date && await pickO(true)) || await pickO(false);
+        const d = date ? await pickD(true) : await pickD(false);      // 배송일이 있으면 그 배송일 자료만
+        const o = date ? await pickO(true) : await pickO(false);
         res = {
           found: !!(d && d.business_name),
           store_name: (d && d.business_name) || IS_NODATA,
@@ -10123,7 +10157,8 @@
           const { data } = await q.order('delivery_date', { ascending: false }).limit(1);
           return data && data[0];
         };
-        const d = (store && date && await pick(true, true)) || (store && await pick(true, false)) || await pick(false, false);
+        const d = date ? ((store && await pick(true, true)) || await pick(false, true))          // 배송일이 있으면 그 배송일 자료만
+                       : ((store && await pick(true, false)) || await pick(false, false));
         res = d ? { found: true, product_name: d.product_name || IS_NODATA, temperature: d.temperature || '', unit: d.unit || '', stock_type: d.stock_type || '' }
                 : { found: false, product_name: IS_NODATA, temperature: '', unit: '', stock_type: '' };
       } catch (e) { return null; }
@@ -10134,26 +10169,86 @@
     async function isAutoFill(id, row, patch) {
       const out = {};
       const blank = (keys) => keys.forEach(k => { out[k] = ''; });
-      const apply = (f, keys) => { keys.forEach(k => { out[k] = f[k] ?? ''; }); };
-      if ('store_code' in patch || ('delivery_date' in patch && row.store_code)) {
-        isState.miss.delete(id + '|store_code');
-        if (!row.store_code) blank(IS_STORE_AUTO);
-        else {
-          const f = await isLookupStore(row.store_code, row.delivery_date);
-          if (f && (f.found || 'store_code' in patch)) apply(f, IS_STORE_AUTO);
-          if (f && !f.found) isState.miss.add(id + '|store_code');
+      const remember = (g, vals) => isState.autoVals.set(id + '|' + g, vals);
+      const wasAuto = (g, key) => { const v = isState.autoVals.get(id + '|' + g); return !row[key] || row[key] === IS_NODATA || (v && v[key] === row[key]); };
+      const run = async (g, codeKey, nameKey, keys, lookup) => {
+        isState.miss.delete(id + '|' + codeKey);
+        if (!row[codeKey]) { blank(keys); return; }
+        const f = await lookup();
+        if (!f) return;
+        if (f.found || codeKey in patch || wasAuto(g, nameKey)) {
+          keys.forEach(k => { out[k] = f[k] ?? ''; });
+          remember(g, { ...out });
         }
-      }
-      if ('product_code' in patch || (('store_code' in patch || 'delivery_date' in patch) && row.product_code)) {
-        isState.miss.delete(id + '|product_code');
-        if (!row.product_code) blank(IS_PRODUCT_AUTO);
-        else {
-          const f = await isLookupProduct(row.product_code, row.store_code, row.delivery_date);
-          if (f && (f.found || 'product_code' in patch)) apply(f, IS_PRODUCT_AUTO);
-          if (f && !f.found) isState.miss.add(id + '|product_code');
-        }
-      }
+        if (!f.found) isState.miss.add(id + '|' + codeKey);
+      };
+      if ('store_code' in patch || ('delivery_date' in patch && row.store_code))
+        await run('store', 'store_code', 'store_name', IS_STORE_AUTO, () => isLookupStore(row.store_code, row.delivery_date));
+      if ('product_code' in patch || (('store_code' in patch || 'delivery_date' in patch) && row.product_code))
+        await run('product', 'product_code', 'product_name', IS_PRODUCT_AUTO, () => isLookupProduct(row.product_code, row.store_code, row.delivery_date));
       return out;
+    }
+
+    // ---------- 거래처명 · 제품명 추천 (배송일 기준 · 홈화면 매장명 검색처럼) ----------
+    let isSugTimer = null, isSugSeq = 0;
+    function isSugClose() { isState.sug = null; const b = isEl('isSuggest'); if (b) b.remove(); }
+    async function isSugFetch(kind, kw, row) {
+      if (!kw || !supabaseClient) return [];
+      const like = `%${homeLikeEsc(kw)}%`;
+      if (kind === 'store') {
+        let q = supabaseClient.from('dispatch_data').select('business_code,business_name,main_center,center_name').ilike('business_name', like);
+        if (row.delivery_date) q = q.eq('delivery_date', row.delivery_date);
+        const { data } = await q.order('delivery_date', { ascending: false }).limit(300);
+        const items = (data || []).filter(r => r.business_name).map(r => ({ code: r.business_code || '', name: r.business_name, sub: r.main_center || r.center_name || '' }));
+        return homeDedupe(items, i => i.code + '|' + i.name, kw, 30);
+      }
+      const get = async (useStore) => {
+        let q = supabaseClient.from('order_data').select('product_code,product_name,temperature,unit').ilike('product_name', like);
+        if (row.delivery_date) q = q.eq('delivery_date', row.delivery_date);
+        if (useStore) q = q.eq('store_code', row.store_code);
+        const { data } = await q.order('delivery_date', { ascending: false }).limit(300);
+        return (data || []).filter(r => r.product_name).map(r => ({ code: r.product_code || '', name: r.product_name, sub: [r.temperature, r.unit].filter(Boolean).join(' · ') }));
+      };
+      let items = row.store_code ? await get(true) : [];         // 거래처가 정해져 있으면 그 거래처 주문 제품 먼저
+      if (!items.length) items = await get(false);
+      return homeDedupe(items, i => i.code + '|' + i.name, kw, 30);
+    }
+    function isSugRender() {
+      const sg = isState.sug, ed = isState.edit;
+      if (!sg || !ed) return;
+      let box = isEl('isSuggest');
+      if (!sg.items.length) { if (box) box.remove(); return; }
+      if (!box) { box = document.createElement('div'); box.id = 'isSuggest'; isEl('isInner').appendChild(box); box.addEventListener('mousedown', (e) => { const it = e.target.closest('[data-sug]'); if (it) { e.preventDefault(); isSugPick(+it.dataset.sug); } }); }
+      const td = isTd(ed.id, ed.col); if (!td) return;
+      const r = isRectIn(td);
+      Object.assign(box.style, { left: r.x + 'px', top: (r.y + r.h + 2) + 'px' });
+      box.innerHTML = `<div class="px-2 pt-1 pb-1.5 text-[10.5px] font-bold text-gray-400">${sg.kind === 'store' ? '거래처 추천' : '제품 추천'}${ed.row && ed.row.delivery_date ? ` · ${svEsc(ed.row.delivery_date)} 배송일 기준` : ''} — 고르면 코드가 자동 입력됩니다</div>`
+        + sg.items.map((it, i) => `<div class="it ${i === sg.idx ? 'on' : ''}" data-sug="${i}"><span class="flex-1 min-w-0 truncate font-bold text-gray-900">${svEsc(it.name)}</span><span class="font-mono text-[11px] text-[#007AFF] flex-none">${svEsc(it.code)}</span>${it.sub ? `<span class="text-[10.5px] text-gray-400 flex-none">${svEsc(it.sub)}</span>` : ''}</div>`).join('');
+    }
+    function isSugInput() {
+      const ed = isState.edit; if (!ed) return;
+      const col = IS_COLS.find(c => c.k === ed.col); if (!col || !col.suggest) return;
+      clearTimeout(isSugTimer);
+      const kw = ed.el.value.trim();
+      if (!kw) { isSugClose(); return; }
+      isSugTimer = setTimeout(async () => {
+        const seq = ++isSugSeq;
+        let items = [];
+        try { items = await isSugFetch(col.suggest, kw, ed.row || {}); } catch (e) { items = []; }
+        if (seq !== isSugSeq || isState.edit !== ed) return;
+        isState.sug = { kind: col.suggest, items, idx: -1 };
+        isSugRender();
+      }, 200);
+    }
+    async function isSugPick(i) {
+      const sg = isState.sug, ed = isState.edit;
+      if (!sg || !ed || !sg.items[i]) return;
+      const it = sg.items[i], id = ed.id;
+      isSugClose();
+      isCloseEditor(true);
+      const patch = sg.kind === 'store' ? { store_code: it.code, store_name: it.name } : { product_code: it.code, product_name: it.name };
+      await isDraftSet(id, patch);
+      isMove(0, 1);
     }
 
     // ---------- 저장 전 내용(draft) : 고치면 자동 체크 · 저장을 눌러야 반영 ----------
@@ -10320,6 +10415,52 @@
       XLSX.utils.book_append_sheet(wb, ws, '특이사항');
       XLSX.writeFile(wb, `특이사항_${isToday()}.xlsx`);
     }
+    // ---------- 칸별 필터 (엑셀 필터처럼 값 선택) ----------
+    const isFp = { k: null, vals: [], sel: new Set() };
+    function isOpenFilter(k, btn) {
+      const col = IS_COLS.find(c => c.k === k); if (!col) return;
+      const counts = new Map();
+      isRowsAll().filter(r => !r._new).forEach(r => { const v = String(r[k] ?? ''); counts.set(v, (counts.get(v) || 0) + 1); });
+      isFp.k = k;
+      isFp.vals = [...counts.entries()].sort((a, b) => a[0] === '' ? 1 : b[0] === '' ? -1 : a[0].localeCompare(b[0], 'ko'));
+      isFp.sel = new Set(isState.filters[k] ? [...isState.filters[k]] : isFp.vals.map(v => v[0]));
+      isEl('isFpTitle').textContent = `${col.h} 필터`;
+      isEl('isFpSearch').value = '';
+      isRenderFilterList();
+      const pop = isEl('isFilterPop'), r = btn.getBoundingClientRect();
+      pop.classList.remove('hidden');
+      pop.style.left = Math.max(8, Math.min(window.innerWidth - 250, r.left - 110)) + 'px';
+      pop.style.top = (r.bottom + 6) + 'px';
+      setTimeout(() => isEl('isFpSearch').focus(), 30);
+    }
+    function isRenderFilterList() {
+      const q = isEl('isFpSearch').value.trim().toLowerCase();
+      const list = isFp.vals.filter(([v]) => !q || v.toLowerCase().includes(q));
+      isEl('isFpList').innerHTML = list.map(([v, n]) => `<label class="flex items-center gap-2 px-1 py-1 rounded-md hover:bg-gray-50 text-[12px] cursor-pointer"><input type="checkbox" data-fp="${svEsc(v)}" ${isFp.sel.has(v) ? 'checked' : ''} class="w-3.5 h-3.5"><span class="flex-1 min-w-0 truncate ${v ? 'text-gray-800' : 'text-gray-400'}">${v ? svEsc(v) : '(빈칸)'}</span><span class="text-[10.5px] text-gray-400">${n}</span></label>`).join('') || '<div class="py-4 text-center text-[12px] text-gray-400">값이 없습니다.</div>';
+      const all = isEl('isFpAll'), on = list.filter(([v]) => isFp.sel.has(v)).length;
+      all.checked = list.length > 0 && on === list.length; all.indeterminate = on > 0 && on < list.length;
+    }
+    function isApplyFilter() {
+      const k = isFp.k; if (!k) return;
+      if (isFp.sel.size === isFp.vals.length) delete isState.filters[k];
+      else isState.filters[k] = new Set(isFp.sel);
+      isCloseFilter(); isRender();
+    }
+    function isClearFilter(k) {
+      if (k) delete isState.filters[k]; else isState.filters = {};
+      isCloseFilter(); isRender();
+    }
+    function isCloseFilter() { isEl('isFilterPop').classList.add('hidden'); }
+    isEl('isFpSearch').addEventListener('input', isRenderFilterList);
+    isEl('isFpSearch').addEventListener('keydown', (e) => { if (e.isComposing || e.keyCode === 229) return; if (e.key === 'Enter') { e.preventDefault(); isApplyFilter(); } else if (e.key === 'Escape') isCloseFilter(); });
+    isEl('isFpList').addEventListener('change', (e) => { const c = e.target.closest('[data-fp]'); if (!c) return; if (c.checked) isFp.sel.add(c.dataset.fp); else isFp.sel.delete(c.dataset.fp); isRenderFilterList(); });
+    isEl('isFpAll').addEventListener('change', (e) => {
+      const q = isEl('isFpSearch').value.trim().toLowerCase();
+      isFp.vals.filter(([v]) => !q || v.toLowerCase().includes(q)).forEach(([v]) => { if (e.target.checked) isFp.sel.add(v); else isFp.sel.delete(v); });
+      isRenderFilterList();
+    });
+    document.addEventListener('mousedown', (e) => { const pop = isEl('isFilterPop'); if (!pop.classList.contains('hidden') && !pop.contains(e.target) && !e.target.closest('[data-is-filter]')) isCloseFilter(); });
+
     function isRenderOptionLists() {
       ['content', 'subject', 'fault'].forEach(k => { const dl = isEl('isOpt_' + k); if (dl) dl.innerHTML = (issueSheetOptions[k] || []).map(v => `<option value="${svEsc(v)}">`).join(''); });
     }
@@ -10334,24 +10475,28 @@
     }
 
     // ---------- 탭 : 홈화면 / 웰스토리 / 유통물류 / 원앤원 / 사용자 추가 ----------
-    const IS_TAB_DEFAULT = [{ id: 'home', name: '홈화면', icon: 'ph-house' }, { id: 'wellstory', name: '웰스토리', icon: 'ph-buildings' }, { id: 'distrib', name: '유통물류', icon: 'ph-truck' }, { id: 'onenone', name: '원앤원', icon: 'ph-storefront' }];
+    const IS_TAB_HOME = { id: 'home', name: '홈화면', icon: 'ph-house' };
+    const IS_TAB_ICONS = { wellstory: 'ph-buildings', distrib: 'ph-truck', onenone: 'ph-storefront' };
+    const IS_TAB_DEFAULT_REST = [{ id: 'wellstory', name: '웰스토리' }, { id: 'distrib', name: '유통물류' }, { id: 'onenone', name: '원앤원' }];
     async function isLoadTabs() {
       try {
-        const { data } = await supabaseClient.from(SETTINGS_TABLE).select('key,value').in('key', ['issue_sheet_tabs', 'issue_sheet_options']);
+        const { data } = await supabaseClient.from(SETTINGS_TABLE).select('key,value').in('key', ['issue_sheet_tabs', 'issue_sheet_tabs_v2', 'issue_sheet_options']);
         const m = new Map((data || []).map(r => [r.key, r.value]));
-        const v = m.get('issue_sheet_tabs');
-        isState.tabs = Array.isArray(v) ? v.filter(t => t && t.id && t.name) : [];
+        const v2 = m.get('issue_sheet_tabs_v2'), v = m.get('issue_sheet_tabs');
+        // v2 = 홈화면을 뺀 전체 탭 목록 (기본 탭도 삭제 가능) · 없으면 기본 탭 + 예전에 추가한 탭
+        isState.tabs = Array.isArray(v2) ? v2.filter(t => t && t.id && t.name)
+          : IS_TAB_DEFAULT_REST.concat(Array.isArray(v) ? v.filter(t => t && t.id && t.name) : []);
         if (m.has('issue_sheet_options')) issueSheetOptions = isoNorm(m.get('issue_sheet_options'));
-      } catch (e) { isState.tabs = []; }
+      } catch (e) { isState.tabs = IS_TAB_DEFAULT_REST.slice(); }
       isRenderTabs();
       isRenderOptionLists();
     }
-    function isAllTabs() { return IS_TAB_DEFAULT.concat(isState.tabs.map(t => ({ ...t, icon: 'ph-folder-simple', custom: true }))); }
+    function isAllTabs() { return [IS_TAB_HOME].concat(isState.tabs.map(t => ({ ...t, icon: IS_TAB_ICONS[t.id] || 'ph-folder-simple', custom: true }))); }
     function isRenderTabs() {
       const box = isEl('isTabs');
       if (!isAllTabs().some(t => t.id === isState.tab)) isState.tab = 'home';
       box.innerHTML = isAllTabs().map(t => `<button type="button" data-tab="${svEsc(t.id)}" class="segment-tab ${isState.tab === t.id ? 'active' : ''} flex-1 min-w-[84px] py-2 px-2 text-[12px] sm:text-[13px] font-semibold text-gray-600 rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap">
-          <i class="ph-bold ${t.icon} text-sm"></i><span>${svEsc(t.name)}</span>${t.custom ? `<i data-tab-del="${svEsc(t.id)}" class="ph-bold ph-x text-[10px] text-gray-400 hover:text-red-500 ml-0.5" title="탭 삭제"></i>` : ''}
+          <i class="ph-bold ${t.icon} text-sm"></i><span>${svEsc(t.name)}</span>${t.custom ? `<i data-tab-del="${svEsc(t.id)}" role="button" class="ph-bold ph-x text-[9px] w-4 h-4 rounded-full bg-gray-300/70 text-white hover:bg-[#FF3B30] inline-flex items-center justify-center ml-1" title="탭 삭제"></i>` : ''}
         </button>`).join('');
     }
     function isSwitchTab(id) {
@@ -10409,7 +10554,7 @@
     }
     function isCloseTabModal() { const m = isEl('isTabModal'); m.classList.remove('opacity-100'); m.classList.add('opacity-0', 'pointer-events-none'); }
     async function isSaveTabs(next) {
-      const res = await dbRun('탭 저장', async () => { await settingsSave([{ key: 'issue_sheet_tabs', value: next }]); });
+      const res = await dbRun('탭 저장', async () => { await settingsSave([{ key: 'issue_sheet_tabs_v2', value: next }]); });
       if (res.ok) { isState.tabs = next; isRenderTabs(); }
       return res.ok;
     }
@@ -10627,6 +10772,16 @@
       isSelect(id, col, { noScroll: true });
       if (again) { e.preventDefault(); isBeginEdit(); }
     });
+    isEl('isBody').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-is-cancel]'); if (!b) return;
+      e.preventDefault(); e.stopPropagation();
+      const id = +b.dataset.isCancel;
+      if (isState.edit && isState.edit.id === id) isCloseEditor(false);
+      isState.drafts.delete(id); isState.checked.delete(id);
+      ['store_code', 'product_code'].forEach(k => isState.miss.delete(id + '|' + k));
+      if (isState.sel && isState.sel.id === id) isState.sel = null;
+      isRender(); isSendDrafts();
+    });
     isEl('isBody').addEventListener('dblclick', (e) => { if (e.target.closest('td[data-col]') && !isState.edit) isBeginEdit(); });
     isEl('isBody').addEventListener('change', (e) => {
       const cb = e.target.closest('[data-is-check]'); if (!cb) return;
@@ -10637,7 +10792,7 @@
     isEl('isWrap').setAttribute('tabindex', '0');
     isEl('isWrap').addEventListener('mousemove', isOnMouse);
     isEl('isWrap').addEventListener('mouseleave', () => { if (isState.ch && isState.me) isBroadcast('cursor', { cid: isState.cid, hide: true }); });
-    const isModalOpen = () => isEl('isUserModal').classList.contains('opacity-100') || isEl('isTabModal').classList.contains('opacity-100');
+    const isModalOpen = () => isEl('isUserModal').classList.contains('opacity-100') || isEl('isTabModal').classList.contains('opacity-100') || !isEl('isFilterPop').classList.contains('hidden');
     const isTyping = () => { const a = document.activeElement; return a && a !== isEl('isWrap') && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.id !== 'isEditor' && !a.hasAttribute('data-is-check') && a.id !== 'isCheckAll'; };
     document.addEventListener('keydown', (e) => {
       if (isVisible() && e.key === 'Escape' && !isState.edit && isEl('issueSheetViewArea').classList.contains('is-full') && !isModalOpen()) { isToggleFull(false); return; }
