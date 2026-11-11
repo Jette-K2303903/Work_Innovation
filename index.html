@@ -39,6 +39,26 @@
     }
 
 
+
+    /* ===== 특이사항 관리 : 실시간 협업 시트 ===== */
+    .is-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 13px; }
+    .is-table th { position: sticky; top: 0; z-index: 3; height: 36px; padding: 0 8px; background: #F9FAFB; border-bottom: 1px solid #E5E7EB; border-right: 1px solid #F0F0F3; text-align: left; font-size: 12px; font-weight: 700; color: #6B7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .is-table td { height: 34px; padding: 0 8px; background: #fff; border-bottom: 1px solid #F0F0F3; border-right: 1px solid #F3F4F6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1F2937; cursor: cell; }
+    .is-table .is-gut { position: sticky; left: 0; z-index: 2; background: #FAFAFB; text-align: center; color: #9CA3AF; font-size: 11px; cursor: default; }
+    .is-table th.is-gut { z-index: 4; }
+    .is-table td.is-ro { background: #FCFCFD; color: #6B7280; cursor: default; }
+    .is-table td.is-sel { box-shadow: inset 0 0 0 2px #007AFF; }
+    .is-table td.is-miss { background: #FEF2F2; color: #DC2626; }
+    .is-table tr.is-checked td { background: #EFF6FF; }
+    .is-table tr:hover td.is-gut { color: #4B5563; }
+    .is-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+    .is-rsel { position: absolute; border: 2px solid var(--c); border-radius: 2px; pointer-events: none; }
+    .is-rsel span { position: absolute; left: -2px; top: -17px; padding: 1px 6px; border-radius: 4px 4px 4px 0; background: var(--c); color: #fff; font-size: 10px; font-weight: 800; white-space: nowrap; }
+    .is-cur { position: absolute; pointer-events: none; transition: left .09s linear, top .09s linear; z-index: 7; }
+    .is-cur span { position: absolute; left: 14px; top: 14px; padding: 2px 7px; border-radius: 999px; background: var(--c); color: #fff; font-size: 10.5px; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+    .is-ava { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; color: #fff; font-size: 10.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,.12); position: relative; }
+    .is-ava.is-me { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--c); }
+    #isEditor { position: absolute; z-index: 6; margin: 0; border: 2px solid #007AFF; border-radius: 2px; padding: 0 6px; font-size: 13px; background: #fff; outline: none; box-shadow: 0 6px 18px rgba(0,122,255,.18); }
     /* ===== iOS 스타일 셀렉트 / 카드 탭 애니메이션 (비용관리·구간차량 공통) ===== */
     .ios-select, #costViewArea select, #sectionVehicleViewArea select {
       -webkit-appearance: none; appearance: none;
@@ -667,9 +687,11 @@
         <div class="flex items-center space-x-1.5 min-w-0"><span id="sbStatusDot" class="inline-block w-2 h-2 rounded-full bg-[#FF9500]"></span><span id="sbStatusText" class="text-[12px] font-semibold text-gray-600 truncate">Supabase 미연결 (테스트 모드)</span></div>
         <button type="button" onclick="testSupabaseConnection()" class="ios-btn-tap px-2.5 py-1 bg-white border border-gray-200 text-gray-700 font-semibold rounded-lg text-[11px] whitespace-nowrap">연결 테스트</button>
       </div>
-      <div class="flex bg-gray-200/80 p-1 rounded-2xl mb-3 ios-card-shadow">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-gray-200/80 p-1 rounded-2xl mb-3 ios-card-shadow">
         <button type="button" id="tabUploadDispatch" onclick="switchUploadManageTab('dispatch')" class="segment-tab active flex-1 py-2 text-xs font-semibold text-gray-600 rounded-xl flex items-center justify-center space-x-1"><i class="ph-bold ph-truck text-sm"></i><span>배차 업로드</span></button>
         <button type="button" id="tabUploadOrder" onclick="switchUploadManageTab('order')" class="segment-tab flex-1 py-2 text-xs font-semibold text-gray-600 rounded-xl flex items-center justify-center space-x-1"><i class="ph-bold ph-file-arrow-up text-sm"></i><span>주문 업로드</span></button>
+        <button type="button" id="tabUploadStore" onclick="switchUploadManageTab('store')" class="segment-tab flex-1 py-2 text-xs font-semibold text-gray-600 rounded-xl flex items-center justify-center space-x-1"><i class="ph-bold ph-storefront text-sm"></i><span>매장정보 업로드</span></button>
+        <button type="button" id="tabUploadProduct" onclick="switchUploadManageTab('product')" class="segment-tab flex-1 py-2 text-xs font-semibold text-gray-600 rounded-xl flex items-center justify-center space-x-1"><i class="ph-bold ph-package text-sm"></i><span>제품정보 업로드</span></button>
       </div>
       <div id="paneUploadDispatch" class="flex-1 min-h-0 flex flex-col bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
         <div class="flex items-center space-x-2.5 pb-3 mb-3 border-b border-gray-100 min-w-0">
@@ -693,6 +715,54 @@
         <div class="grid grid-cols-2 gap-2.5 pt-3 border-t border-gray-100">
           <button type="button" onclick="clearUploadText('dispatchDataTextarea','dispatchDataStats')" class="ios-btn-tap py-3 bg-gray-100 active:bg-gray-200 text-gray-700 font-semibold rounded-xl text-[14px]">지우기</button>
           <button type="button" onclick="startDispatchUploadProcess()" class="ios-btn-tap py-3 bg-[#34C759] active:bg-[#28A745] text-white font-semibold rounded-xl text-[14px] shadow-md shadow-emerald-500/25 flex items-center justify-center space-x-1.5"><i class="ph-bold ph-floppy-disk text-base"></i><span>저장</span></button>
+        </div>
+      </div>
+      <div id="paneUploadStore" class="hidden flex-1 min-h-0 flex flex-col bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
+        <div class="flex items-center space-x-2.5 pb-3 mb-3 border-b border-gray-100 min-w-0">
+          <div class="w-8 h-8 rounded-xl bg-amber-50 text-[#FF9500] flex items-center justify-center flex-shrink-0"><i class="ph-bold ph-storefront text-lg"></i></div>
+          <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">매장정보 업로드</h3><p class="text-[11px] text-gray-500 whitespace-nowrap overflow-hidden text-ellipsis">임시 화면 · 추후 디자인 예정</p></div>
+          <span class="ml-auto flex-shrink-0 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-full">준비 중</span>
+        </div>
+        <div class="mb-3 p-3 bg-amber-50 border border-amber-200/70 rounded-2xl flex items-start space-x-2.5">
+          <i class="ph-fill ph-info text-amber-500 text-lg flex-shrink-0 mt-0.5"></i>
+          <div class="text-[12.5px] text-gray-800 font-medium leading-relaxed min-w-0">
+            <span class="font-bold block">임시로 만든 화면입니다</span>
+            <span class="block text-[11.5px] text-gray-600 mt-0.5">붙여넣기와 업로드 버튼은 동작 확인용이며, 내용은 <b>저장되지 않습니다.</b></span>
+          </div>
+        </div>
+        <div class="flex-1 flex flex-col min-h-[240px] mb-3">
+          <div class="flex justify-between items-center text-[12px] text-gray-500 mb-1 px-1"><span>복사한 엑셀/TSV 데이터를 붙여넣으세요</span><span id="uploadStoreStats" class="font-mono text-gray-400 whitespace-nowrap">0행 (0자)</span></div>
+          <div class="flex-1 relative bg-gray-50/90 rounded-2xl border border-gray-200 focus-within:bg-white transition-all overflow-hidden p-3 shadow-inner">
+            <textarea id="uploadStoreTextarea" rows="10" oninput="uploadTempStats('Store')" placeholder="엑셀 데이터를 복사해 여기에 붙여넣으세요..." class="w-full h-full min-h-[200px] text-[13px] font-mono leading-relaxed bg-transparent outline-none resize-none"></textarea>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2.5 pt-3 border-t border-gray-100">
+          <button type="button" onclick="clearUploadText('uploadStoreTextarea','uploadStoreStats')" class="ios-btn-tap py-3 bg-gray-100 active:bg-gray-200 text-gray-700 font-semibold rounded-xl text-[14px]">지우기</button>
+          <button type="button" onclick="uploadTempNotice('매장정보 업로드')" class="ios-btn-tap py-3 bg-gray-300 text-white font-semibold rounded-xl text-[14px] flex items-center justify-center space-x-1.5"><i class="ph-bold ph-cloud-arrow-up text-base"></i><span>업로드 (준비 중)</span></button>
+        </div>
+      </div>
+      <div id="paneUploadProduct" class="hidden flex-1 min-h-0 flex flex-col bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
+        <div class="flex items-center space-x-2.5 pb-3 mb-3 border-b border-gray-100 min-w-0">
+          <div class="w-8 h-8 rounded-xl bg-purple-50 text-[#AF52DE] flex items-center justify-center flex-shrink-0"><i class="ph-bold ph-package text-lg"></i></div>
+          <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">제품정보 업로드</h3><p class="text-[11px] text-gray-500 whitespace-nowrap overflow-hidden text-ellipsis">임시 화면 · 추후 디자인 예정</p></div>
+          <span class="ml-auto flex-shrink-0 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-full">준비 중</span>
+        </div>
+        <div class="mb-3 p-3 bg-amber-50 border border-amber-200/70 rounded-2xl flex items-start space-x-2.5">
+          <i class="ph-fill ph-info text-amber-500 text-lg flex-shrink-0 mt-0.5"></i>
+          <div class="text-[12.5px] text-gray-800 font-medium leading-relaxed min-w-0">
+            <span class="font-bold block">임시로 만든 화면입니다</span>
+            <span class="block text-[11.5px] text-gray-600 mt-0.5">붙여넣기와 업로드 버튼은 동작 확인용이며, 내용은 <b>저장되지 않습니다.</b></span>
+          </div>
+        </div>
+        <div class="flex-1 flex flex-col min-h-[240px] mb-3">
+          <div class="flex justify-between items-center text-[12px] text-gray-500 mb-1 px-1"><span>복사한 엑셀/TSV 데이터를 붙여넣으세요</span><span id="uploadProductStats" class="font-mono text-gray-400 whitespace-nowrap">0행 (0자)</span></div>
+          <div class="flex-1 relative bg-gray-50/90 rounded-2xl border border-gray-200 focus-within:bg-white transition-all overflow-hidden p-3 shadow-inner">
+            <textarea id="uploadProductTextarea" rows="10" oninput="uploadTempStats('Product')" placeholder="엑셀 데이터를 복사해 여기에 붙여넣으세요..." class="w-full h-full min-h-[200px] text-[13px] font-mono leading-relaxed bg-transparent outline-none resize-none"></textarea>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2.5 pt-3 border-t border-gray-100">
+          <button type="button" onclick="clearUploadText('uploadProductTextarea','uploadProductStats')" class="ios-btn-tap py-3 bg-gray-100 active:bg-gray-200 text-gray-700 font-semibold rounded-xl text-[14px]">지우기</button>
+          <button type="button" onclick="uploadTempNotice('제품정보 업로드')" class="ios-btn-tap py-3 bg-gray-300 text-white font-semibold rounded-xl text-[14px] flex items-center justify-center space-x-1.5"><i class="ph-bold ph-cloud-arrow-up text-base"></i><span>업로드 (준비 중)</span></button>
         </div>
       </div>
       <div id="paneUploadOrder" class="hidden flex-1 min-h-0 flex flex-col bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
@@ -1025,15 +1095,59 @@
       </div>
     </main>
 
-    <!-- [특이사항 관리 뷰 (사무실 전용)] -->
+    <!-- [매장정보 관리 뷰 (사무실 전용)] -->
     <main id="specialNotesViewArea" class="hidden flex-1 overflow-y-auto no-scrollbar px-3 sm:px-5 pt-3 pb-8 flex flex-col">
       <div class="bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-6 flex flex-col items-center justify-center text-center min-h-[280px]">
-        <div class="w-14 h-14 rounded-2xl bg-amber-50 text-[#FF9500] flex items-center justify-center mb-3"><i class="ph-bold ph-warning-circle text-3xl"></i></div>
-        <h3 class="text-[17px] font-bold text-gray-900 tracking-tight">특이사항 관리</h3>
+        <div class="w-14 h-14 rounded-2xl bg-amber-50 text-[#FF9500] flex items-center justify-center mb-3"><i class="ph-bold ph-storefront text-3xl"></i></div>
+        <h3 class="text-[17px] font-bold text-gray-900 tracking-tight">매장정보 관리</h3>
         <p class="text-[13px] text-gray-500 mt-1 leading-relaxed">이 기능은 준비 중입니다. 추후 기능을 추가할 예정이에요.</p>
         <span class="mt-3 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-full">준비 중</span>
       </div>
     </main>
+
+    <!-- [특이사항 관리 뷰 (사무실 전용) : 실시간 협업 시트] -->
+    <main id="issueSheetViewArea" class="hidden flex-1 min-h-0 overflow-hidden px-3 sm:px-5 pt-3 pb-3 flex flex-col">
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <div class="min-w-0">
+          <h3 class="text-[16px] font-bold text-gray-900 tracking-tight">특이사항 관리</h3>
+          <p id="isMeta" class="text-[11.5px] text-gray-500 truncate">불러오는 중…</p>
+        </div>
+        <div class="flex items-center gap-2 flex-none">
+          <div id="isAvatars" class="flex items-center -space-x-2"></div>
+          <button type="button" id="isMeBtn" onclick="isOpenUserPicker()" class="ios-btn-tap px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-[12px] font-bold whitespace-nowrap">사용자 선택</button>
+        </div>
+      </div>
+      <div id="isNotice" class="hidden mb-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[12px] font-semibold text-amber-800 leading-relaxed"></div>
+      <div class="flex flex-wrap items-center gap-2 mb-2">
+        <input type="search" id="isSearch" oninput="isState.q = this.value.trim(); isRender()" placeholder="매장 · 제품 · 내용 검색" class="flex-1 min-w-[160px] px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-blue-200">
+        <div id="isStatusFilter" class="flex bg-gray-200/80 p-1 rounded-xl"></div>
+        <button type="button" onclick="isAddRow()" class="ios-btn-tap px-3 py-2 rounded-xl bg-[#007AFF] text-white text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-plus"></i>행 추가</button>
+        <button type="button" id="isDelBtn" onclick="isDeleteChecked()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-red-600 text-[12.5px] font-bold">선택 삭제</button>
+        <button type="button" onclick="isDownload()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-microsoft-excel-logo"></i>엑셀</button>
+      </div>
+      <div id="isWrap" class="relative flex-1 min-h-0 overflow-auto bg-white rounded-[18px] border border-gray-200/80 ios-card-shadow">
+        <div id="isInner" class="relative inline-block min-w-full align-top">
+          <table id="isTable" class="is-table"><colgroup id="isCols"></colgroup><thead><tr id="isHead"></tr></thead><tbody id="isBody"></tbody></table>
+          <div id="isLayer" class="absolute inset-0 pointer-events-none"></div>
+        </div>
+      </div>
+      <p class="mt-1.5 text-[11px] text-gray-400 leading-relaxed">셀을 한 번 더 누르거나 바로 입력 · Enter 아래 칸 · Tab 오른쪽 칸 · 엑셀에서 여러 칸 복사 후 붙여넣기 가능 · 매장코드/제품코드를 입력하면 이름이 자동으로 채워집니다</p>
+      <datalist id="isTypeList"></datalist>
+    </main>
+
+    <!-- [특이사항 관리 : 사용자 선택] -->
+    <div id="isUserModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
+      <div class="bg-white rounded-[28px] w-full max-w-sm p-5 shadow-2xl border border-gray-100 flex flex-col max-h-[86vh]">
+        <div class="flex items-center space-x-2.5 pb-3 border-b border-gray-100 flex-shrink-0">
+          <div class="w-8 h-8 rounded-xl bg-blue-50 text-[#007AFF] flex items-center justify-center"><i class="ph-bold ph-user-circle text-lg"></i></div>
+          <div class="min-w-0"><h3 class="text-[17px] font-bold text-gray-900 tracking-tight">사용자 선택</h3><p class="text-[11px] text-gray-500">특이사항 관리는 사용자를 선택해야 입력할 수 있습니다</p></div>
+        </div>
+        <input type="search" id="isUserSearch" oninput="isRenderUserList()" placeholder="성명 검색" class="mt-3 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[14px] font-medium border border-gray-200 outline-none flex-shrink-0">
+        <div id="isUserList" class="flex-1 overflow-y-auto no-scrollbar py-2 space-y-1.5 min-h-[120px]"></div>
+        <p class="text-[11px] text-gray-400 pb-2">목록은 연락처 &gt; 사무실 연락처의 성명입니다.</p>
+        <button type="button" onclick="isCloseUserPicker()" class="ios-btn-tap py-2.5 bg-gray-100 active:bg-gray-200 text-gray-700 font-semibold rounded-xl text-[14px] flex-shrink-0">닫기 (보기만)</button>
+      </div>
+    </div>
 
     <!-- [비용관리 뷰 (사무실 전용)] -->
     <main id="costViewArea" class="hidden flex-1 overflow-y-auto no-scrollbar px-3 sm:px-5 pt-3 pb-8 flex flex-col">
@@ -1843,6 +1957,19 @@
                   <i class="ph-bold ph-coins text-lg"></i>
                 </div>
                 <span class="text-[16px] font-medium text-gray-800">비용관리</span>
+              </div>
+              <i class="ph-bold ph-caret-right text-gray-300"></i>
+            </a>
+          </div>
+
+          <!-- 특이사항 관리 독립 카드 (사무실 전용 · 실시간 협업 시트) -->
+          <div id="issueMenuCard" class="hidden mt-3 bg-white rounded-2xl border border-gray-200/80 ios-card-shadow overflow-hidden">
+            <a href="javascript:void(0)" onclick="handleMenuClick('특이사항 관리')" class="ios-btn-tap flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-lg bg-rose-50 text-[#FF2D55] flex items-center justify-center">
+                  <i class="ph-bold ph-warning-circle text-lg"></i>
+                </div>
+                <span class="text-[16px] font-medium text-gray-800">특이사항 관리</span>
               </div>
               <i class="ph-bold ph-caret-right text-gray-300"></i>
             </a>
@@ -3383,6 +3510,7 @@
       document.getElementById('uploadManageViewArea').classList.add('hidden');
       document.getElementById('sectionVehicleViewArea').classList.add('hidden');
       document.getElementById('specialNotesViewArea').classList.add('hidden');
+      document.getElementById('issueSheetViewArea').classList.add('hidden');
       document.getElementById('costViewArea').classList.add('hidden');
       headerPageTitle.textContent = '업로드 내역';
       incidentLoadState = { status: 'loading', message: '' };
@@ -3823,6 +3951,7 @@
       document.getElementById('uploadManageViewArea').classList.add('hidden');
       document.getElementById('sectionVehicleViewArea').classList.add('hidden');
       document.getElementById('specialNotesViewArea').classList.add('hidden');
+      document.getElementById('issueSheetViewArea').classList.add('hidden');
       document.getElementById('costViewArea').classList.add('hidden');
       palletViewArea.classList.add('hidden');
       contactsViewArea.classList.add('hidden');
@@ -4184,6 +4313,7 @@
       document.getElementById('uploadManageViewArea').classList.add('hidden');
       document.getElementById('sectionVehicleViewArea').classList.add('hidden');
       document.getElementById('specialNotesViewArea').classList.add('hidden');
+      document.getElementById('issueSheetViewArea').classList.add('hidden');
       document.getElementById('costViewArea').classList.add('hidden');
       mainScrollArea.classList.remove('hidden');
       homeFooterBar.classList.remove('hidden');
@@ -4917,6 +5047,7 @@
       document.getElementById('uploadManageViewArea').classList.add('hidden');
       document.getElementById('sectionVehicleViewArea').classList.add('hidden');
       document.getElementById('specialNotesViewArea').classList.add('hidden');
+      document.getElementById('issueSheetViewArea').classList.add('hidden');
       document.getElementById('costViewArea').classList.add('hidden');
       palletViewArea.classList.remove('hidden');
       headerPageTitle.textContent = '파렛트 입고현황';
@@ -5398,6 +5529,7 @@
       document.getElementById('uploadManageViewArea').classList.add('hidden');
       document.getElementById('sectionVehicleViewArea').classList.add('hidden');
       document.getElementById('specialNotesViewArea').classList.add('hidden');
+      document.getElementById('issueSheetViewArea').classList.add('hidden');
       document.getElementById('costViewArea').classList.add('hidden');
       contactsViewArea.classList.remove('hidden');
       headerPageTitle.textContent = '연락처';
@@ -6028,7 +6160,7 @@
       { id: 'menu-upload-history', name: '업로드 내역', icon: 'ph-clock-counter-clockwise', color: 'purple', visible: true },
       { id: 'menu-upload-manage', name: '업로드 관리', icon: 'ph-upload-simple', color: 'blue', visible: true, officeOnly: true },
       { id: 'menu-section-vehicle', name: '구간차량 관리', icon: 'ph-truck', color: 'rose', visible: true, officeOnly: true },
-      { id: 'menu-special-notes', name: '특이사항 관리', icon: 'ph-warning-circle', color: 'amber', visible: true, officeOnly: true }
+      { id: 'menu-special-notes', name: '매장정보 관리', icon: 'ph-storefront', color: 'amber', visible: true, officeOnly: true }
     ];
 
     const dynamicNavMenuList = document.getElementById('dynamicNavMenuList');
@@ -6038,6 +6170,8 @@
       if (!dynamicNavMenuList) return;
       const _costCard = document.getElementById('costMenuCard');
       if (_costCard) _costCard.classList.toggle('hidden', !(isLoggedIn && currentRole === 'office'));
+      const _issueCard = document.getElementById('issueMenuCard');
+      if (_issueCard) _issueCard.classList.toggle('hidden', !(isLoggedIn && currentRole === 'office'));
       
       const filtered = navigationMenus.filter(m => {
         const isOfficeUser = isLoggedIn && currentRole === 'office';
@@ -7101,6 +7235,7 @@
       uploadHistoryViewArea.classList.add('hidden');
       document.getElementById('uploadManageViewArea').classList.add('hidden');
       document.getElementById('specialNotesViewArea').classList.add('hidden');
+      document.getElementById('issueSheetViewArea').classList.add('hidden');
       document.getElementById('costViewArea').classList.add('hidden');
       document.getElementById('sectionVehicleViewArea').classList.remove('hidden');
       headerPageTitle.textContent = '구간차량 관리';
@@ -9287,6 +9422,7 @@
       document.getElementById('uploadManageViewArea').classList.add('hidden');
       document.getElementById('sectionVehicleViewArea').classList.add('hidden');
       document.getElementById('specialNotesViewArea').classList.add('hidden');
+      document.getElementById('issueSheetViewArea').classList.add('hidden');
       document.getElementById('costViewArea').classList.remove('hidden');
       headerPageTitle.textContent = '비용관리';
       costState.period = 'm' + (new Date().getMonth() + 1);   // 이번 달 자동 매칭 (변경 가능)
@@ -9308,8 +9444,557 @@
       document.getElementById('uploadManageViewArea').classList.add('hidden');
       document.getElementById('sectionVehicleViewArea').classList.add('hidden');
       document.getElementById('costViewArea').classList.add('hidden');
+      document.getElementById('issueSheetViewArea').classList.add('hidden');
       document.getElementById('specialNotesViewArea').classList.remove('hidden');
+      headerPageTitle.textContent = '매장정보 관리';
+    }
+
+    // ==========================================
+    // [특이사항 관리] 실시간 협업 시트
+    //  - 데이터 : Supabase issue_sheet_rows (누적 관리)
+    //  - 실시간 : Realtime presence(접속자 아바타·선택한 칸) + broadcast(마우스 커서·변경 즉시 반영) + DB 변경 구독
+    //  - 사용자 : 연락처 > 사무실 연락처의 성명 중 선택해야 입력 가능
+    // ==========================================
+    const IS_TABLE = 'issue_sheet_rows';
+    const IS_TYPES = ['파손', '오배송', '누락', '수량 부족', '유통기한', '이물질', '품질 불량', '온도 이탈', '기타'];
+    const IS_STATUS = ['접수', '처리중', '완료'];
+    const IS_STATUS_STYLE = { '접수': 'bg-blue-50 text-[#007AFF]', '처리중': 'bg-amber-50 text-amber-700', '완료': 'bg-emerald-50 text-emerald-700' };
+    const IS_COLS = [
+      { k: 'issue_date', h: '일자', w: 112, type: 'date' },
+      { k: 'store_code', h: '매장코드', w: 100, lookup: 'store' },
+      { k: 'store_name', h: '매장명', w: 150 },
+      { k: 'product_code', h: '제품코드', w: 110, lookup: 'product' },
+      { k: 'product_name', h: '제품명', w: 200 },
+      { k: 'inbound_center', h: '입고센터', w: 90 },
+      { k: 'unit', h: '단위', w: 64 },
+      { k: 'qty', h: '수량', w: 70 },
+      { k: 'issue_type', h: '문제 유형', w: 104, list: true },
+      { k: 'detail', h: '상세 내용', w: 260 },
+      { k: 'action_taken', h: '조치 내용', w: 220 },
+      { k: 'status', h: '상태', w: 84, type: 'status' },
+      { k: 'created_by', h: '작성자', w: 76, ro: true },
+      { k: 'updated_at', h: '최종 수정', w: 132, ro: true }
+    ];
+    const IS_EDIT = IS_COLS.filter(c => !c.ro).map(c => c.k);
+    const IS_COLORS = ['#007AFF', '#FF9500', '#34C759', '#AF52DE', '#FF2D55', '#32ADE6', '#FF3B30', '#5856D6', '#00A86B', '#C68E17'];
+    const IS_USER_KEY = 'issue_sheet_user_v1';
+    const isState = {
+      rows: [], loaded: false, missing: false, q: '', status: 'all', sel: null, edit: null, checked: new Set(), miss: new Set(),
+      me: (() => { try { return localStorage.getItem(IS_USER_KEY) || ''; } catch (e) { return ''; } })(),
+      cid: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      ch: null, dbCh: null, peers: [], cursors: new Map(), users: [], cache: { store: new Map(), product: new Map() }
+    };
+    const isEl = (id) => document.getElementById(id);
+    const isVisible = () => !isEl('issueSheetViewArea').classList.contains('hidden');
+    const isToday = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+    function isColor(name) { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return IS_COLORS[h % IS_COLORS.length]; }
+    function isShort(name) { const n = String(name || '?').trim(); return n.length >= 3 ? n.slice(-2) : n; }
+    function isFmtTs(ts) { if (!ts) return ''; const d = new Date(ts); if (isNaN(d)) return ''; const p = (v) => String(v).padStart(2, '0'); return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+
+    function isRowsView() {
+      const q = isState.q.toLowerCase();
+      return isState.rows.filter(r => (isState.status === 'all' || (r.status || '접수') === isState.status)
+        && (!q || IS_COLS.some(c => String(r[c.k] ?? '').toLowerCase().includes(q))))
+        .sort((a, b) => a.id - b.id);
+    }
+
+    // ---------- 그리기 ----------
+    function isRenderStatic() {
+      isEl('isCols').innerHTML = '<col style="width:64px">' + IS_COLS.map(c => `<col style="width:${c.w}px">`).join('');
+      isEl('isTable').style.width = (64 + IS_COLS.reduce((a, c) => a + c.w, 0)) + 'px';
+      isEl('isHead').innerHTML = `<th class="is-gut"><input type="checkbox" id="isCheckAll" class="w-3.5 h-3.5 align-middle cursor-pointer" title="전체 선택"></th>` + IS_COLS.map(c => `<th title="${svEsc(c.h)}">${svEsc(c.h)}</th>`).join('');
+      isEl('isTypeList').innerHTML = IS_TYPES.map(t => `<option value="${svEsc(t)}">`).join('');
+      isEl('isCheckAll').addEventListener('change', (e) => { isRowsView().forEach(r => { if (e.target.checked) isState.checked.add(r.id); else isState.checked.delete(r.id); }); isRender(); });
+    }
+    function isCellHtml(r, c) {
+      const v = r[c.k];
+      if (c.k === 'updated_at') return svEsc(isFmtTs(v));
+      if (c.type === 'status') { const t = v || '접수'; return `<span class="is-pill ${IS_STATUS_STYLE[t] || 'bg-gray-100 text-gray-600'}">${svEsc(t)}</span>`; }
+      return svEsc(v ?? '');
+    }
+    function isRender() {
+      if (!isEl('isHead').children.length) isRenderStatic();
+      const rows = isRowsView();
+      const cnt = { 접수: 0, 처리중: 0, 완료: 0 };
+      isState.rows.forEach(r => { cnt[r.status || '접수'] = (cnt[r.status || '접수'] || 0) + 1; });
+      isEl('isStatusFilter').innerHTML = [['all', `전체 ${isState.rows.length}`], ...IS_STATUS.map(t => [t, `${t} ${cnt[t] || 0}`])].map(([k, l]) =>
+        `<button type="button" onclick="isState.status='${k}'; isRender()" class="px-2.5 py-1 rounded-lg text-[11.5px] font-bold ${isState.status === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}">${l}</button>`).join('');
+      const people = new Set(isState.peers.map(p => p.name)); if (isState.me) people.add(isState.me);
+      isEl('isMeta').textContent = isState.missing ? '서버 준비 필요' : `총 ${isState.rows.length}건 · 접속 ${people.size}명${isState.me ? ` · 나 : ${isState.me}` : ' · 사용자 선택 전 (보기만 가능)'}`;
+      const body = isEl('isBody');
+      if (!rows.length) {
+        body.innerHTML = `<tr><td colspan="${IS_COLS.length + 1}" class="is-ro" style="height:120px;text-align:center;white-space:normal;cursor:default">${isState.missing ? '서버에 특이사항 표가 아직 없습니다.' : !isState.loaded ? '불러오는 중…' : isState.rows.length ? '조건에 맞는 기록이 없습니다.' : "아직 기록이 없습니다. '행 추가'를 눌러 시작하세요."}</td></tr>`;
+      } else {
+        body.innerHTML = rows.map((r, i) => `<tr data-id="${r.id}" class="${isState.checked.has(r.id) ? 'is-checked' : ''}">
+          <td class="is-gut"><label class="flex items-center justify-center gap-1.5 cursor-pointer"><input type="checkbox" data-is-check="${r.id}" ${isState.checked.has(r.id) ? 'checked' : ''} class="w-3.5 h-3.5"><span class="w-5 text-left">${i + 1}</span></label></td>
+          ${IS_COLS.map(c => {
+            const cls = [c.ro ? 'is-ro' : '', isState.miss.has(r.id + '|' + c.k) ? 'is-miss' : '', isState.sel && isState.sel.id === r.id && isState.sel.col === c.k ? 'is-sel' : ''].filter(Boolean).join(' ');
+            return `<td data-col="${c.k}" class="${cls}" title="${svEsc(String(r[c.k] ?? ''))}">${isCellHtml(r, c)}</td>`;
+          }).join('')}
+        </tr>`).join('');
+      }
+      const all = isEl('isCheckAll');
+      if (all) { const n = rows.filter(r => isState.checked.has(r.id)).length; all.checked = rows.length > 0 && n === rows.length; all.indeterminate = n > 0 && n < rows.length; }
+      isEl('isDelBtn').textContent = isState.checked.size ? `선택 삭제 (${isState.checked.size})` : '선택 삭제';
+      isRenderAvatars();
+      isPlaceEditor();
+      isDrawLayer();
+    }
+    function isTd(id, col) { return document.querySelector(`#isBody tr[data-id="${id}"] td[data-col="${col}"]`); }
+    function isRectIn(td) {
+      const a = td.getBoundingClientRect(), b = isEl('isInner').getBoundingClientRect();
+      return { x: a.left - b.left, y: a.top - b.top, w: a.width, h: a.height };
+    }
+    function isRenderAvatars() {
+      const box = isEl('isAvatars');
+      const by = new Map();
+      isState.peers.forEach(p => { if (p.name && p.name !== isState.me) by.set(p.name, p); });
+      const list = (isState.me ? [{ name: isState.me, me: true }] : []).concat([...by.values()]);
+      const show = list.slice(0, 5);
+      box.innerHTML = show.map(p => `<div class="is-ava ${p.me ? 'is-me' : ''}" style="background:${isColor(p.name)};--c:${isColor(p.name)}" title="${svEsc(p.name)}${p.me ? ' (나)' : ' · 접속 중'}">${svEsc(isShort(p.name))}</div>`).join('')
+        + (list.length > 5 ? `<div class="is-ava" style="background:#8E8E93" title="${svEsc(list.slice(5).map(p => p.name).join(', '))}">+${list.length - 5}</div>` : '');
+      const btn = isEl('isMeBtn');
+      btn.textContent = isState.me ? '사용자 변경' : '사용자 선택';
+      btn.className = 'ios-btn-tap px-3 py-1.5 rounded-xl text-[12px] font-bold whitespace-nowrap ' + (isState.me ? 'bg-gray-100 text-gray-700' : 'bg-[#007AFF] text-white');
+    }
+    // 다른 사용자의 선택 칸 · 마우스 커서
+    function isDrawLayer() {
+      const layer = isEl('isLayer');
+      if (!layer) return;
+      let html = '';
+      isState.peers.forEach(p => {
+        if (!p.sel || !p.name || p.cid === isState.cid) return;
+        const td = isTd(p.sel.id, p.sel.col); if (!td) return;
+        const r = isRectIn(td), c = isColor(p.name);
+        html += `<div class="is-rsel" style="--c:${c};left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px"><span>${svEsc(p.name)}${p.editing ? ' 입력 중' : ''}</span></div>`;
+      });
+      const now = Date.now();
+      isState.cursors.forEach((cu, key) => {
+        if (now - cu.t > 15000 || !isState.peers.some(p => p.cid === key)) { isState.cursors.delete(key); return; }
+        const td = isTd(cu.id, cu.col); if (!td) return;
+        const r = isRectIn(td), c = isColor(cu.name);
+        const x = r.x + r.w * cu.fx, y = r.y + r.h * cu.fy;
+        html += `<div class="is-cur" style="--c:${c};left:${x}px;top:${y}px"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M2 1.5l13 6.2-5.6 1.5-2.4 5.5z" fill="${c}" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg><span>${svEsc(cu.name)}</span></div>`;
+      });
+      layer.innerHTML = html;
+    }
+
+    // ---------- 선택 · 이동 ----------
+    function isSelect(id, col, opts = {}) {
+      isState.sel = { id, col };
+      document.querySelectorAll('#isBody td.is-sel').forEach(t => t.classList.remove('is-sel'));
+      const td = isTd(id, col);
+      if (td) { td.classList.add('is-sel'); if (!opts.noScroll) isEnsureVisible(td); }
+      isTrack();
+    }
+    function isEnsureVisible(td) {
+      const wrap = isEl('isWrap'), r = td.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+      const top = w.top + 36, left = w.left + 64;
+      if (r.top < top) wrap.scrollTop -= top - r.top;
+      else if (r.bottom > w.bottom) wrap.scrollTop += r.bottom - w.bottom;
+      if (r.left < left) wrap.scrollLeft -= left - r.left;
+      else if (r.right > w.right) wrap.scrollLeft += r.right - w.right;
+    }
+    function isMove(dr, dc) {
+      const rows = isRowsView();
+      if (!rows.length) return;
+      if (!isState.sel) { isSelect(rows[0].id, IS_COLS[0].k); return; }
+      let ri = rows.findIndex(r => r.id === isState.sel.id), ci = IS_COLS.findIndex(c => c.k === isState.sel.col);
+      if (ri < 0) ri = 0; if (ci < 0) ci = 0;
+      ri = Math.max(0, Math.min(rows.length - 1, ri + dr));
+      ci = Math.max(0, Math.min(IS_COLS.length - 1, ci + dc));
+      isSelect(rows[ri].id, IS_COLS[ci].k);
+    }
+
+    // ---------- 입력 ----------
+    function isNeedUser() {
+      if (isState.missing) { showIosAutoToast('서버 준비(SQL 실행) 후 입력할 수 있습니다.'); return true; }
+      if (!isState.me) { isOpenUserPicker(); return true; }
+      return false;
+    }
+    function isBeginEdit(initial) {
+      if (!isState.sel || isNeedUser()) return;
+      const col = IS_COLS.find(c => c.k === isState.sel.col);
+      const row = isState.rows.find(r => r.id === isState.sel.id);
+      if (!col || col.ro || !row) return;
+      isCloseEditor(false);
+      let el;
+      if (col.type === 'status') {
+        el = document.createElement('select');
+        el.innerHTML = IS_STATUS.map(t => `<option ${t === (row.status || '접수') ? 'selected' : ''}>${t}</option>`).join('');
+        el.addEventListener('change', () => isCommit(el.value, 'down'));
+      } else {
+        el = document.createElement('input');
+        el.type = col.type === 'date' ? 'date' : 'text';
+        if (col.list) el.setAttribute('list', 'isTypeList');
+        el.value = initial != null ? initial : (row[col.k] ?? '');
+        el.autocomplete = 'off';
+      }
+      el.id = 'isEditor';
+      el.addEventListener('keydown', (e) => {
+        e.stopPropagation();                                      // 시트 단축키로 중복 처리되지 않도록
+        if (e.isComposing || e.keyCode === 229) return;          // 한글 조합 중에는 무시
+        if (e.key === 'Enter') { e.preventDefault(); isCommit(el.value, 'down'); }
+        else if (e.key === 'Tab') { e.preventDefault(); isCommit(el.value, e.shiftKey ? 'left' : 'right'); }
+        else if (e.key === 'Escape') { e.preventDefault(); isCloseEditor(true); }
+      });
+      el.addEventListener('blur', () => { if (isState.edit && isState.edit.el === el) isCommit(el.value, null); });
+      isEl('isInner').appendChild(el);
+      isState.edit = { id: row.id, col: col.k, el, orig: row[col.k] ?? '' };
+      isPlaceEditor();
+      el.focus();
+      if (el.tagName === 'INPUT' && el.type === 'text') { const n = el.value.length; el.setSelectionRange(n, n); }
+      isTrack();
+    }
+    function isPlaceEditor() {
+      const ed = isState.edit; if (!ed) return;
+      const td = isTd(ed.id, ed.col);
+      if (!td) { isCloseEditor(false); return; }
+      const r = isRectIn(td);
+      Object.assign(ed.el.style, { left: r.x + 'px', top: r.y + 'px', width: Math.max(r.w, ed.col === 'detail' || ed.col === 'action_taken' ? 320 : r.w) + 'px', height: r.h + 'px' });
+    }
+    function isCloseEditor(refocus) {
+      const ed = isState.edit; if (!ed) return;
+      isState.edit = null;
+      ed.el.remove();
+      if (refocus) isEl('isWrap').focus({ preventScroll: true });
+      isTrack();
+    }
+    async function isCommit(value, move) {
+      const ed = isState.edit; if (!ed) return;
+      isCloseEditor(true);
+      const v = String(value ?? '').trim();
+      if (v !== String(ed.orig ?? '').trim()) await isSetCell(ed.id, ed.col, v);
+      if (move === 'down') isMove(1, 0); else if (move === 'right') isMove(0, 1); else if (move === 'left') isMove(0, -1);
+    }
+
+    // ---------- 코드 → 이름 자동 채우기 ----------
+    async function isLookupStore(code) {
+      if (!code || !supabaseClient) return null;
+      if (isState.cache.store.has(code)) return isState.cache.store.get(code);
+      let name = '';
+      try {
+        const a = await supabaseClient.from('order_data').select('store_name').eq('store_code', code).order('delivery_date', { ascending: false }).limit(1);
+        name = (a.data && a.data[0] && a.data[0].store_name) || '';
+        if (!name) {
+          const b = await supabaseClient.from('dispatch_data').select('business_name').eq('business_code', code).order('delivery_date', { ascending: false }).limit(1);
+          name = (b.data && b.data[0] && b.data[0].business_name) || '';
+        }
+      } catch (e) { return null; }
+      const res = name ? { store_name: name } : null;
+      isState.cache.store.set(code, res);
+      return res;
+    }
+    async function isLookupProduct(code) {
+      if (!code || !supabaseClient) return null;
+      if (isState.cache.product.has(code)) return isState.cache.product.get(code);
+      let res = null;
+      try {
+        const { data } = await supabaseClient.from('order_data').select('product_name,item_designation,unit').eq('product_code', code).order('delivery_date', { ascending: false }).limit(1);
+        const d = data && data[0];
+        if (d && d.product_name) res = { product_name: d.product_name, inbound_center: inboundCenterLabel(d.item_designation), unit: d.unit || '' };
+      } catch (e) { return null; }
+      isState.cache.product.set(code, res);
+      return res;
+    }
+    async function isWithLookup(row, patch) {
+      for (const c of IS_COLS.filter(x => x.lookup && x.k in patch)) {
+        const code = patch[c.k];
+        isState.miss.delete(row.id + '|' + c.k);
+        if (!code) continue;
+        const found = c.lookup === 'store' ? await isLookupStore(code) : await isLookupProduct(code);
+        if (found) Object.keys(found).forEach(k => { if (!(k in patch) || !patch[k]) patch[k] = found[k]; });
+        else { isState.miss.add(row.id + '|' + c.k); showIosAutoToast(`${c.h} '${code}' 정보를 찾지 못했습니다. 이름을 직접 입력해 주세요.`); }
+      }
+      return patch;
+    }
+
+    // ---------- 저장 (화면 먼저 반영 → 서버 저장 → 다른 사용자에게 즉시 알림) ----------
+    async function isSetCell(id, col, value) { const row = isState.rows.find(r => r.id === id); if (row) await isSaveRow(row, { [col]: value }); }
+    async function isSaveRow(row, patch) {
+      await isWithLookup(row, patch);
+      const before = { ...row };
+      Object.assign(row, patch, { updated_by: isState.me, updated_at: new Date().toISOString() });
+      isRender();
+      const { data, error } = await supabaseClient.from(IS_TABLE).update({ ...patch, updated_by: isState.me, updated_at: row.updated_at }).eq('id', row.id).select().single();
+      if (error) {
+        Object.keys(row).forEach(k => delete row[k]); Object.assign(row, before);
+        isRender();
+        showToastNotification('저장 실패', dbErrorMessage(error), 'warning');
+        return false;
+      }
+      Object.assign(row, data);
+      isRender();
+      isBroadcast('row', { row: data });
+      return true;
+    }
+    async function isAddRow(fields) {
+      if (isNeedUser()) return null;
+      if (isState.status !== 'all' && isState.status !== '접수') isState.status = 'all';
+      const base = { issue_date: isToday(), status: '접수', created_by: isState.me, updated_by: isState.me };
+      const patch = await isWithLookup({ id: 'new' }, { ...base, ...(fields || {}) });
+      const { data, error } = await supabaseClient.from(IS_TABLE).insert(patch).select().single();
+      if (error) { showToastNotification('행 추가 실패', dbErrorMessage(error), 'warning'); return null; }
+      isState.rows.push(data);
+      ['store_code', 'product_code'].forEach(k => { if (isState.miss.has('new|' + k)) { isState.miss.delete('new|' + k); isState.miss.add(data.id + '|' + k); } });
+      isRender();
+      isBroadcast('row', { row: data });
+      if (!fields) { isSelect(data.id, 'store_code'); isBeginEdit(); }
+      return data;
+    }
+    async function isDeleteChecked() {
+      if (isNeedUser()) return;
+      const ids = [...isState.checked].filter(id => isState.rows.some(r => r.id === id));
+      if (!ids.length) { showIosAutoToast('삭제할 행을 왼쪽 체크박스로 선택해 주세요.'); return; }
+      if (!confirm(`선택한 ${ids.length}건을 삭제하시겠습니까? 되돌릴 수 없습니다.`)) return;
+      const { error } = await supabaseClient.from(IS_TABLE).delete().in('id', ids);
+      if (error) { showToastNotification('삭제 실패', dbErrorMessage(error), 'warning'); return; }
+      isState.rows = isState.rows.filter(r => !ids.includes(r.id));
+      isState.checked.clear();
+      if (isState.sel && ids.includes(isState.sel.id)) isState.sel = null;
+      isRender();
+      isBroadcast('del', { ids });
+      showIosAutoToast(`${ids.length}건을 삭제했습니다.`);
+    }
+    // 엑셀에서 복사한 여러 칸 붙여넣기 (선택한 칸부터 오른쪽·아래로, 모자라면 새 행 추가)
+    async function isPaste(text) {
+      if (isNeedUser()) return;
+      const lines = String(text).replace(/\r/g, '').split('\n'); if (lines.length && lines[lines.length - 1] === '') lines.pop();
+      const grid = lines.map(l => l.split('\t')).slice(0, 500);
+      if (!grid.length) return;
+      const rows = isRowsView();
+      let ri = isState.sel ? rows.findIndex(r => r.id === isState.sel.id) : rows.length;
+      if (ri < 0) ri = rows.length;
+      const startCol = Math.max(0, IS_EDIT.indexOf(isState.sel ? isState.sel.col : IS_EDIT[0]));
+      showBusy('붙여넣는 중...');
+      let n = 0;
+      try {
+        for (let i = 0; i < grid.length; i++) {
+          const patch = {};
+          grid[i].forEach((v, j) => { const k = IS_EDIT[startCol + j]; if (k) patch[k] = k === 'status' && !IS_STATUS.includes(v.trim()) ? '접수' : v.trim(); });
+          if (!Object.keys(patch).length) continue;
+          const target = rows[ri + i];
+          if (target) { if (await isSaveRow(target, patch)) n++; }
+          else if (await isAddRow(patch)) n++;
+        }
+      } finally { hideBusy(); }
+      showIosAutoToast(`${n}행을 붙여넣었습니다.`);
+    }
+    function isDownload() {
+      if (typeof XLSX === 'undefined') { showIosAutoToast('엑셀 기능을 불러오지 못했습니다.'); return; }
+      const rows = isRowsView();
+      const aoa = [IS_COLS.map(c => c.h)].concat(rows.map(r => IS_COLS.map(c => c.k === 'updated_at' ? isFmtTs(r[c.k]) : (r[c.k] ?? ''))));
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols'] = IS_COLS.map(c => ({ wch: Math.round(c.w / 7) }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, '특이사항');
+      XLSX.writeFile(wb, `특이사항_${isToday()}.xlsx`);
+    }
+
+    // ---------- 실시간 ----------
+    function isMerge(row) {
+      if (!row || row.id == null) return;
+      const i = isState.rows.findIndex(r => r.id === row.id);
+      if (i < 0) isState.rows.push(row);
+      else if (!isState.rows[i].updated_at || !row.updated_at || row.updated_at >= isState.rows[i].updated_at) isState.rows[i] = { ...isState.rows[i], ...row };
+    }
+    function isBroadcast(event, payload) { if (isState.ch) isState.ch.send({ type: 'broadcast', event, payload }).catch(() => {}); }
+    let isTrackTimer = null;
+    function isTrack() {
+      clearTimeout(isTrackTimer);
+      isTrackTimer = setTimeout(() => {
+        if (!isState.ch || !isState.me) return;
+        isState.ch.track({ cid: isState.cid, name: isState.me, sel: isState.sel, editing: !!isState.edit, at: Date.now() }).catch(() => {});
+      }, 120);
+    }
+    function isSyncPeers() {
+      const st = isState.ch ? isState.ch.presenceState() : {};
+      isState.peers = Object.values(st).map(arr => arr[arr.length - 1]).filter(p => p && p.name);
+      isRender();
+    }
+    function isJoin() {
+      if (!supabaseClient || isState.ch || typeof supabaseClient.channel !== 'function') return;
+      isState.ch = supabaseClient.channel('issue-sheet', { config: { presence: { key: isState.cid }, broadcast: { self: false } } })
+        .on('presence', { event: 'sync' }, isSyncPeers)
+        .on('broadcast', { event: 'cursor' }, ({ payload }) => {
+          if (!payload || payload.cid === isState.cid) return;
+          if (payload.hide) isState.cursors.delete(payload.cid); else isState.cursors.set(payload.cid, { ...payload, t: Date.now() });
+          isDrawLayer();
+        })
+        .on('broadcast', { event: 'row' }, ({ payload }) => { if (payload && payload.row) { isMerge(payload.row); isRender(); } })
+        .on('broadcast', { event: 'del' }, ({ payload }) => { if (payload && payload.ids) { isState.rows = isState.rows.filter(r => !payload.ids.includes(r.id)); isRender(); } })
+        .subscribe((status) => { if (status === 'SUBSCRIBED') isTrack(); });
+      // DB 변경 구독은 별도 채널 (표가 없거나 실시간 등록 전이어도 접속자 표시는 동작하도록)
+      isState.dbCh = supabaseClient.channel('issue-sheet-db')
+        .on('postgres_changes', { event: '*', schema: 'public', table: IS_TABLE }, (pl) => {
+          if (pl.eventType === 'DELETE') { const id = pl.old && pl.old.id; if (id != null) isState.rows = isState.rows.filter(r => r.id !== id); }
+          else isMerge(pl.new);
+          isRender();
+        })
+        .subscribe();
+    }
+    function isLeave() {
+      isCloseEditor(false);
+      [isState.ch, isState.dbCh].forEach(c => { if (c) { try { c.untrack && c.untrack(); } catch (e) {} try { supabaseClient.removeChannel(c); } catch (e) {} } });
+      isState.ch = null; isState.dbCh = null; isState.peers = []; isState.cursors.clear();
+    }
+    let isCursorAt = 0;
+    function isOnMouse(e) {
+      if (!isState.ch || !isState.me || Date.now() - isCursorAt < 45) return;
+      const td = e.target.closest && e.target.closest('#isBody td[data-col]');
+      const tr = td && td.parentElement;
+      if (!td || !tr || !tr.dataset.id) return;
+      const r = td.getBoundingClientRect();
+      isCursorAt = Date.now();
+      isBroadcast('cursor', { cid: isState.cid, name: isState.me, id: +tr.dataset.id, col: td.dataset.col, fx: (e.clientX - r.left) / r.width, fy: (e.clientY - r.top) / r.height });
+    }
+
+    // ---------- 불러오기 ----------
+    async function isLoad() {
+      if (!supabaseClient) { isState.loaded = true; isRender(); return; }
+      const all = [];
+      let err = null;
+      for (let from = 0; from < 20000; from += 1000) {
+        const { data, error } = await supabaseClient.from(IS_TABLE).select('*').order('id').range(from, from + 999);
+        if (error) { err = error; break; }
+        all.push(...(data || []));
+        if (!data || data.length < 1000) break;
+      }
+      isState.missing = !!err && (err.code === 'PGRST205' || err.code === '42P01' || /Could not find the table|does not exist/i.test(err.message || ''));
+      const notice = isEl('isNotice');
+      notice.classList.toggle('hidden', !isState.missing);
+      if (isState.missing) notice.textContent = "특이사항을 저장할 표가 서버에 아직 없습니다. Supabase SQL Editor 에서 '특이사항관리_DB.sql' 을 실행해 주세요. (그 전에는 접속자 표시만 동작합니다)";
+      else if (err) showToastNotification('특이사항 불러오기 실패', dbErrorMessage(err), 'warning');
+      if (!err) isState.rows = all;
+      isState.loaded = true;
+      isRender();
+    }
+
+    // ---------- 사용자 선택 (연락처 > 사무실 연락처의 성명) ----------
+    async function isOpenUserPicker() {
+      const m = isEl('isUserModal');
+      m.classList.remove('opacity-0', 'pointer-events-none'); m.classList.add('opacity-100');
+      isEl('isUserSearch').value = '';
+      isEl('isUserList').innerHTML = '<div class="py-6 text-center text-[13px] text-gray-400">불러오는 중…</div>';
+      try {
+        const { data, error } = await supabaseClient.from('contacts').select('name,role').eq('category', 'office').order('name').limit(1000);
+        if (error) throw error;
+        const seen = new Set();
+        isState.users = (data || []).filter(c => c.name && !seen.has(c.name) && seen.add(c.name));
+      } catch (e) { isState.users = []; }
+      isRenderUserList();
+      setTimeout(() => isEl('isUserSearch').focus(), 120);
+    }
+    function isRenderUserList() {
+      const q = isEl('isUserSearch').value.trim();
+      const list = isState.users.filter(u => !q || u.name.includes(q));
+      isEl('isUserList').innerHTML = !isState.users.length
+        ? '<div class="py-6 text-center text-[13px] text-gray-500 leading-relaxed">사무실 연락처에 등록된 성명이 없습니다.<br>연락처 &gt; 사무실 연락처에서 먼저 추가해 주세요.</div>'
+        : list.map(u => `<button type="button" data-is-user="${svEsc(u.name)}" class="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border ${u.name === isState.me ? 'border-[#007AFF] bg-blue-50/60' : 'border-gray-200/80 bg-white'} text-left active:scale-[0.99] transition-transform">
+            <span class="is-ava flex-none" style="background:${isColor(u.name)};border-color:transparent">${svEsc(isShort(u.name))}</span>
+            <span class="flex-1 min-w-0"><span class="block text-[14px] font-bold text-gray-900 truncate">${svEsc(u.name)}</span>${u.role && u.role !== '-' ? `<span class="block text-[11.5px] text-gray-500 truncate">${svEsc(u.role)}</span>` : ''}</span>
+            ${u.name === isState.me ? '<i class="ph-bold ph-check text-[#007AFF]"></i>' : ''}
+          </button>`).join('') || '<div class="py-6 text-center text-[13px] text-gray-400">검색 결과가 없습니다.</div>';
+    }
+    function isCloseUserPicker() {
+      const m = isEl('isUserModal');
+      m.classList.remove('opacity-100'); m.classList.add('opacity-0', 'pointer-events-none');
+    }
+    isEl('isUserList').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-is-user]'); if (!b) return;
+      isState.me = b.dataset.isUser;
+      try { localStorage.setItem(IS_USER_KEY, isState.me); } catch (er) {}
+      isCloseUserPicker();
+      isTrack();
+      isRender();
+      showIosAutoToast(`${isState.me} 님으로 입력합니다.`);
+    });
+
+    // ---------- 이벤트 ----------
+    isEl('isBody').addEventListener('mousedown', (e) => {
+      const td = e.target.closest('td[data-col]'); const tr = td && td.parentElement;
+      if (!td || !tr || !tr.dataset.id) return;
+      const id = +tr.dataset.id, col = td.dataset.col;
+      const again = isState.sel && isState.sel.id === id && isState.sel.col === col && !isState.edit;
+      if (isState.edit) isCommit(isState.edit.el.value, null);
+      isSelect(id, col, { noScroll: true });
+      if (again) { e.preventDefault(); isBeginEdit(); }
+    });
+    isEl('isBody').addEventListener('dblclick', (e) => { if (e.target.closest('td[data-col]') && !isState.edit) isBeginEdit(); });
+    isEl('isBody').addEventListener('change', (e) => {
+      const cb = e.target.closest('[data-is-check]'); if (!cb) return;
+      const id = +cb.dataset.isCheck;
+      if (cb.checked) isState.checked.add(id); else isState.checked.delete(id);
+      isRender();
+    });
+    isEl('isWrap').setAttribute('tabindex', '0');
+    isEl('isWrap').addEventListener('mousemove', isOnMouse);
+    isEl('isWrap').addEventListener('mouseleave', () => { if (isState.ch && isState.me) isBroadcast('cursor', { cid: isState.cid, hide: true }); });
+    const isModalOpen = () => isEl('isUserModal').classList.contains('opacity-100');
+    const isTyping = () => { const a = document.activeElement; return a && a !== isEl('isWrap') && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.id !== 'isEditor'; };
+    document.addEventListener('keydown', (e) => {
+      if (!isVisible() || isModalOpen() || isState.edit || isTyping()) return;
+      if (e.isComposing) return;
+      const k = e.key;
+      if (k === 'ArrowDown') { e.preventDefault(); isMove(1, 0); }
+      else if (k === 'ArrowUp') { e.preventDefault(); isMove(-1, 0); }
+      else if (k === 'ArrowRight') { e.preventDefault(); isMove(0, 1); }
+      else if (k === 'ArrowLeft') { e.preventDefault(); isMove(0, -1); }
+      else if (k === 'Tab' && isState.sel) { e.preventDefault(); isMove(0, e.shiftKey ? -1 : 1); }
+      else if ((k === 'Enter' || k === 'F2') && isState.sel) { e.preventDefault(); isBeginEdit(); }
+      else if ((k === 'Delete' || k === 'Backspace') && isState.sel) {
+        e.preventDefault();
+        const c = IS_COLS.find(x => x.k === isState.sel.col);
+        if (c && !c.ro && c.type !== 'status' && !isNeedUser()) isSetCell(isState.sel.id, c.k, '');
+      }
+      else if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'c' && isState.sel) {
+        const r = isState.rows.find(x => x.id === isState.sel.id);
+        if (r && navigator.clipboard) navigator.clipboard.writeText(String(r[isState.sel.col] ?? '')).catch(() => {});
+      }
+      else if (k.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && isState.sel) {
+        const c = IS_COLS.find(x => x.k === isState.sel.col);
+        if (c && !c.ro && c.type !== 'status' && c.type !== 'date') { e.preventDefault(); isBeginEdit(k); }
+      }
+    });
+    // 한글 입력 시작 (조합 중인 키는 keydown 으로 잡히지 않음) → 편집 칸을 열고 이어서 입력
+    document.addEventListener('compositionstart', () => {
+      if (!isVisible() || isModalOpen() || isState.edit || isTyping() || !isState.sel) return;
+      const c = IS_COLS.find(x => x.k === isState.sel.col);
+      if (c && !c.ro && c.type !== 'status' && c.type !== 'date') isBeginEdit('');
+    });
+    document.addEventListener('paste', (e) => {
+      if (!isVisible() || isModalOpen() || isState.edit || isTyping()) return;
+      const t = e.clipboardData && e.clipboardData.getData('text');
+      if (!t) return;
+      e.preventDefault();
+      if (t.includes('\t') || t.includes('\n')) isPaste(t);
+      else if (isState.sel && !isNeedUser()) { const c = IS_COLS.find(x => x.k === isState.sel.col); if (c && !c.ro) isSetCell(isState.sel.id, c.k, c.type === 'status' && !IS_STATUS.includes(t.trim()) ? '접수' : t.trim()); }
+    });
+    window.addEventListener('resize', () => { if (isVisible()) { isPlaceEditor(); isDrawLayer(); } });
+    setInterval(() => { if (isVisible() && isState.cursors.size) isDrawLayer(); }, 5000);
+    // 화면을 떠나면 실시간 연결 종료
+    new MutationObserver(() => { if (!isVisible() && isState.ch) isLeave(); }).observe(isEl('issueSheetViewArea'), { attributes: true, attributeFilter: ['class'] });
+
+    function showIssueSheetView() {
+      if (!(isLoggedIn && currentRole === 'office')) {
+        showToastNotification('접근 제한', '사무실 담당자 로그인 후 이용할 수 있습니다.', 'warning');
+        return;
+      }
+      mainScrollArea.classList.add('hidden');
+      homeFooterBar.classList.add('hidden');
+      palletViewArea.classList.add('hidden');
+      contactsViewArea.classList.add('hidden');
+      uploadHistoryViewArea.classList.add('hidden');
+      document.getElementById('uploadManageViewArea').classList.add('hidden');
+      document.getElementById('sectionVehicleViewArea').classList.add('hidden');
+      document.getElementById('costViewArea').classList.add('hidden');
+      document.getElementById('specialNotesViewArea').classList.add('hidden');
+      document.getElementById('issueSheetViewArea').classList.remove('hidden');
       headerPageTitle.textContent = '특이사항 관리';
+      isRender();
+      isLoad();
+      isJoin();
+      if (!isState.me) setTimeout(isOpenUserPicker, 250);
     }
 
     // ==========================================
@@ -9582,8 +10267,12 @@
         setTimeout(() => showCostView(), 200);
         return;
       }
-      if (menuName === '특이사항 관리') {
+      if (menuName === '매장정보 관리') {
         setTimeout(() => showSpecialNotesView(), 200);
+        return;
+      }
+      if (menuName === '특이사항 관리') {
+        setTimeout(() => showIssueSheetView(), 200);
         return;
       }
       if (menuName === '업로드 내역') {
@@ -9719,16 +10408,26 @@
       uploadHistoryViewArea.classList.add('hidden');
       document.getElementById('sectionVehicleViewArea').classList.add('hidden');
       document.getElementById('specialNotesViewArea').classList.add('hidden');
+      document.getElementById('issueSheetViewArea').classList.add('hidden');
       document.getElementById('costViewArea').classList.add('hidden');
       document.getElementById('uploadManageViewArea').classList.remove('hidden');
       headerPageTitle.textContent = '업로드 관리';
     }
     updateSupabaseStatus();
     function switchUploadManageTab(tab) {
-      document.getElementById('tabUploadDispatch').classList.toggle('active', tab === 'dispatch');
-      document.getElementById('tabUploadOrder').classList.toggle('active', tab === 'order');
-      document.getElementById('paneUploadDispatch').classList.toggle('hidden', tab !== 'dispatch');
-      document.getElementById('paneUploadOrder').classList.toggle('hidden', tab !== 'order');
+      [['dispatch', 'Dispatch'], ['order', 'Order'], ['store', 'Store'], ['product', 'Product']].forEach(([k, id]) => {
+        document.getElementById('tabUpload' + id).classList.toggle('active', tab === k);
+        document.getElementById('paneUpload' + id).classList.toggle('hidden', tab !== k);
+      });
+    }
+    // 매장정보 / 제품정보 업로드 : 임시 화면 (저장하지 않음 · 추후 디자인 예정)
+    function uploadTempStats(key) {
+      const t = document.getElementById('upload' + key + 'Textarea').value;
+      const n = t.trim() ? t.trim().split(/\r?\n/).length : 0;
+      document.getElementById('upload' + key + 'Stats').textContent = `${n.toLocaleString()}행 (${t.length.toLocaleString()}자)`;
+    }
+    function uploadTempNotice(title) {
+      showToastNotification(title, '임시 화면입니다. 업로드 내용은 저장되지 않습니다. (추후 디자인 예정)', 'warning');
     }
     function clearUploadText(taId, statId) {
       document.getElementById(taId).value = '';
