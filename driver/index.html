@@ -498,6 +498,14 @@
         .drv-act.is-warn { background: #FFF7ED; color: #C2410C; border: 1px solid #FED7AA; }
         .drv-act.is-start { grid-column: 1 / -1; height: 52px; font-size: 16px; background: var(--drv-primary); color: #fff; box-shadow: 0 8px 18px rgba(0,122,255,.28); }
         .drv-store.is-locked .drv-act.is-arrive:disabled { background: #E5E5EA; color: #AEAEB2; }
+        /* 관리자 보기 (메인 사이트 > 기사님 페이지 탭에서 열림) */
+        .drv-admin-badge { display: none; margin-left: 8px; padding: 3px 8px; border-radius: 6px; background: #111827; color: #fff; font-size: 10px; font-weight: 900; vertical-align: middle; }
+        .drv-admin .drv-admin-badge { display: inline-block; }
+        .drv-admin #drv-exit { display: none; }
+        .drv-admin-row { display: flex; justify-content: flex-end; padding: 0 14px 12px; }
+        .drv-undo { padding: 7px 12px; border-radius: 10px; background: #fff; border: 1px solid #FECACA; color: #DC2626; font-size: 12px; font-weight: 900; }
+        .drv-undo:active { background: #FEF2F2; }
+        .drv-syncoff { padding: 12px 14px; border-radius: var(--drv-btn-radius); background: #FEF2F2; border: 1px solid #FECACA; color: #B91C1C; font-size: 12px; font-weight: 800; line-height: 1.6; word-break: keep-all; }
         .drv-lockmsg { margin: -4px 14px 12px; font-size: 11.5px; font-weight: 800; color: var(--drv-sub); text-align: center; }
 
         /* 입차 및 주의사항 시트 */
@@ -597,7 +605,7 @@
          ===================================================== -->
     <section id="drv-home" class="drv-screen" aria-label="기사 메인">
         <header class="drv-nav drv-glass">
-            <div class="drv-nav-title"><b id="drv-home-name"></b><span id="drv-home-hon">사장님</span></div>
+            <div class="drv-nav-title"><b id="drv-home-name"></b><span id="drv-home-hon">사장님</span><span class="drv-admin-badge">관리자 보기</span></div>
             <button type="button" id="drv-exit" class="drv-exit drv-press">나가기</button>
         </header>
         <main class="drv-home-main">
@@ -787,7 +795,7 @@
         SESSION_KEY: 'drv_session_v1',     // sessionStorage (탭 종료 시 자동 소멸)
         SECTION_VALUE: '구간',             // dispatch_data.vehicle_type 이 이 값이면 센터 출발 카드 표시
         FALLBACK_MAP_URL: 'https://map.naver.com/p/search/',   // TMAP 미설치 시 (v32 openCenterLocation 과 동일)
-        // 서버 기록 (기사전용_DB_마이그레이션_v2.sql 적용 시 모두 저장 · 컬럼/테이블이 없으면 해당 항목만 건너뜀)
+        // 서버 기록 (기사전용_DB_마이그레이션_v3.sql 적용 시 모두 저장 · 컬럼/테이블이 없으면 해당 항목만 건너뜀)
         DB: {
             ORDER_COL: 'route_order',          // dispatch_data : 배송 순서 (1부터)
             LOG_TABLE: 'driver_event_logs',    // 배송 시작 · 매장 도착 · 하차 완료 · 순서 변경 이력
@@ -1872,6 +1880,10 @@
         }
         saveProg();
         partitionDone();
+        S.syncOff = !!(fromServer && !hasDoneCol);          // 서버에 기록 칸이 없으면 기기 간 동기화 불가
+        const sig = JSON.stringify([S.route.map(r => [r.key, r.name, r.address, r.phone]), S.prog, S.isSection, S.center, S.syncOff]);
+        if (silent && sig === S.lastSig) return;
+        S.lastSig = sig;
         $('#drv-home-stores').textContent = `${S.route.length}개 매장`;
         renderHomeStores();
         if (dlLayer.classList.contains('is-open')) renderDispatchList();
@@ -1932,6 +1944,7 @@
         const chev = '<svg class="drv-chev" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7l4.5 4.5L13.5 7"/></svg>';
         let no = 0;
         homeSlot.innerHTML =
+            (S.session && S.session.admin && S.syncOff ? `<div class="drv-syncoff">⚠️ 서버에 진행 기록 칸이 없어 실시간 동기화가 꺼져 있습니다.<br>Supabase 에서 '기사전용_DB_마이그레이션_v3.sql' 을 실행해 주세요.</div>` : '') +
             `<div class="drv-progress-wrap"><div class="drv-stores-head"><h3>배송지 목록 <b>${S.route.length}</b>곳</h3><span>하차 완료 ${doneN} / ${S.route.length}</span></div>
              <div class="drv-prog-bar"><i style="width:${Math.round(doneN / S.route.length * 100)}%"></i></div></div>` +
             insertCenter(S.route.map(r => {
@@ -1950,6 +1963,8 @@
                             : `<button type="button" class="drv-act is-arrive" data-act="arrive"${cur ? '' : ' disabled'}>매장 도착</button>`}
                         <button type="button" class="drv-act is-unload" data-act="unload"${cur && arrived ? '' : ' disabled'}>하차 완료</button>
                     </div>${act === CENTER_KEY && no === 1 ? '<p class="drv-lockmsg">센터에서 배송 시작을 누르면 매장 도착을 기록할 수 있어요</p>' : ''}`;
+                const adminRow = S.session && S.session.admin && (done || arrived)
+                    ? `<div class="drv-admin-row"><button type="button" class="drv-undo" data-act="${done ? 'undo-done' : 'undo-arrive'}">↩ ${done ? '하차 완료 취소' : '도착 취소'}</button></div>` : '';
                 const detail = done ? '' : `<div class="drv-collapse is-pw drv-store-detail"><div><div class="drv-detail-in">${open ? photoHtml(r) : ''}</div></div></div>`;
                 return `
             <div class="drv-card drv-store${done ? ' is-done' : ''}${cur ? ' is-current' : ''}${open ? ' is-open' : ''}${r.key === flashKey ? ' is-flash' : ''}" data-key="${esc(r.key)}">
@@ -1965,6 +1980,7 @@
                 </div>
                 ${tags ? `<div class="drv-store-tags">${tags}</div>` : ''}
                 ${acts}
+                ${adminRow}
                 ${detail}
             </div>`;
             }), act).join('');
@@ -2013,6 +2029,7 @@
         const c = S.center || { name: '출발 센터', address: '' };
         const st = S.prog[CENTER_KEY] || {};
         const started = !!st.s, cur = act === CENTER_KEY;
+        const undoStart = S.session && S.session.admin ? '<div class="drv-admin-row"><button type="button" class="drv-undo" data-act="undo-start">↩ 배송 시작 취소</button></div>' : '';
         const html = `
             <div class="drv-card drv-store drv-center${started ? ' is-done' : ''}${cur ? ' is-current' : ''}" data-key="${CENTER_KEY}">
                 <div class="drv-center-top">
@@ -2024,7 +2041,7 @@
                     </div>
                 </div>
                 ${!started && c.departTime ? `<div class="drv-store-tags"><span class="drv-tag is-arr">🕑 출발 예정 ${esc(c.departTime)}</span></div>` : ''}
-                ${started ? `<div class="drv-store-tags"><span class="drv-tag is-fin">🚚 배송 시작 ${esc(st.s)}</span></div>` : `
+                ${started ? `<div class="drv-store-tags"><span class="drv-tag is-fin">🚚 배송 시작 ${esc(st.s)}</span></div>${undoStart}` : `
                 <div class="drv-center-acts">
                     <button type="button" class="drv-act is-sub is-warn" data-act="notice">⚠️ 입차 및 주의사항</button>
                     <button type="button" class="drv-act is-sub" data-act="nav">🧭 센터 위치 확인</button>
@@ -2184,6 +2201,7 @@
 
     function logEvent(type, r, ts, payload) {
         if (!S.session) return;
+        if (S.session.admin) payload = Object.assign({}, payload, { by: 'admin' });   // 관리자가 대신 처리한 기록
         enqueue({ kind: 'log', row: {
             delivery_date: S.latestDate || null,
             driver_name: S.session.name,
@@ -2362,7 +2380,9 @@
         document.dispatchEvent(new CustomEvent('drv:unload', { detail: { code: r.code, name: r.name, time: hm } }));
 
         const remain = S.route.filter(x => !isDone(x)).length;
-        if (remain === 0) {
+        if (remain === 0 && S.session.admin) {
+            toast(`✅ ${r.name} 하차 완료 · 전체 완료`, 'green');
+        } else if (remain === 0) {
             await sleep(650);
             await iosAlert({ icon: '🙏', title: '모든 배송이 완료되었습니다', message: '발송된 카카오톡 배송승인 부탁드립니다.\n감사합니다', buttons: [{ text: '확인', style: 'bold', value: true }] });
         } else {
@@ -2379,6 +2399,7 @@
         const act = e.target.closest('[data-act]');
         if (act) {
             const a = act.dataset.act;
+            if (a.startsWith('undo-')) { adminUndo(a, card.dataset.key); return; }
             if (a === 'arrive') markArrive(card.dataset.key);
             else if (a === 'unload') markUnload(card.dataset.key);
             else if (a === 'start') startDelivery();
@@ -2771,7 +2792,7 @@
 
     /* ---------- 세션 유지시간 (v32 driverTimeout) ---------- */
     function isExpired() {
-        return S.session && (Date.now() - S.session.loginTs > S.settings.driverTimeout * 60 * 1000);
+        return S.session && !S.session.admin && (Date.now() - S.session.loginTs > S.settings.driverTimeout * 60 * 1000);
     }
     let timeoutShowing = false;
     async function handleTimeout() {
@@ -2784,14 +2805,14 @@
     document.addEventListener('click', e => {
         if (!S.session || S.alertOpen) return;
         if (isExpired()) { e.preventDefault(); e.stopPropagation(); handleTimeout(); return; }
-        if (CONFIG.AGREEMENT_POLICY === 'daily' && S.session.agreedKey !== resetKey()) { e.preventDefault(); e.stopPropagation(); checkAgreementCycle(); }
+        if (!S.session.admin && CONFIG.AGREEMENT_POLICY === 'daily' && S.session.agreedKey !== resetKey()) { e.preventDefault(); e.stopPropagation(); checkAgreementCycle(); }
     }, true);
     setInterval(() => { if (isExpired()) handleTimeout(); else checkAgreementCycle(); }, 30000);
 
     // 로그인 상태에서 19:00 가 지나면 사용 동의서 재서명 필요 → 로그아웃 후 재로그인·서명
     let cycleShowing = false;
     async function checkAgreementCycle() {
-        if (!S.session || cycleShowing || CONFIG.AGREEMENT_POLICY !== 'daily') return false;
+        if (!S.session || S.session.admin || cycleShowing || CONFIG.AGREEMENT_POLICY !== 'daily') return false;
         if (S.session.agreedKey === resetKey()) return false;
         cycleShowing = true;
         const name = S.session.name;
@@ -2847,6 +2868,77 @@
     /* =========================================================
        시작
        ========================================================= */
+    /* =========================================================
+       9) 관리자 보기 : 메인 사이트(사무실 로그인) 안의 미리보기에서만 열림
+          - driver/?admin=1&name=기사명  +  부모 창이 사무실 로그인 상태임을 확인해 줘야 진입
+          - 기사 휴대폰과 같은 서버 기록을 보고/쓰므로 양쪽이 실시간으로 맞춰짐
+       ========================================================= */
+    const QS = new URLSearchParams(location.search);
+    const ADMIN_REQ = QS.get('admin') === '1' && window.parent !== window;
+    function adminHandshake() {
+        return new Promise(res => {
+            let done = false;
+            const h = e => {
+                if (e.source !== window.parent || e.origin !== location.origin || !e.data || e.data.type !== 'drv:admin-ok') return;
+                done = true; window.removeEventListener('message', h); res(!!e.data.ok);
+            };
+            window.addEventListener('message', h);
+            try { window.parent.postMessage({ type: 'drv:admin-hello' }, location.origin); } catch (e) {}
+            setTimeout(() => { if (!done) { window.removeEventListener('message', h); res(false); } }, 2000);
+        });
+    }
+    async function enterAdmin(name) {
+        const d = S.drivers.find(x => x.name === name);
+        if (!S.live || !d) {
+            await iosAlert({ icon: '⚠️', title: '기사 화면을 열 수 없습니다', message: !S.live ? '서버에 연결하지 못했습니다.' : `'${name || ''}' 기사님의 최신 배차가 없습니다.` });
+            return;
+        }
+        S.session = { name: d.name, car4: d.car4, carFull: d.carFull, stores: d.stores, loginTs: Date.now(), agreedKey: resetKey(), signedAt: '', demo: false, admin: true };
+        renderHome();
+        showScreen('drv-home');
+        getSavedAgreement(d.name).then(rec => {
+            const box = $('.drv-signed');
+            if (!box || !S.session) return;
+            const ok = isValidRecord(rec);
+            box.textContent = ok ? `✅ 보안서약 완료 ${rec.signedAt || ''}` : '⏳ 오늘 보안서약 서명 전 (또는 서명 기록이 서버에 없음)';
+            if (!ok) { box.style.background = '#FFF7ED'; box.style.borderColor = '#FED7AA'; box.style.color = '#C2410C'; }
+        });
+    }
+    async function adminUndo(kind, key) {
+        if (!S.session || !S.session.admin) return;
+        const r = kind === 'undo-start' ? null : S.route.find(x => x.key === key);
+        if (kind !== 'undo-start' && !r) return;
+        const what = kind === 'undo-start' ? '배송 시작' : (kind === 'undo-done' ? '하차 완료' : '매장 도착');
+        const ok = await iosAlert({ title: `${what} 취소`, message: `${r ? r.name + '\n' : ''}${what} 기록을 취소하시겠습니까?\n기사님 화면에도 바로 반영됩니다.`, buttons: [{ text: '닫기', value: false }, { text: '기록 취소', style: 'danger', value: true }] });
+        if (!ok || !S.session) return;
+        if (kind === 'undo-start') {
+            delete S.prog[CENTER_KEY];
+            const ids = S.routeOrig.reduce((a, x) => a.concat(x.ids || []), []);
+            enqueue({ kind: 'update', ids, patch: { started_at: null, started_ts: null }, dedupe: 'start' });
+        } else {
+            const p = Object.assign({}, prog(r));
+            if (kind === 'undo-done') { delete p.d; delete p.dTs; enqueue({ kind: 'update', ids: r.ids, patch: { is_completed: false, completed_at: null, completed_ts: null } }); }
+            else { delete p.a; delete p.aTs; enqueue({ kind: 'update', ids: r.ids, patch: { arrived_at: null, arrived_ts: null } }); }
+            if (p.a || p.d) S.prog[key] = p; else delete S.prog[key];
+        }
+        logEvent('undo', r, Date.now(), { what: kind.replace('undo-', '') });
+        partitionDone();
+        saveProg();
+        S.lastSig = null;
+        renderHomeStores();
+        if (dlLayer.classList.contains('is-open')) renderDispatchList();
+        toast(`↩ ${what} 기록을 취소했습니다`);
+    }
+    // 실시간 구독이 꺼져 있어도 맞춰지도록 주기적으로 서버 상태 확인 (관리자 5초 · 기사 10초)
+    let pollN = 0;
+    setInterval(() => {
+        pollN++;
+        if (!S.session || S.session.demo || !S.live || document.visibilityState !== 'visible') return;
+        if (!S.session.admin && pollN % 2) return;
+        if (S.alertOpen || dlList.classList.contains('is-sorting') || flushing || outboxLoad().length) return;
+        loadRoute(true);
+    }, 5000);
+
     /* ---------- 로그인 상자 위치 고정 ---------- */
     let frozenW = 0;
     function freezeLoginTop(force) {
@@ -2862,6 +2954,15 @@
 
     (async function boot() {
         renderList();
+        if (ADMIN_REQ && await adminHandshake()) {
+            document.documentElement.classList.add('drv-admin');
+            showHUD('기사 화면을 불러오는 중');
+            await loadAll();
+            hideHUD();
+            await enterAdmin(QS.get('name'));
+            flushOutbox();
+            return;
+        }
         showHUD('배차 정보를 불러오는 중');
         await loadAll();
         hideHUD();

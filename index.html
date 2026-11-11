@@ -752,34 +752,54 @@
         <span class="mt-3 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-full">준비 중</span>
       </div>
 
-      <!-- ============ 구간차량 관리 > 기사님 페이지 (driver/index.html 연결) ============ -->
+      <!-- ============ 구간차량 관리 > 기사님 페이지 (기사 실시간 현황 + 기사 화면 관리자 보기) ============ -->
       <div id="svDriverPane" class="hidden space-y-3">
         <section class="bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
-          <div class="flex items-center space-x-2.5 pb-3 mb-3 border-b border-gray-100 min-w-0">
-            <div class="w-9 h-9 rounded-xl bg-blue-50 text-[#007AFF] flex items-center justify-center flex-none"><i class="ph-bold ph-user text-lg"></i></div>
-            <div class="min-w-0">
-              <h3 class="text-[15px] font-bold text-gray-900 tracking-tight">기사님 페이지</h3>
-              <p class="text-[12px] text-gray-500">기사님들께는 아래 주소만 공유하세요. 이름 검색 화면부터 열립니다.</p>
+          <div class="flex items-center gap-2 min-w-0">
+            <div class="w-9 h-9 rounded-xl bg-blue-50 text-[#007AFF] flex items-center justify-center flex-none"><i class="ph-bold ph-link text-lg"></i></div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[11px] font-bold text-gray-500">기사님 공유 주소 (이름 검색 화면부터 열립니다)</p>
+              <p id="svDriverUrl" class="truncate text-[13px] font-semibold text-gray-800 select-all"></p>
             </div>
-          </div>
-          <div class="flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2.5 min-w-0">
-            <i class="ph-bold ph-link text-gray-500 flex-none"></i>
-            <span id="svDriverUrl" class="flex-1 min-w-0 truncate text-[13px] font-semibold text-gray-800 select-all"></span>
-          </div>
-          <div class="grid grid-cols-2 gap-2 mt-3">
-            <button type="button" onclick="svOpenDriverPage()" class="py-3 rounded-xl bg-[#007AFF] text-white text-[14px] font-bold active:scale-[0.97] transition-transform flex items-center justify-center gap-1.5"><i class="ph-bold ph-arrow-square-out"></i>새 창으로 열기</button>
-            <button type="button" onclick="svCopyDriverUrl()" class="py-3 rounded-xl bg-gray-100 text-gray-800 text-[14px] font-bold active:scale-[0.97] transition-transform flex items-center justify-center gap-1.5"><i class="ph-bold ph-copy"></i>주소 복사</button>
+            <button type="button" onclick="svCopyDriverUrl()" class="flex-none px-3 py-2 rounded-xl bg-gray-100 text-gray-800 text-[12px] font-bold active:scale-[0.97] transition-transform">복사</button>
+            <button type="button" onclick="svOpenDriverPage()" class="flex-none px-3 py-2 rounded-xl bg-[#007AFF] text-white text-[12px] font-bold active:scale-[0.97] transition-transform">열기</button>
           </div>
         </section>
-        <section class="bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-[14px] font-bold text-gray-900">휴대폰 화면 미리보기</h3>
-            <button type="button" onclick="svReloadDriverPreview()" class="text-[12px] font-bold text-[#007AFF] px-2 py-1 rounded-lg bg-blue-50">새로고침</button>
-          </div>
-          <div class="mx-auto w-full max-w-[390px] h-[720px] rounded-[36px] border-[10px] border-gray-900 overflow-hidden bg-[#F2F2F7] shadow-xl">
-            <iframe id="svDriverFrame" title="기사님 페이지 미리보기" class="w-full h-full border-0" loading="lazy"></iframe>
-          </div>
-        </section>
+
+        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_410px] gap-3 items-start">
+          <!-- 기사 실시간 현황 -->
+          <section class="bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4 min-w-0">
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <div class="min-w-0">
+                <h3 class="text-[15px] font-bold text-gray-900 tracking-tight">기사 실시간 현황</h3>
+                <p id="svDrvMeta" class="text-[11.5px] text-gray-500 truncate">불러오는 중…</p>
+              </div>
+              <button type="button" onclick="svDrvLoad(true)" class="flex-none text-[12px] font-bold text-[#007AFF] px-2.5 py-1.5 rounded-lg bg-blue-50">새로고침</button>
+            </div>
+            <div id="svDrvNotice" class="hidden mb-3 px-3 py-2.5 rounded-xl bg-rose-50 border border-rose-200 text-[12px] font-semibold text-rose-700 leading-relaxed"></div>
+            <input id="svDrvSearch" type="search" oninput="svDrvQuery = this.value.trim(); svDrvRender()" placeholder="기사명 · 차량번호 검색" class="w-full mb-3 px-3 py-2.5 rounded-xl bg-gray-100 text-[14px] font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-blue-200">
+            <div id="svDrvList" class="space-y-2 max-h-[690px] overflow-y-auto no-scrollbar"></div>
+          </section>
+
+          <!-- 선택한 기사 화면 (관리자 보기 · 기사 휴대폰과 실시간 동기화) -->
+          <section class="bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <div class="min-w-0">
+                <h3 id="svDrvPhoneTitle" class="text-[14px] font-bold text-gray-900 truncate">기사 화면</h3>
+                <p class="text-[11px] text-gray-500">여기서 누른 내용은 기사님 휴대폰에 바로 반영됩니다</p>
+              </div>
+              <button type="button" onclick="svReloadDriverPreview()" class="flex-none text-[12px] font-bold text-[#007AFF] px-2.5 py-1.5 rounded-lg bg-blue-50">다시 열기</button>
+            </div>
+            <div class="relative mx-auto w-full max-w-[390px] h-[720px] rounded-[36px] border-[10px] border-gray-900 overflow-hidden bg-[#F2F2F7] shadow-xl">
+              <div id="svDrvPhoneEmpty" class="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+                <i class="ph-bold ph-hand-tap text-4xl text-gray-300 mb-2"></i>
+                <p class="text-[14px] font-bold text-gray-500">왼쪽에서 기사님을 선택하세요</p>
+                <p class="text-[12px] text-gray-400 mt-1">그 기사님이 보고 있는 화면이 그대로 열립니다</p>
+              </div>
+              <iframe id="svDriverFrame" title="기사 화면 관리자 보기" class="hidden w-full h-full border-0"></iframe>
+            </div>
+          </section>
+        </div>
       </div>
 
       <!-- ============ 구간차량 관리 > 홈화면 ============ -->
@@ -6924,15 +6944,122 @@
       if (isDriverTab) svInitDriverPane();
     }
 
-    // ---------- 구간차량 관리 > 기사님 페이지 : driver/index.html (기사 전용 페이지) ----------
+    // ---------- 구간차량 관리 > 기사님 페이지 : 기사 실시간 현황 + 기사 화면 관리자 보기 (driver/index.html) ----------
     const SV_DRIVER_PATH = 'driver/';
+    let svDrvList = [], svDrvSelected = '', svDrvQuery = '', svDrvDate = '', svDrvTimer = null, svDrvBusy = false;
     function svDriverUrl() { return new URL(SV_DRIVER_PATH, location.href).href; }
     function svInitDriverPane() {
       document.getElementById('svDriverUrl').textContent = svDriverUrl();
-      const f = document.getElementById('svDriverFrame');
-      if (!f.getAttribute('src')) f.setAttribute('src', SV_DRIVER_PATH);
+      svDrvLoad(true);
+      if (!svDrvTimer) svDrvTimer = setInterval(() => {      // 탭이 보이는 동안 6초마다 현황 갱신
+        const pane = document.getElementById('svDriverPane');
+        if (currentSectionTab === 'driver' && pane && pane.offsetParent !== null && document.visibilityState === 'visible') svDrvLoad(false);
+      }, 6000);
     }
-    function svReloadDriverPreview() { document.getElementById('svDriverFrame').setAttribute('src', SV_DRIVER_PATH + '?t=' + Date.now()); }
+    // driver/index.html 이 '관리자 보기'로 열려도 되는지 확인 요청 → 사무실 로그인 상태일 때만 허용
+    window.addEventListener('message', (e) => {
+      if (e.origin !== location.origin || !e.data || e.data.type !== 'drv:admin-hello') return;
+      const frame = document.getElementById('svDriverFrame');
+      if (!frame || e.source !== frame.contentWindow) return;
+      e.source.postMessage({ type: 'drv:admin-ok', ok: !!(isLoggedIn && currentRole === 'office') }, location.origin);
+    });
+    async function svDrvLoad(showError) {
+      if (svDrvBusy) return;
+      const meta = document.getElementById('svDrvMeta');
+      if (!supabaseClient) { meta.textContent = 'Supabase 미연결'; svDrvList = []; svDrvRender(); return; }
+      svDrvBusy = true;
+      try {
+        const latest = await supabaseClient.from('dispatch_data').select('delivery_date').order('delivery_date', { ascending: false }).limit(1);
+        if (latest.error) throw latest.error;
+        svDrvDate = (latest.data && latest.data[0] && latest.data[0].delivery_date) || '';
+        const all = [];
+        if (svDrvDate) {
+          for (let from = 0; from < 50000; from += 1000) {
+            const { data, error } = await supabaseClient.from('dispatch_data').select('*').eq('delivery_date', svDrvDate).order('id').range(from, from + 999);
+            if (error) throw error;
+            all.push(...(data || []));
+            if (!data || data.length < 1000) break;
+          }
+        }
+        // 같은 날 재업로드 : (센터, 매장코드) 최신 행만 (구간차량 관리 홈화면과 동일 규칙)
+        const latestBy = new Map();
+        all.forEach(r => latestBy.set((r.center_name || r.center_code || '') + '|' + r.business_code, r));
+        const byDriver = new Map();
+        [...latestBy.values()].sort((a, b) => a.id - b.id).forEach(r => {
+          const name = (r.driver_name || '').trim();
+          if (!name || !r.vehicle_no) return;
+          if (!byDriver.has(name)) byDriver.set(name, { name, vehicleNo: r.vehicle_no || '', phone: r.driver_phone || '', center: r.center_name || r.center_code || '', vehicleType: r.vehicle_type || '', stores: new Map(), started: '' });
+          const d = byDriver.get(name);
+          if (r.started_at && !d.started) d.started = r.started_at;
+          const key = r.business_code || ('id' + r.id);
+          const st = d.stores.get(key) || { name: r.business_name || key, done: false, arrived: false };
+          if (r.is_completed) st.done = true;
+          if (r.arrived_at || r.arrived_ts) st.arrived = true;
+          d.stores.set(key, st);
+        });
+        svDrvList = [...byDriver.values()].map(d => {
+          const stores = [...d.stores.values()];
+          const done = stores.filter(x => x.done).length;
+          const at = stores.find(x => x.arrived && !x.done);
+          return { name: d.name, vehicleNo: d.vehicleNo, phone: d.phone, center: d.center, vehicleType: d.vehicleType, total: stores.length, done, started: d.started, atStore: at ? at.name : '' };
+        }).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+        const notice = document.getElementById('svDrvNotice');
+        const noCols = all.length > 0 && !('is_completed' in all[0]);
+        notice.classList.toggle('hidden', !noCols);
+        if (noCols) notice.textContent = '서버에 진행 기록 칸이 아직 없어 실시간 동기화가 꺼져 있습니다. Supabase SQL Editor 에서 기사전용_DB_마이그레이션_v3.sql 을 실행하면 바로 켜집니다.';
+        const now = new Date();
+        meta.textContent = svDrvDate ? `배송일 ${svDrvDate} · 기사 ${svDrvList.length}명 · ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} 갱신` : '업로드된 배차가 없습니다';
+      } catch (err) {
+        console.warn('기사 현황 조회 실패', err);
+        if (showError) meta.textContent = '현황을 불러오지 못했습니다';
+      } finally { svDrvBusy = false; }
+      svDrvRender();
+    }
+    function svDrvRender() {
+      const box = document.getElementById('svDrvList');
+      if (!box) return;
+      const q = svDrvQuery.toLowerCase();
+      const rows = svDrvList.filter(d => !q || d.name.toLowerCase().includes(q) || String(d.vehicleNo).toLowerCase().includes(q));
+      if (!rows.length) { box.innerHTML = `<div class="py-8 text-center text-[13px] text-gray-400">${svDrvList.length ? '검색 결과가 없습니다.' : '표시할 기사님이 없습니다.'}</div>`; return; }
+      box.innerHTML = rows.map(d => {
+        const allDone = d.total > 0 && d.done === d.total;
+        const working = !allDone && (d.done > 0 || d.started || d.atStore);
+        const chip = allDone ? ['완료', 'bg-emerald-50 text-emerald-700 border-emerald-200'] : working ? ['배송 중', 'bg-blue-50 text-[#007AFF] border-blue-200'] : ['대기', 'bg-gray-100 text-gray-500 border-gray-200'];
+        const sub = d.atStore ? `${svEsc(d.atStore)} 도착 · 하차 중` : d.started ? svEsc(d.started) : (d.vehicleType === '구간' ? '센터 출발 전' : '시작 전');
+        const pct = d.total ? Math.round(d.done / d.total * 100) : 0;
+        const sel = d.name === svDrvSelected;
+        return `<button type="button" data-drv-name="${svEsc(d.name)}" class="w-full text-left rounded-2xl border ${sel ? 'border-[#007AFF] bg-blue-50/60' : 'border-gray-200/80 bg-white'} px-3.5 py-3 active:scale-[0.99] transition-transform">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="flex-none w-9 h-9 rounded-full bg-blue-50 text-[#007AFF] font-black flex items-center justify-center">${svEsc(d.name.charAt(0))}</span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5 min-w-0"><span class="text-[15px] font-bold text-gray-900 truncate">${svEsc(d.name)}</span>${d.vehicleType === '구간' ? '<span class="flex-none text-[10px] font-bold text-white bg-gray-800 px-1.5 py-0.5 rounded">구간</span>' : ''}</div>
+              <div class="text-[11.5px] text-gray-500 truncate">${svEsc(d.vehicleNo)}${d.center ? ' · ' + svEsc(d.center) : ''}</div>
+            </div>
+            <div class="flex-none text-right">
+              <span class="inline-block text-[11px] font-bold border px-2 py-0.5 rounded-full ${chip[1]}">${chip[0]}</span>
+              <div class="text-[12px] font-bold text-gray-700 mt-0.5">${d.done} / ${d.total}</div>
+            </div>
+          </div>
+          <div class="mt-2 h-1.5 rounded-full bg-gray-100 overflow-hidden"><div class="h-full bg-emerald-500 rounded-full" style="width:${pct}%"></div></div>
+          <div class="mt-1.5 text-[11.5px] font-semibold ${d.atStore ? 'text-[#007AFF]' : 'text-gray-400'} truncate">${sub}</div>
+        </button>`;
+      }).join('');
+    }
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('#svDrvList [data-drv-name]');
+      if (b) svDrvSelect(b.dataset.drvName);
+    });
+    function svDrvSelect(name) {
+      if (!(isLoggedIn && currentRole === 'office')) { showToastNotification('접근 제한', '사무실 담당자 로그인 후 이용할 수 있습니다.', 'warning'); return; }
+      svDrvSelected = name;
+      document.getElementById('svDrvPhoneTitle').textContent = `${name} 기사님 화면`;
+      document.getElementById('svDrvPhoneEmpty').classList.add('hidden');
+      const f = document.getElementById('svDriverFrame');
+      f.classList.remove('hidden');
+      f.setAttribute('src', SV_DRIVER_PATH + '?admin=1&name=' + encodeURIComponent(name) + '&t=' + Date.now());
+      svDrvRender();
+    }
+    function svReloadDriverPreview() { if (svDrvSelected) svDrvSelect(svDrvSelected); }
     function svOpenDriverPage() { window.open(svDriverUrl(), '_blank', 'noopener'); }
     async function svCopyDriverUrl() {
       const url = svDriverUrl();
