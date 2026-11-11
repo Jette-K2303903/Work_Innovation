@@ -1154,7 +1154,7 @@
           <button type="button" id="isMeBtn" onclick="isOpenUserPicker()" class="ios-btn-tap px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-[12px] font-bold whitespace-nowrap">사용자 선택</button>
           <button type="button" id="isChatBtn" onclick="isTogglePanel('chat')" class="ios-btn-tap relative px-3 py-1.5 rounded-xl text-[12px] font-bold whitespace-nowrap flex items-center gap-1"><i class="ph-bold ph-chats-circle text-sm"></i>채팅<span id="isChatBadge" class="hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#FF3B30] text-white text-[10.5px] font-extrabold leading-[18px] text-center shadow"></span></button>
           <button type="button" id="isLogBtn" onclick="isTogglePanel('log')" class="ios-btn-tap px-3 py-1.5 rounded-xl text-[12px] font-bold whitespace-nowrap flex items-center gap-1"><i class="ph-bold ph-clock-counter-clockwise text-sm"></i>수정 기록</button>
-          <button type="button" id="ibBtn" onclick="ibToggle()" class="ios-btn-tap px-3 py-1.5 rounded-xl text-[12px] font-bold whitespace-nowrap flex items-center gap-1 bg-gradient-to-r from-[#5856D6] to-[#AF52DE] text-white shadow-sm"><i class="ph-fill ph-robot text-sm"></i>등록 도우미</button>
+          <button type="button" id="ibBtn" onclick="ibToggle()" class="ios-btn-tap pl-1.5 pr-3 py-1 rounded-xl text-[12px] font-bold whitespace-nowrap flex items-center gap-1.5 bg-[#FFE7D1] text-[#263553] border border-[#F6C9A3]"><img src="assets/ttaettae-icon.svg" alt="" aria-hidden="true" class="w-6 h-6 rounded-full">때때</button>
         </div>
       </div>
       <div id="isNotice" class="hidden mb-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[12px] font-semibold text-amber-800 leading-relaxed"></div>
@@ -1231,8 +1231,8 @@
     <!-- [특이사항 관리 : 등록 도우미 챗봇 (외부 AI 없이 사이트 안에서 동작)] -->
     <div id="ibPanel" class="hidden fixed right-4 bottom-4 z-[47] w-[370px] h-[560px] max-h-[calc(100vh-32px)] bg-white rounded-[24px] border border-gray-200 shadow-2xl flex flex-col overflow-hidden max-md:inset-0 max-md:w-auto max-md:h-auto max-md:max-h-none max-md:rounded-none">
       <div class="flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-[#5856D6] to-[#AF52DE] text-white flex-none">
-        <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center"><i class="ph-fill ph-robot text-lg"></i></div>
-        <div class="min-w-0 flex-1"><h4 class="text-[14.5px] font-bold">특이사항 등록 도우미</h4><p class="text-[11px] text-white/80 truncate">사진은 때때가 보고, 설명하면 자동으로 등록해요</p></div>
+        <img src="assets/ttaettae-icon.svg" alt="" aria-hidden="true" class="w-9 h-9 rounded-full ring-2 ring-white/40 flex-none">
+        <div class="min-w-0 flex-1"><h4 class="text-[16px] font-bold">때때</h4></div>
         <button type="button" onclick="ibReset()" class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center" title="처음부터"><i class="ph-bold ph-arrow-counter-clockwise text-xs"></i></button>
         <button type="button" onclick="ibToggle(false)" class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center" title="닫기"><i class="ph-bold ph-x text-xs"></i></button>
       </div>
@@ -1253,7 +1253,7 @@
       <div class="bg-white rounded-[28px] w-full max-w-sm p-5 shadow-2xl border border-gray-100">
         <div class="flex items-center gap-2.5 pb-3 border-b border-gray-100">
           <div class="w-8 h-8 rounded-xl bg-purple-50 text-[#5856D6] flex items-center justify-center"><i class="ph-bold ph-gear-six text-lg"></i></div>
-          <div class="min-w-0"><h3 class="text-[17px] font-bold text-gray-900 tracking-tight">특이사항 관리 설정</h3><p class="text-[11px] text-gray-500">등록 도우미의 사진 판단(때때) 연결</p></div>
+          <div class="min-w-0"><h3 class="text-[17px] font-bold text-gray-900 tracking-tight">특이사항 관리 설정</h3><p class="text-[11px] text-gray-500">때때 사진 판단 연결</p></div>
         </div>
         <label class="block mt-3 text-[12px] font-semibold text-gray-600">때때 두뇌 주소</label>
         <input type="url" id="ibSetUrl" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[13px] font-mono border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-purple-200">
@@ -11250,7 +11250,7 @@
     }
     function ibReset() { ib.draft = null; ib.pending = null; ib.msgs = []; ibWelcome(); ibRenderChips(); }
     function ibWelcome() {
-      ibBot(`안녕하세요${isState.me ? ` ${svEsc(isState.me)}님` : ''}! <b>제품 사진을 복사해서 Ctrl+V</b> 해 주세요. 때때가 문제 유형을 보고, 거래처·제품을 말씀해 주시면 바로 등록해요. 사진 없이 문장으로만 등록해도 돼요.
+      ibBot(`안녕하세요${isState.me ? ` ${svEsc(isState.me)}님` : ''}, 때때예요! <b>제품 사진을 복사해서 Ctrl+V</b> 해 주세요. 때때가 문제 유형을 보고, 거래처·제품을 말씀해 주시면 바로 등록해요. 사진 없이 문장으로만 등록해도 돼요.
         <div class="mt-2 space-y-1 text-[12px] text-gray-600">
           <div>· <b>부산광안 김치 필라프 파손 2개</b></div>
           <div>· <b>내일 200577 P1 누락 3박스 귀책 센터</b></div>
@@ -11264,7 +11264,7 @@
       const list = ibEl('ibList');
       list.innerHTML = ib.msgs.map(m => m.who === 'me'
         ? `<div class="flex justify-end"><div class="max-w-[82%] px-3 py-2 rounded-2xl rounded-tr-md bg-[#5856D6] text-white text-[13px] leading-snug break-words">${m.html}</div></div>`
-        : `<div class="flex gap-2"><span class="w-7 h-7 flex-none rounded-full bg-gradient-to-br from-[#5856D6] to-[#AF52DE] text-white flex items-center justify-center"><i class="ph-fill ph-robot text-sm"></i></span><div class="max-w-[85%] min-w-0 px-3 py-2 rounded-2xl rounded-tl-md bg-white border border-gray-200 text-[13px] text-gray-900 leading-snug break-words">${m.html}</div></div>`).join('');
+        : `<div class="flex gap-2"><img src="assets/ttaettae-icon.svg" alt="" aria-hidden="true" class="w-7 h-7 flex-none rounded-full"><div class="max-w-[85%] min-w-0 px-3 py-2 rounded-2xl rounded-tl-md bg-white border border-gray-200 text-[13px] text-gray-900 leading-snug break-words">${m.html}</div></div>`).join('');
       requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
     }
     function ibRenderChips() {
