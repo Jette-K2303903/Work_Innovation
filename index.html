@@ -773,7 +773,7 @@
           <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">매장정보 업로드</h3><p id="muStoreMeta" class="text-[11px] text-gray-500 whitespace-nowrap overflow-hidden text-ellipsis">불러오는 중…</p></div>
         </div>
         <div class="mb-3 p-3 bg-gray-50 border border-gray-200/80 rounded-2xl text-[12px] text-gray-700 leading-relaxed">
-          <div class="flex flex-wrap gap-1.5 mb-1.5"><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">A</b> 고객사코드</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">B</b> 고객사명</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">C</b> 거래처코드</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">D</b> 거래처명</span></div>
+          <div class="flex flex-wrap gap-1.5 mb-1.5"><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">A</b> 고객사코드</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">B</b> 고객사명</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">C</b> 거래처코드</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">D</b> 거래처명</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">E</b> 주소</span></div>
           <span class="block text-[11.5px] text-gray-500">고객사코드 + 거래처코드가 같으면 덮어쓰고, 다르면 새로 쌓입니다. 첫 줄이 제목이면 자동으로 건너뜁니다. 행이 많으면 엑셀/CSV 파일을 바로 선택하는 것이 빠릅니다.</span>
         </div>
         <div class="flex-1 flex flex-col min-h-[220px] mb-3">
@@ -1236,7 +1236,7 @@
       </div>
       </div>
       <datalist id="isTypeList"></datalist>
-      <datalist id="isOpt_content"></datalist><datalist id="isOpt_subject"></datalist><datalist id="isOpt_fault"></datalist>
+      <datalist id="isOpt_main_center"></datalist><datalist id="isOpt_content"></datalist><datalist id="isOpt_subject"></datalist><datalist id="isOpt_fault"></datalist>
       <!-- 칸별 필터 -->
       <div id="isFilterPop" class="hidden fixed z-[46] w-[240px] bg-white rounded-2xl border border-gray-200 shadow-2xl p-3">
         <div class="flex items-center justify-between mb-2"><b id="isFpTitle" class="text-[13px] text-gray-900"></b><button type="button" onclick="isCloseFilter()" class="w-6 h-6 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"><i class="ph-bold ph-x text-[10px]"></i></button></div>
@@ -2135,7 +2135,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.021</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.022</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -2405,7 +2405,7 @@
           <div id="paneDataReason" class="hidden space-y-3">
             <button type="button" onclick="isoOpen()" class="ios-btn-tap w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-rose-50 border border-rose-200/80 text-left">
               <span class="w-8 h-8 rounded-lg bg-white text-[#FF2D55] flex items-center justify-center flex-none"><i class="ph-bold ph-warning-circle text-base"></i></span>
-              <span class="flex-1 min-w-0"><span class="block text-[13.5px] font-bold text-gray-900">특이사항 관리</span><span class="block text-[11px] text-gray-500 truncate">내용 · 주체 · 귀책 선택 목록 관리</span></span>
+              <span class="flex-1 min-w-0"><span class="block text-[13.5px] font-bold text-gray-900">특이사항 관리</span><span class="block text-[11px] text-gray-500 truncate">메인센터 · 내용 · 주체 · 귀책 선택 목록 관리</span></span>
               <i class="ph-bold ph-caret-right text-gray-400"></i>
             </button>
             <div class="flex items-center space-x-2">
@@ -2486,7 +2486,8 @@
                   <input type="number" id="retentionIssueChatInput" min="1" max="365" value="60" oninput="retRefreshSummary()" class="w-24 px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-bold text-center text-[#007AFF]">
                   <span class="text-sm font-semibold text-gray-700">일 후 자동 삭제</span>
                 </div>
-                <p class="text-[11px] text-gray-400 mt-1.5 leading-relaxed">특이사항 관리의 채팅 메시지와 수정 기록이 이 기간이 지나면 삭제됩니다. 특이사항 표(데이터)는 삭제되지 않습니다. (기본 60일)</p></div>
+                <p class="text-[11px] text-gray-400 mt-1.5 leading-relaxed">특이사항 관리의 채팅 메시지와 수정 기록만 이 기간이 지나면 삭제됩니다. (기본 60일)</p>
+                <p class="mt-2 px-2.5 py-2 rounded-xl bg-blue-50 text-[11px] text-[#0A58CA] leading-relaxed"><i class="ph-bold ph-shield-check"></i> <b>특이사항 관리 홈화면 데이터(표)는 자동으로 삭제되지 않습니다.</b> 지우려면 특이사항 관리에서 행을 체크한 뒤 직접 삭제해 주세요.</p></div>
                 </div>
               </div>
               <div class="ret-card bg-white rounded-2xl border border-gray-200/80 overflow-hidden" data-ret="login">
@@ -2558,7 +2559,7 @@
       <div class="bg-white rounded-[28px] w-full max-w-lg p-5 shadow-2xl border border-gray-100 flex flex-col max-h-[90vh]">
         <div class="flex items-center gap-2.5 pb-3 border-b border-gray-100 flex-none">
           <div class="w-8 h-8 rounded-xl bg-rose-50 text-[#FF2D55] flex items-center justify-center"><i class="ph-bold ph-warning-circle text-lg"></i></div>
-          <div class="min-w-0 flex-1"><h3 class="text-[17px] font-bold text-gray-900 tracking-tight">특이사항 관리 목록</h3><p class="text-[11px] text-gray-500">특이사항 관리 홈화면의 내용 · 주체 · 귀책 칸에서 고를 수 있는 항목입니다.</p></div>
+          <div class="min-w-0 flex-1"><h3 class="text-[17px] font-bold text-gray-900 tracking-tight">특이사항 관리 목록</h3><p class="text-[11px] text-gray-500">특이사항 관리 홈화면의 메인센터 · 내용 · 주체 · 귀책 칸을 누르면 뜨는 항목입니다. 항목을 누르면 수정할 수 있어요.</p></div>
           <button type="button" onclick="isoClose()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500"><i class="ph-bold ph-x text-base"></i></button>
         </div>
         <div id="isoBody" class="flex-1 overflow-y-auto no-scrollbar py-3 space-y-3"></div>
@@ -6670,8 +6671,8 @@
     }
 
     // ----- 특이사항 관리 : 내용 · 주체 · 귀책 선택 목록 (app_settings: issue_sheet_options) -----
-    const ISO_FIELDS = [{ k: 'content', h: '내용', ph: '예: 파손, 누락, 오배송' }, { k: 'subject', h: '주체', ph: '예: 센터, 기사, 매장' }, { k: 'fault', h: '귀책', ph: '예: 센터, 기사, 협력사' }];
-    let isoDraft = null;
+    const ISO_FIELDS = [{ k: 'main_center', h: '메인센터', ph: '예: 밀양, 양산, 김해' }, { k: 'content', h: '내용', ph: '예: 파손, 누락, 오배송' }, { k: 'subject', h: '주체', ph: '예: 센터, 기사, 매장' }, { k: 'fault', h: '귀책', ph: '예: 센터, 기사, 협력사' }];
+    let isoDraft = null, isoEditing = null;          // isoEditing = { k, i } : 수정 중인 항목
     function isoNorm(v) { const o = {}; ISO_FIELDS.forEach(f => { o[f.k] = Array.isArray(v && v[f.k]) ? v[f.k].map(String).filter(Boolean) : []; }); return o; }
     async function isoOpen() {
       try {
@@ -6679,6 +6680,7 @@
         issueSheetOptions = isoNorm(data && data[0] && data[0].value);
       } catch (e) {}
       isoDraft = JSON.parse(JSON.stringify(issueSheetOptions));
+      isoEditing = null;
       isoRender();
       const m = document.getElementById('isoModal');
       m.classList.remove('opacity-0', 'pointer-events-none'); m.classList.add('opacity-100');
@@ -6690,31 +6692,44 @@
           <div class="flex items-center justify-between mb-2"><h4 class="text-[13.5px] font-bold text-gray-900">${f.h}</h4><span class="text-[11px] font-semibold text-gray-400">${isoDraft[f.k].length}개</span></div>
           <div class="flex items-center gap-2">
             <input type="text" id="isoIn_${f.k}" data-iso-in="${f.k}" placeholder="${svEsc(f.ph)}" class="flex-1 min-w-0 px-3 py-2 bg-white rounded-xl text-[13px] border border-gray-200 outline-none focus:ring-2 focus:ring-blue-200">
-            <button type="button" onclick="isoAdd('${f.k}')" class="ios-btn-tap px-3 py-2 bg-[#007AFF] text-white font-semibold rounded-xl text-xs flex items-center gap-1 flex-none"><i class="ph-bold ph-plus"></i>${f.h} 추가</button>
+            ${isoEditing && isoEditing.k === f.k
+              ? `<button type="button" onclick="isoAdd('${f.k}')" class="ios-btn-tap px-3 py-2 bg-[#34C759] text-white font-semibold rounded-xl text-xs flex items-center gap-1 flex-none"><i class="ph-bold ph-check"></i>수정</button><button type="button" onclick="isoCancelEdit()" class="ios-btn-tap px-2.5 py-2 bg-gray-200 text-gray-700 font-semibold rounded-xl text-xs flex-none">취소</button>`
+              : `<button type="button" onclick="isoAdd('${f.k}')" class="ios-btn-tap px-3 py-2 bg-[#007AFF] text-white font-semibold rounded-xl text-xs flex items-center gap-1 flex-none"><i class="ph-bold ph-plus"></i>${f.h} 추가</button>`}
           </div>
-          <div class="flex flex-wrap gap-1.5 mt-2.5">${isoDraft[f.k].map((v, i) => `<span class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-white border border-gray-200 text-[12px] font-semibold text-gray-800">${svEsc(v)}<button type="button" onclick="isoRemove('${f.k}', ${i})" class="w-4 h-4 rounded-full bg-gray-300 hover:bg-gray-400 text-white flex items-center justify-center text-[9px]"><i class="ph-bold ph-x"></i></button></span>`).join('') || '<span class="text-[11.5px] text-gray-400">아직 없습니다.</span>'}</div>
+          <div class="flex flex-wrap gap-1.5 mt-2.5">${isoDraft[f.k].map((v, i) => `<span class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full ${isoEditing && isoEditing.k === f.k && isoEditing.i === i ? 'bg-green-50 border-[#34C759]' : 'bg-white border-gray-200'} border text-[12px] font-semibold text-gray-800"><button type="button" onclick="isoStartEdit('${f.k}', ${i})" class="hover:text-[#007AFF]" title="눌러서 수정">${svEsc(v)}</button><button type="button" onclick="isoRemove('${f.k}', ${i})" class="w-4 h-4 rounded-full bg-gray-300 hover:bg-gray-400 text-white flex items-center justify-center text-[9px]"><i class="ph-bold ph-x"></i></button></span>`).join('') || '<span class="text-[11.5px] text-gray-400">아직 없습니다.</span>'}</div>
         </section>`).join('');
     }
+    function isoStartEdit(k, i) {
+      isoEditing = { k, i }; isoRender();
+      const el = document.getElementById('isoIn_' + k); el.value = isoDraft[k][i]; el.focus(); el.select();
+    }
+    function isoCancelEdit() { isoEditing = null; isoRender(); }
     function isoAdd(k) {
       const el = document.getElementById('isoIn_' + k), v = el.value.trim();
       if (!v) { el.focus(); return; }
+      if (isoEditing && isoEditing.k === k) {
+        const i = isoEditing.i;
+        if (isoDraft[k].some((x, j) => x === v && j !== i)) { showToastNotification('중복', '이미 있는 항목입니다.', 'warning'); return; }
+        isoDraft[k][i] = v; isoEditing = null; isoRender(); return;
+      }
       if (isoDraft[k].includes(v)) { showToastNotification('중복', '이미 있는 항목입니다.', 'warning'); return; }
       isoDraft[k].push(v); isoRender();
       setTimeout(() => document.getElementById('isoIn_' + k).focus(), 0);
     }
-    function isoRemove(k, i) { isoDraft[k].splice(i, 1); isoRender(); }
+    function isoRemove(k, i) { isoDraft[k].splice(i, 1); isoEditing = null; isoRender(); }
     async function isoSave() {
       const res = await dbRun('특이사항 목록 저장', async () => { await settingsSave([{ key: 'issue_sheet_options', value: isoDraft }]); });
       if (!res.ok) return;
       issueSheetOptions = isoNorm(isoDraft);
       try { isRenderOptionLists(); } catch (e) {}
       isoClose();
-      showToastNotification('저장 완료', '특이사항 관리의 내용 · 주체 · 귀책 목록이 저장되었습니다.', 'success');
+      showToastNotification('저장 완료', '특이사항 관리의 메인센터 · 내용 · 주체 · 귀책 목록이 저장되었습니다.', 'success');
     }
     document.getElementById('isoBody').addEventListener('keydown', (e) => {
       const k = e.target.dataset && e.target.dataset.isoIn; if (!k) return;
       if (e.isComposing || e.keyCode === 229) return;
       if (e.key === 'Enter') { e.preventDefault(); isoAdd(k); }
+      else if (e.key === 'Escape' && isoEditing) { e.preventDefault(); isoCancelEdit(); }
     });
 
     function removeReasonTag(idx) {
@@ -9992,7 +10007,7 @@
     //  - auto: 거래처코드/제품코드로 자동 채움 (직접 수정 불가 · 회색)
     const IS_COLS = [
       { k: 'delivery_date', h: '배송일', w: 92, type: 'date' },
-      { k: 'main_center', h: '메인센터', w: 70, auto: true },
+      { k: 'main_center', h: '메인센터', w: 70, opt: true },
       { k: 'client_code', h: '고객사코드', w: 72, auto: true },
       { k: 'client_name', h: '고객사명', w: 82, auto: true },
       { k: 'store_code', h: '거래처코드', w: 74, lookup: 'store' },
@@ -10218,7 +10233,7 @@
       el.type = col.type === 'date' ? 'date' : 'text';
       el.value = initial != null ? initial : (row[col.k] ?? '');
       el.autocomplete = 'off';
-      if (col.opt) el.setAttribute('list', 'isOpt_' + col.k);       // 설정 > 사유 목록 > 특이사항 관리 목록에서 고르기 (직접 입력도 가능)
+      // 목록 칸(메인센터 · 내용 · 주체 · 귀책) : 누르면 설정 > 사유 목록 > 특이사항 관리 목록이 뜸 (직접 입력도 가능)
       el.id = 'isEditor';
       el.addEventListener('keydown', (e) => {
         e.stopPropagation();                                      // 시트 단축키로 중복 처리되지 않도록
@@ -10234,10 +10249,11 @@
         else if (e.key === 'Escape') { e.preventDefault(); isCloseEditor(true); }
       });
       el.addEventListener('blur', () => { if (isState.edit && isState.edit.el === el) isCommit(el.value, null); });
-      if (col.suggest) { el.addEventListener('input', isSugInput); el.addEventListener('compositionend', isSugInput); }
+      if (col.suggest || col.opt) { el.addEventListener('input', isSugInput); el.addEventListener('compositionend', isSugInput); }
       isEl('isInner').appendChild(el);
       isState.edit = { id: row.id, col: col.k, el, orig: row[col.k] ?? '', row };
       if (col.suggest && el.value && el.value !== IS_NODATA) isSugInput();
+      if (col.opt) isSugInput(true);
       isPlaceEditor();
       el.focus();
       if (el.type === 'text') { const n = el.value.length; el.setSelectionRange(n, n); }
@@ -10346,7 +10362,12 @@
         const f = await lookup();
         if (!f) return;
         if (f.found || codeKey in patch || wasAuto(g, nameKey)) {
-          keys.forEach(k => { out[k] = f[k] ?? ''; });
+          const prev = isState.autoVals.get(id + '|' + g);
+          keys.forEach(k => {
+            // 메인센터를 직접 적어 둔 경우(자동으로 채운 값이 아닌 경우)는 그대로 둠
+            if (k === 'main_center' && row.main_center && row.main_center !== IS_NODATA && !(prev && prev.main_center === row.main_center)) return;
+            out[k] = f[k] ?? '';
+          });
           remember(g, { ...out });
         }
         if (!f.found) isState.miss.add(id + '|' + codeKey);
@@ -10394,17 +10415,33 @@
       const sg = isState.sug, ed = isState.edit;
       if (!sg || !ed) return;
       let box = isEl('isSuggest');
-      if (!sg.items.length) { if (box) box.remove(); return; }
+      if (!sg.items.length && !(sg.kind === 'opt' && sg.empty)) { if (box) box.remove(); return; }
       if (!box) { box = document.createElement('div'); box.id = 'isSuggest'; isEl('isInner').appendChild(box); box.addEventListener('mousedown', (e) => { const it = e.target.closest('[data-sug]'); if (it) { e.preventDefault(); isSugPick(+it.dataset.sug); } }); }
       const td = isTd(ed.id, ed.col); if (!td) return;
       const r = isRectIn(td);
       Object.assign(box.style, { left: r.x + 'px', top: (r.y + r.h + 2) + 'px' });
+      if (sg.kind === 'opt') {
+        const h = (IS_COLS.find(c => c.k === sg.col) || {}).h || '';
+        box.innerHTML = `<div class="px-2 pt-1 pb-1.5 text-[10.5px] font-bold text-gray-400">${svEsc(h)} 목록 — 직접 입력도 돼요</div>`
+          + (sg.items.length ? sg.items.map((it, i) => `<div class="it ${i === sg.idx ? 'on' : ''}" data-sug="${i}"><span class="flex-1 min-w-0 truncate font-bold text-gray-900">${svEsc(it.name)}</span></div>`).join('')
+            : `<div class="px-2 pb-1.5 text-[11px] text-gray-400">목록이 비어 있어요. 데이터 관리 &gt; 사유 목록 &gt; 특이사항 관리에서 추가할 수 있어요.</div>`);
+        return;
+      }
       box.innerHTML = `<div class="px-2 pt-1 pb-1.5 text-[10.5px] font-bold text-gray-400">${sg.kind === 'store' ? '거래처 추천' : '제품 추천'}${ed.row && ed.row.delivery_date ? ` · ${svEsc(ed.row.delivery_date)} 배송일 기준` : ''} — 고르면 코드가 자동 입력됩니다</div>`
         + sg.items.map((it, i) => `<div class="it ${i === sg.idx ? 'on' : ''}" data-sug="${i}"><span class="flex-1 min-w-0 truncate font-bold text-gray-900">${svEsc(it.name)}</span><span class="font-mono text-[11px] text-[#007AFF] flex-none">${svEsc(it.code)}</span>${it.sub ? `<span class="text-[10.5px] text-gray-400 flex-none">${svEsc(it.sub)}</span>` : ''}</div>`).join('');
     }
-    function isSugInput() {
+    function isSugInput(all) {
       const ed = isState.edit; if (!ed) return;
-      const col = IS_COLS.find(c => c.k === ed.col); if (!col || !col.suggest) return;
+      const col = IS_COLS.find(c => c.k === ed.col); if (!col) return;
+      if (col.opt) {                                                   // 고정 목록 : 처음엔 전체, 입력하면 걸러서
+        const kw = all === true ? '' : ed.el.value.trim().toLowerCase();
+        const list = (issueSheetOptions[col.k] || []);
+        const items = list.filter(v => !kw || String(v).toLowerCase().includes(kw)).map(v => ({ name: v, code: '' }));
+        isState.sug = { kind: 'opt', col: col.k, items, idx: -1, empty: !list.length };
+        isSugRender();
+        return;
+      }
+      if (!col.suggest) return;
       clearTimeout(isSugTimer);
       const kw = ed.el.value.trim();
       if (!kw) { isSugClose(); return; }
@@ -10423,7 +10460,7 @@
       const it = sg.items[i], id = ed.id;
       isSugClose();
       isCloseEditor(true);
-      const patch = sg.kind === 'store' ? { store_code: it.code, store_name: it.name } : { product_code: it.code, product_name: it.name };
+      const patch = sg.kind === 'opt' ? { [sg.col]: it.name } : sg.kind === 'store' ? { store_code: it.code, store_name: it.name } : { product_code: it.code, product_name: it.name };
       await isDraftSet(id, patch);
       isMove(0, 1);
     }
@@ -10535,7 +10572,7 @@
       const newIds = checked.filter(id => isState.drafts.has(id) && isState.drafts.get(id).isNew);
       const ids = checked.filter(id => isState.rows.some(r => r.id === id));
       if (!newIds.length && !ids.length) { showToastNotification('선택 필요', '삭제할 행을 왼쪽 체크박스로 선택해 주세요.', 'warning'); return; }
-      if (ids.length && !confirm(`저장된 ${ids.length}건을 삭제하시겠습니까? 되돌릴 수 없습니다.`)) return;
+      if (ids.length && !isDeleteChecked._ok) { showConfirmModal(() => { isDeleteChecked._ok = true; isDeleteChecked().finally(() => { isDeleteChecked._ok = false; }); }, '특이사항 삭제', `선택한 저장된 기록 <b>${ids.length}건</b>을 삭제합니다.<br>삭제한 기록은 되돌릴 수 없어요.`); return; }
       newIds.forEach(id => { isState.drafts.delete(id); isState.checked.delete(id); });
       if (ids.length) {
         const delRows = isState.rows.filter(r => ids.includes(r.id));
@@ -10640,7 +10677,7 @@
     document.addEventListener('mousedown', (e) => { const pop = isEl('isFilterPop'); if (!pop.classList.contains('hidden') && !pop.contains(e.target) && !e.target.closest('[data-is-filter]')) isCloseFilter(); });
 
     function isRenderOptionLists() {
-      ['content', 'subject', 'fault'].forEach(k => { const dl = isEl('isOpt_' + k); if (dl) dl.innerHTML = (issueSheetOptions[k] || []).map(v => `<option value="${svEsc(v)}">`).join(''); });
+      ['main_center', 'content', 'subject', 'fault'].forEach(k => { const dl = isEl('isOpt_' + k); if (dl) dl.innerHTML = (issueSheetOptions[k] || []).map(v => `<option value="${svEsc(v)}">`).join(''); });
     }
     // 크게 보기 (화면 전체를 시트로)
     function isToggleFull(force) {
@@ -11992,6 +12029,17 @@
       fd.append('customerLabel', issueId);
       fetch(ibConn.url + '/api/v1/feedback', { method: 'POST', headers: { 'X-Bot-Key': ibConn.key }, body: fd }).catch(() => {});
     }
+    // 붙여넣은(Ctrl+V) 사진은 바로 올리지 않고 먼저 확인 (잘못 붙여넣기 방지)
+    function ibConfirmPaste(files) {
+      files = [...files].filter(f => f && /^image\//.test(f.type)).slice(0, 6);
+      if (!files.length) return;
+      const thumbs = files.map(f => `<img src="${URL.createObjectURL(f)}" alt="붙여넣은 사진" class="max-w-[150px] max-h-[160px] rounded-xl object-cover border border-gray-200">`).join('');
+      ibYesNo(`붙여넣은 사진${files.length > 1 ? ` ${files.length}장` : ''}이 맞나요?<div class="mt-2 flex flex-wrap gap-1.5">${thumbs}</div>`,
+        () => ibHandlePhotos(files),
+        () => ibBot('사진을 넣지 않았어요. 필요하면 다시 붙여넣어 주세요.'));
+      ib.msgs[ib.msgs.length - 1].html = ib.msgs[ib.msgs.length - 1].html.replace('네, 맞아요', '네, 이 사진이에요').replace('>아니요<', '>아니요, 취소<');
+      ibRender();
+    }
     async function ibHandlePhotos(files) {
       files = [...files].filter(f => f && /^image\//.test(f.type));
       if (!files.length) return;
@@ -12183,7 +12231,7 @@
     // 입력 · 버튼
     ibEl('ibInput').addEventListener('paste', (e) => {
       const files = [...((e.clipboardData && e.clipboardData.items) || [])].filter(it => it.kind === 'file' && /^image\//.test(it.type)).map(it => it.getAsFile()).filter(Boolean);
-      if (files.length) { e.preventDefault(); ibHandlePhotos(files); }
+      if (files.length) { e.preventDefault(); ibConfirmPaste(files); }
     });
     ibEl('ibInput').addEventListener('input', () => {
       const el = ibEl('ibInput'); el.style.height = 'auto'; el.style.height = Math.min(110, el.scrollHeight) + 'px';
@@ -12740,7 +12788,7 @@
     // ===== 매장정보 / 제품정보 업로드 (Supabase store_master · product_master · 누적 + 같은 키는 덮어쓰기) =====
     const MU_SPECS = {
       Store: { label: '매장정보', table: 'store_master', conflict: 'client_code,store_code', first: '고객사코드',
-        cols: ['client_code', 'client_name', 'store_code', 'store_name'], req: ['store_code'], key: r => r.client_code + '|' + r.store_code },
+        cols: ['client_code', 'client_name', 'store_code', 'store_name', 'address'], req: ['store_code'], key: r => r.client_code + '|' + r.store_code },
       Product: { label: '제품정보', table: 'product_master', conflict: 'product_code,client', first: '제품코드',
         cols: ['product_code', 'product_name', 'item_designation', 'client', 'temperature', 'stock_type'], req: ['product_code'], key: r => r.product_code + '|' + r.client }
     };
