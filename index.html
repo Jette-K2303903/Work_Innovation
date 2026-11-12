@@ -1305,6 +1305,11 @@
           <span class="min-w-0 flex-1"><span class="block text-[14px] font-semibold text-gray-900">데이터 업로드</span><span class="block text-[11px] text-gray-500">엑셀에서 복사한 내용을 붙여넣어 한 번에 등록 (기본값 · 백데이터)</span></span>
           <i class="ph-bold ph-caret-right text-gray-300"></i>
         </button>
+        <button type="button" onclick="ibOpenImprove()" class="ios-btn-tap mt-2 w-full flex items-center gap-3 px-3.5 py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-2xl text-left transition-colors">
+          <span class="w-8 h-8 rounded-xl bg-[#AF52DE]/10 text-[#AF52DE] flex items-center justify-center flex-shrink-0"><i class="ph-bold ph-lightbulb text-lg"></i></span>
+          <span class="min-w-0 flex-1"><span class="block text-[14px] font-semibold text-gray-900">때때 개선함 <span id="ibImpBadge" class="hidden ml-1 px-1.5 py-0.5 rounded-full bg-[#FF3B30] text-white text-[10px] font-bold align-middle"></span></span><span class="block text-[11px] text-gray-500">사용자 건의 · 때때가 모른 질문 확인, 답 가르치기</span></span>
+          <i class="ph-bold ph-caret-right text-gray-300"></i>
+        </button>
         <div class="mt-3 pt-3 border-t border-gray-100 text-[11px] font-semibold text-gray-400">때때 사진 판단 연결</div>
         <label class="block mt-2 text-[12px] font-semibold text-gray-600">때때 두뇌 주소</label>
         <input type="url" id="ibSetUrl" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[13px] font-mono border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
@@ -1363,6 +1368,23 @@
           <button type="button" onclick="isCloseBulkFix()" class="ios-btn-tap py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[14px]">닫기</button>
           <button type="button" onclick="isApplyBulkFix()" class="ios-btn-tap py-2.5 bg-[#007AFF] text-white font-semibold rounded-xl text-[14px]">고친 내용 적용</button>
         </div>
+      </div>
+    </div>
+
+    <!-- [특이사항 관리 설정 > 때때 개선함 : 건의 · 모르는 질문 · 가르친 답] -->
+    <div id="ibImpModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
+      <div class="bg-white rounded-[28px] w-full max-w-2xl p-5 shadow-2xl border border-gray-100 flex flex-col max-h-[90vh]">
+        <div class="flex items-center gap-2.5 pb-3 border-b border-gray-100 flex-shrink-0">
+          <div class="w-8 h-8 rounded-xl bg-[#AF52DE]/10 text-[#AF52DE] flex items-center justify-center"><i class="ph-bold ph-lightbulb text-lg"></i></div>
+          <div class="min-w-0 flex-1"><h3 class="text-[17px] font-bold text-gray-900 tracking-tight">때때 개선함</h3><p class="text-[11px] text-gray-500">사용하면서 생긴 건의와 때때가 답하지 못한 질문이 모여요. 답을 가르치면 다음부터 바로 답해요.</p></div>
+          <button type="button" onclick="ibCloseImprove()" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center flex-shrink-0"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div class="mt-3 flex bg-gray-100 p-1 rounded-xl flex-shrink-0">
+          <button type="button" data-imp-tab="open" class="segment-tab active flex-1 py-1.5 text-xs font-semibold text-gray-700 rounded-lg">새 건의 · 질문</button>
+          <button type="button" data-imp-tab="done" class="segment-tab flex-1 py-1.5 text-xs font-semibold text-gray-700 rounded-lg">처리 완료</button>
+          <button type="button" data-imp-tab="faq" class="segment-tab flex-1 py-1.5 text-xs font-semibold text-gray-700 rounded-lg">가르친 답</button>
+        </div>
+        <div id="ibImpBody" class="mt-3 overflow-y-auto min-h-0 flex-1 space-y-2"></div>
       </div>
     </div>
 
@@ -2167,7 +2189,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.023</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.024</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -11458,7 +11480,16 @@
           <div>· 내일 200577 P1 누락 3박스 귀책 센터</div>
           <div>· 11/12 광안 우유 유통기한, 상세: 12일자 입고분</div>
         </div>
-        <div class="mt-2 text-[11.5px] text-gray-500">배송일을 말하지 않으면 오늘로 넣어요. 나중에 "수량 5", "귀책 기사", "날짜 어제"처럼 고칠 수 있어요.</div>`);
+        <div class="mt-2 text-[11.5px] text-gray-500">배송일을 말하지 않으면 오늘로 넣어요. 나중에 "수량 5", "귀책 기사", "날짜 어제"처럼 고칠 수 있어요.</div>
+        <div class="mt-2.5 pt-2 border-t border-gray-200"><b class="text-[13px]">이런 것도 물어보세요</b>
+          <div class="mt-1 space-y-0.5 text-[12.5px] text-gray-700">
+            <div>· 부서활동비 얼마나 남았어? / 예산 잔액</div>
+            <div>· 배차 부산광안 → 가는 기사님 · 도착 예정</div>
+            <div>· 기사 홍길동 → 배송하는 매장 · 시간</div>
+            <div>· 이번 주 파손 현황 / 부산광안 특이사항 몇 건</div>
+            <div>· 부산광안 주문 / 내일 부산광안 콜라 주문</div>
+            <div>· 비용관리 열어줘 · 때때 버전 · 건의: …</div>
+          </div></div>`);
     }
     function ibSuggest(action, label) {
       if (action === 'say') { ibSend(label); return; }
@@ -11491,7 +11522,7 @@
       requestAnimationFrame(() => { list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' }); });
     }
     function ibRenderChips() {
-      const chips = !ib.msgs.length ? [] : ib.draft ? ['사진 넣기', '취소'] : ['사진 넣기', '도움말'];
+      const chips = !ib.msgs.length ? [] : ib.draft ? ['사진 넣기', '취소'] : ['사진 넣기', '도움말', '건의하기'];
       ibEl('ibChips').innerHTML = chips.map((c, i) => `<button type="button" data-ib-chip="${svEsc(c)}" style="animation-delay:${i * 40}ms" class="ib-pop ios-btn-tap flex-none px-3 py-1.5 rounded-full bg-white border border-blue-200 text-[12px] font-semibold text-[#007AFF] whitespace-nowrap">${svEsc(c.trim())}</button>`).join('');
     }
 
@@ -11846,6 +11877,9 @@
     //  확실하면 바로 답하고, 비슷하기만 하면 "○○ 맞나요?"로 확인한 뒤 답함
     function ibIntent(t) {
       const issueWords = (issueSheetOptions.content || []).concat(IB_CONTENT_BASE);
+      if (/(현황|통계|집계|몇\s*건|건수|얼마나\s*있|요약)/.test(t) && !/등록|접수/.test(t)) return 'stats';
+      if (/주문|출고/.test(t) && !/특이사항|등록/.test(t)) return 'order';
+      if (/^\s*(기사|배차)(\s|$)|기사님?\s*(누구|어디)|배송\s*(가는|하는)|배송지|가는\s*기사/.test(t)) return 'dispatch';
       if (/등록|특이사항|접수/.test(t) || issueWords.some(w => w && t.includes(w)) || new RegExp(`\\d+\\s*(${IB_UNITS})`).test(t)) return 'register';
       if (/예산|잔액|잔여|남았|남은|남아|얼마나\s*썼|사용(금)?액|활동비|추진비|소모품비|비용/.test(t)) return 'budget';
       if (/(기사|배차|차량|도착|출발)/.test(t) && !/귀책|주체/.test(t)) return 'dispatch';
@@ -11863,12 +11897,11 @@
       if (!costItems.length) { ibBot('비용관리에 예산 자료가 아직 없어요. 비용관리 &gt; 예산 업로드를 먼저 해 주세요.'); return; }
       const q = ibStrip(t, /(얼마나|얼마|남았(어|지|나|니|어요|나요)?|남은|남아\s*있어|잔액|잔여|예산|사용(금)?액|썼(어|지)?|알려\s*줘|알려|좀|현재|지금|이번\s*(달|분기)?|은|는|이|가|요)/g);
       const list = costItems.map(a => ({ code: '', name: a.name, acc: a }));
-      if (!q) { ibAskPick('choice', (costVisibleItems().length ? costVisibleItems().map(v => v.acc) : costItems).slice(0, 6).map(a => ({ name: a.name, acc: a })), '', null, (it) => ibBudgetAnswer(it.acc)); ib.msgs[ib.msgs.length - 1].html = ib.msgs[ib.msgs.length - 1].html.replace('항목 후보가 여러 개예요.', '어떤 계정의 예산을 볼까요?'); ibRender(); return; }
+      if (!q) { await ibBudgetPicker(); return; }
       const r = ibRank(q, list, 5);
       if (r.length && (r[0].s >= 99 || (r[0].s >= 80 && (r.length === 1 || r[1].s < 80)))) { ibBudgetAnswer(r[0].it.acc); return; }
       if (r.length && r[0].s >= 40) { ibYesNo(`<b>${svEsc(r[0].it.name)}</b> 맞나요?`, () => ibBudgetAnswer(r[0].it.acc), () => r.length > 1 ? ibAskPick('choice', r.slice(1).map(x => ({ name: x.it.name, acc: x.it.acc })), '', null, (it) => ibBudgetAnswer(it.acc)) : ibBot('계정 이름을 다시 알려 주세요.')); return; }
-      ibAskPick('choice', (costVisibleItems().length ? costVisibleItems().map(v => v.acc) : costItems).slice(0, 6).map(a => ({ name: a.name, acc: a })), '', null, (it) => ibBudgetAnswer(it.acc));
-      ib.msgs[ib.msgs.length - 1].html = ib.msgs[ib.msgs.length - 1].html.replace('항목 후보가 여러 개예요.', `'${svEsc(q)}' 계정을 찾지 못했어요. 이 중에 있나요?`); ibRender();
+      await ibBudgetPicker(`'${svEsc(q)}' 계정을 찾지 못했어요. 목록에서 고르거나 검색해 주세요.`);
     }
     function ibBudgetAnswer(acc) {
       const vis = costVisibleItems().find(v => v.acc.id === acc.id);
@@ -11887,7 +11920,7 @@
       const dates = await ibRecentDates();
       const date = dt ? dt.v : (dates[0] || ibToday(0));
       const q = ibStrip(dt ? t.replace(dt.m, ' ') : t, /(기사님?|배차|차량(번호)?|누구(야|예요|인가요)?|몇\s*시|도착|출발|예정|시간|알려\s*줘|알려|연락처|전화(번호)?|번호|은|는|이|가|의|좀|요|오늘|내일|어제)/g);
-      if (!q) { ibBot(`어느 매장의 배차를 볼까요? <span class="text-gray-400 text-[12px]">(${ibFmtDate(date)} 기준)</span>`); ib.await = (ans) => ibSkillDispatch(`${date} ${ans} 기사`); return; }
+      if (!q) { ibBot(`어느 매장의 배차를 볼까요? <span class="text-gray-400 text-[12px]">(${ibFmtDate(date)} 기준)</span>`); ib.awaitKind = 'dispatch'; ib.await = (ans) => ibSkillDispatch(`${date} ${ans} 기사`); return; }
       const list = (await ibStoresOn(date)).filter(s => s.code);
       const r = ibRank(q, list, 6);
       const go = (s) => ibDispatchAnswer(s, date);
@@ -11913,7 +11946,7 @@
     // 연락처 (연락처 메뉴의 사무실 · 현장 연락처)
     async function ibSkillContact(t) {
       const q = ibStrip(t, /(연락처|전화번호|전화|번호|찾기|찾아\s*줘|알려\s*줘|알려|뭐(야|예요)?|님|씨|은|는|이|가|의|좀|요)/g);
-      if (!q) { ibBot('누구의 연락처를 찾을까요?'); ib.await = (ans) => ibSkillContact(ans + ' 연락처'); return; }
+      if (!q) { ibBot('누구의 연락처를 찾을까요?'); ib.awaitKind = 'contact'; ib.await = (ans) => ibSkillContact(ans + ' 연락처'); return; }
       const { data } = await supabaseClient.from('contacts').select('name,phone,role,category').limit(3000);
       const list = (data || []).filter(c => c.name).map(c => ({ code: '', name: c.name, c }));
       const r = ibRank(q, list, 6);
@@ -11922,6 +11955,294 @@
       if (r.length && r[0].s >= 40 && (r.length === 1 || r[0].s - r[1].s >= 10)) { ibYesNo(`<b>${svEsc(r[0].it.name)}</b> 맞나요?`, () => go(r[0].it.c), () => ibBot('이름을 다시 알려 주세요.')); return; }
       if (r.length) { ibAskPick('choice', r.map(x => ({ name: x.it.name, code: x.it.c.role || '', c: x.it.c })), q, null, (it) => go(it.c), '이름'); return; }
       ibBot(`'${svEsc(q)}'${ibJosaWa(q)} 비슷한 이름을 연락처에서 찾지 못했어요.`);
+    }
+
+    // ========== 때때 대화 확장 : 인사 · 버전 · 예산 목록 · 배차/기사 · 특이사항 현황 · 주문 · 메뉴 이동 · 가르친 답 · 건의 ==========
+    const IB_FAQ_KEY = 'ttaettae_faq';            // app_settings : [{ q: '질문', a: '답변' }] (특이사항 관리 설정 > 때때 개선함에서 관리)
+    const IB_FB_TABLE = 'ttaettae_feedback';
+    let ibFaq = [], ibFaqLoaded = false;
+    const ibPickOne = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const ibSiteVersion = () => ((document.body.textContent || '').match(/물류관리\s*(v[\d.]+)/) || [])[1] || '';
+    const ibMeName = () => (isState.me ? `${isState.me}님` : '');
+    async function ibLoadFaq(force) {
+      if (ibFaqLoaded && !force) return ibFaq;
+      try {
+        const { data } = await supabaseClient.from(SETTINGS_TABLE).select('value').eq('key', IB_FAQ_KEY).limit(1);
+        const v = data && data[0] && data[0].value;
+        ibFaq = Array.isArray(v) ? v.filter(x => x && x.q && x.a) : [];
+        ibFaqLoaded = true;
+      } catch (e) {}
+      return ibFaq;
+    }
+    async function ibLogFeedback(kind, text, context) {
+      try { await supabaseClient.from(IB_FB_TABLE).insert({ kind, text: String(text || '').slice(0, 2000), context: String(context || '').slice(0, 4000), created_by: isState.me || null }); return true; } catch (e) { return false; }
+    }
+    const ibRecentText = (n) => ib.msgs.slice(-n).map(m => `${m.who === 'me' ? '사용자' : '때때'}: ${String(m.html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()}`).join('\n');
+
+    // ----- 자유 대화 (인사 · 감사 · 안부 · 소개 · 버전 · 시간) -----
+    function ibSmallTalk(t) {
+      const s = t.replace(/[!?.~^ㅎㅋ\s]+$/g, '').trim();
+      const h = new Date().getHours();
+      const tod = h < 6 ? '새벽부터 고생 많으세요' : h < 11 ? '좋은 아침이에요' : h < 14 ? '점심은 맛있게 드셨어요?' : h < 18 ? '오후도 힘내세요' : '늦게까지 수고 많으세요';
+      const nm = ibMeName();
+      if (/(버전|version|ver\b)/i.test(s)) { ibVersion(); return true; }
+      if ((/^(안녕|안뇽|하이|ㅎㅇ|헬로|hello|hi|hey|반가|좋은\s*(아침|저녁|하루)|굿모닝|여보세요|저기요)/i.test(s) || /^때때(야|아|님)?$/.test(s)) && s.length <= 14) {
+        ibBot(ibPickOne([
+          `안녕하세요${nm ? ', ' + nm : ''}! ${tod} 😊 무엇을 도와드릴까요?`,
+          `${nm ? nm + ', ' : ''}반가워요! 때때예요. ${tod}.`,
+          `하이~ ${tod}! 특이사항 등록이든 예산이든 편하게 물어보세요.`
+        ]));
+        return true;
+      }
+      if (/(고마워|고맙|감사|땡큐|thank|수고했|잘했|최고|굿굿|좋아요)/i.test(s) && s.length <= 16) { ibBot(ibPickOne(['천만에요! 또 필요하면 언제든 불러 주세요 😊', '도움이 됐다니 기뻐요!', '별말씀을요. 오늘도 화이팅이에요!'])); return true; }
+      if (/^(잘\s*가|바이|bye|수고하세요|수고하셨|퇴근|내일\s*봐|이만)/i.test(s)) { ibBot(ibPickOne(['수고하셨어요! 조심히 들어가세요 👋', '네, 다음에 또 불러 주세요!'])); return true; }
+      if (/(잘\s*지내|기분\s*어때|뭐\s*해|심심|피곤|힘들)/.test(s) && s.length <= 16) { ibBot(ibPickOne(['저는 늘 쌩쌩해요! 오늘 일은 어떠세요? 제가 덜어 드릴 일이 있으면 말씀해 주세요.', '오늘도 바쁘시죠? 반복되는 일은 저한테 맡겨 주세요 💪'])); return true; }
+      if (/(너는?\s*누구|넌\s*누구|이름이?\s*뭐|자기\s*소개|뭘?\s*할\s*수\s*있|뭐\s*할\s*줄|기능)/.test(s)) { ibCapabilities('저는 <b>때때</b>예요. 제때 밀양센터 업무를 돕는 AI 도우미예요. 이런 걸 할 수 있어요.'); return true; }
+      if (/^(지금\s*)?(몇\s*시|시간)/.test(s) || /오늘\s*(며칠|몇\s*일|날짜|무슨\s*요일)/.test(s)) {
+        const d = new Date(), wk = '일월화수목금토'[d.getDay()];
+        ibBot(`지금은 <b>${d.getMonth() + 1}월 ${d.getDate()}일(${wk}) ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}</b>이에요.`);
+        return true;
+      }
+      return false;
+    }
+    async function ibVersion() {
+      const site = ibSiteVersion();
+      ibBot(`<span class="text-gray-500"><i class="ph-bold ph-spinner-gap animate-spin"></i> 버전을 확인하는 중…</span>`);
+      const wait = ib.msgs[ib.msgs.length - 1];
+      let brain = null;
+      try {
+        await ibLoadConn();
+        const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 7000);
+        const r = await fetch(ibConn.url + '/api/health', { signal: ctl.signal }); clearTimeout(tm);
+        brain = await r.json();
+      } catch (e) {}
+      const wi = ib.msgs.indexOf(wait); if (wi >= 0) ib.msgs.splice(wi, 1);
+      ibBot(`<b>때때 버전</b>
+        <div class="mt-1.5 px-3 py-2 rounded-2xl bg-[#F2F2F7] text-[13px] leading-relaxed">
+          <div>때때 도우미 <b>${svEsc(site || '-')}</b> <span class="text-gray-400 text-[11.5px]">(홈페이지와 같은 버전)</span></div>
+          ${brain && brain.ok ? `<div>사진 판단(때때 두뇌) <b>${svEsc(String(brain.version || brain.activeModelVersion || '-'))}</b>${brain.exampleCount != null ? ` <span class="text-gray-400 text-[11.5px]">· 학습 사진 ${Number(brain.exampleCount).toLocaleString()}장</span>` : ''}</div>`
+            : '<div class="text-gray-500">사진 판단(때때 두뇌) : 지금은 연결 확인이 안 돼요 (잠들어 있으면 처음 사진을 보낼 때 깨어나요)</div>'}
+        </div>`);
+    }
+    function ibCapabilities(head) {
+      ibBot(`${head || '무엇을 도와드릴까요?'}
+        <div class="mt-2 grid grid-cols-2 gap-1.5">
+          ${ibBtn('data-ib-suggest="1"', '📝 특이사항 등록')}
+          ${ibBtn('data-ib-act="budget"', '💰 예산 잔액')}
+          ${ibBtn('data-ib-say="배차 "', '🚚 매장 배차')}
+          ${ibBtn('data-ib-say="기사 "', '👤 기사 배송지')}
+          ${ibBtn('data-ib-say="오늘 특이사항 현황"', '📊 특이사항 현황')}
+          ${ibBtn('data-ib-say="주문 "', '📦 매장 주문')}
+          ${ibBtn('data-ib-say="연락처 "', '📞 연락처')}
+          ${ibBtn('data-ib-act="feedback"', '💬 건의하기')}
+        </div>
+        <div class="mt-2 text-[11.5px] text-gray-500">"비용관리 열어줘", "때때 버전"처럼 말해도 돼요.</div>`);
+    }
+
+    // ----- 예산 : 목록에서 고르거나 검색 (비용관리 홈화면에 보이는 계정은 ▶ 로 먼저) -----
+    async function ibBudgetPicker(head) {
+      if (!costItems.length) { try { await Promise.all([costBudgetLoad(), costReceiptsLoad()]); } catch (e) {} }
+      if (!costItems.length) { ibBot('비용관리에 예산 자료가 아직 없어요. 비용관리 &gt; 예산 업로드를 먼저 해 주세요.'); return; }
+      ib.budgetList = ibBudgetOrder();
+      ib.awaitKind = 'budget'; ib.await = (ans) => ibSkillBudget(ans + ' 예산');          // 아래 입력창에 쳐도 검색됨
+      ibBot(`${head || '어떤 계정의 예산을 볼까요?'} <span class="text-[11.5px] text-gray-400">▶ 비용관리 홈화면에 보이는 계정</span>
+        <input type="search" data-ib-bsearch placeholder="계정명 검색" class="mt-2 w-full px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px] outline-none focus:ring-2 focus:ring-blue-200">
+        <div data-ib-blist class="mt-1.5 max-h-[240px] overflow-y-auto space-y-1 pr-0.5">${ibBudgetListHtml('')}</div>`);
+      setTimeout(() => { const box = ibEl('ibList').querySelector('div:last-child [data-ib-bsearch]'); if (box && window.innerWidth >= 1024) box.focus(); }, 80);
+    }
+    function ibBudgetOrder() {
+      const vis = costVisibleItems(), seen = new Set(), out = [];
+      vis.forEach(v => { if (!seen.has(v.acc.id)) { seen.add(v.acc.id); out.push({ acc: v.acc, star: true }); } });
+      costItems.filter(a => !seen.has(a.id)).sort((a, b) => a.name.localeCompare(b.name, 'ko')).forEach(a => out.push({ acc: a, star: false }));
+      return out;
+    }
+    function ibBudgetListHtml(q) {
+      const list = ib.budgetList || [];
+      let items = list;
+      if (q) {
+        const r = ibRank(q, list.map(x => ({ code: '', name: x.acc.name, x })), 30);
+        items = r.filter(y => y.s >= 30).map(y => y.it.x).sort((a, b) => (b.star - a.star));
+      }
+      if (!items.length) return `<div class="px-2 py-2 text-[12px] text-gray-400">'${svEsc(q)}'${ibJosaWa(q)} 비슷한 계정이 없어요.</div>`;
+      return items.map(x => `<button type="button" data-ib-bpick="${svEsc(x.acc.id)}" class="ios-btn-tap w-full flex items-center gap-2 px-2.5 py-2 rounded-xl border ${x.star ? 'border-blue-200 bg-blue-50/60' : 'border-gray-200 bg-gray-50'} hover:bg-blue-50 text-left">
+          <span class="flex-1 min-w-0 truncate text-[13px] font-semibold text-gray-900">${x.star ? '<span class="text-[#007AFF]">▶</span> ' : ''}${svEsc(x.acc.name)}</span><i class="ph-bold ph-caret-right text-gray-300 text-[11px]"></i></button>`).join('');
+    }
+
+    // ----- 배차 · 기사 : 실시간 대시보드 자료 (가장 최근 배송일) -----
+    let ibDashAt = 0;
+    async function ibDashData() {
+      if (!svDrvList.length || Date.now() - ibDashAt > 60000) { try { await svDrvLoad(false); ibDashAt = Date.now(); } catch (e) {} }
+      return svDrvList;
+    }
+    function ibStoreStatus(s, now) {
+      if (s.done) return { t: `완료 ${s.doneAt || ''}`.trim(), c: 'text-emerald-700' };
+      if (s.arrived) return { t: `도착 ${s.arrAt || ''} · 하차 중`.trim(), c: 'text-amber-700' };
+      if (s.eta) { const late = Math.round((now - s.eta) / 60000); return late >= 3 ? { t: `예정 ${svHmMs(s.eta)} · ${late}분 지연`, c: 'text-rose-600' } : { t: `도착 예정 ${svHmMs(s.eta)}`, c: 'text-[#007AFF]' }; }
+      return { t: '대기', c: 'text-gray-400' };
+    }
+    async function ibSkillDispatch2(t) {
+      const wantDriver = /기사/.test(t) && !/배차|매장|거래처|누구/.test(t);
+      const dt0 = ibParseDate(t);
+      const q = ibStrip(dt0 ? t.replace(dt0.m, ' ') : t, /(기사님?|배차|매장|거래처|차량(번호)?|누구(야|예요|인가요)?|어디(야|예요)?|몇\s*시|도착|출발|예정|시간|배송(지|하는|가는)?|가는|리스트|목록|알려\s*줘|알려|보여\s*줘|연락처|전화(번호)?|번호|은|는|이|가|의|좀|요|오늘|현황)/g);
+      const drivers = await ibDashData();
+      if (!drivers.length) {                                   // 대시보드 자료가 없으면 예전 방식(배차 업로드)으로
+        if (!q) { ibBot('오늘 배차 자료가 아직 없어요. 업로드 관리 &gt; 배차 업로드를 확인해 주세요.'); return; }
+        await ibSkillDispatch(t); return;
+      }
+      const date = svDrvDate;
+      if (dt0 && dt0.v !== date) { await ibSkillDispatch(t); return; }     // 다른 배송일은 배차 업로드 기준으로
+      if (!q) {
+        ibBot(wantDriver ? `어느 기사님의 배송지를 볼까요? <span class="text-gray-400 text-[12px]">(${ibFmtDate(date)} 배차)</span>` : `어느 매장의 배차를 볼까요? <span class="text-gray-400 text-[12px]">(${ibFmtDate(date)} 배차)</span>`);
+        ib.awaitKind = 'dispatch'; ib.await = (ans) => ibSkillDispatch2((wantDriver ? '기사 ' : '배차 ') + ans);
+        return;
+      }
+      const dList = drivers.map(d => ({ code: d.vehicleNo || '', name: d.name, d }));
+      const sMap = new Map();
+      drivers.forEach(d => d.stores.forEach(s => { const k = s.code || s.name; if (!sMap.has(k)) sMap.set(k, { code: s.code, name: s.name }); }));
+      const sList = [...sMap.values()];
+      const dr = ibRank(q, dList, 6), sr = ibRank(q, sList, 6);
+      const dTop = dr.length ? dr[0].s : 0, sTop = sr.length ? sr[0].s : 0;
+      const driverMode = (dTop >= 80 && dTop >= sTop) || (wantDriver && dTop >= 40 && dTop >= sTop) || (wantDriver && sTop < 40);
+      if (!driverMode && sTop < 40) { await ibSkillDispatch(t); return; }   // 기사 배정이 없는 매장 등은 배차 업로드에서 찾기
+      const decide = (r, go, noun, label) => {
+        if (r.length && (r[0].s >= 99 || (r[0].s >= 80 && (r.length === 1 || r[1].s < 80)))) { go(r[0].it); return; }
+        if (r.length && r[0].s >= 40 && (r.length === 1 || r[0].s - r[1].s >= 10)) { ibYesNo(`<b>${svEsc(r[0].it.name)}</b> 맞나요? <span class="text-gray-400 text-[12px]">(${ibFmtDate(date)} 배차)</span>`, () => go(r[0].it), () => r.length > 1 ? ibAskPick('choice', r.slice(1).map(x => ({ name: x.it.name, code: x.it.code, it: x.it })), '', null, (p) => go(p.it), noun) : ibBot(`${label}을 다시 알려 주세요.`)); return; }
+        if (r.length) { ibAskPick('choice', r.map(x => ({ name: x.it.name, code: x.it.code, it: x.it })), q, null, (p) => go(p.it), noun); return; }
+        ibBot(`${ibFmtDate(date)} 배차에서 '${svEsc(q)}'${ibJosaWa(q)} 비슷한 ${noun}을 찾지 못했어요.`);
+      };
+      if (driverMode) decide(dr, (it) => ibDriverAnswer(it.d), '기사님', '기사님 이름');
+      else decide(sr, (it) => ibStoreDriversAnswer(it), '매장', '매장명');
+    }
+    function ibStoreDriversAnswer(store) {
+      const now = Date.now();
+      const hits = svDrvList.map(d => { const i = d.stores.findIndex(s => (store.code && s.code === store.code) || s.name === store.name); return i < 0 ? null : { d, s: d.stores[i] }; }).filter(Boolean);
+      if (!hits.length) { ibBot(`<b>${svEsc(store.name)}</b>${ibJosaRo(store.name)} 가는 기사님을 찾지 못했어요.`); return; }
+      ibBot(`<b>${svEsc(store.name)}</b> <span class="text-[12px] text-gray-500">${ibFmtDate(svDrvDate)} 배송 기사님</span>
+        ${hits.map(({ d, s }) => {
+          const st = ibStoreStatus(s, now), stt = svDashState(d);
+          const pending = d.stores.filter(x => !x.done);
+          const ahead = s.done ? 0 : pending.indexOf(s);
+          return `<div class="mt-1.5 px-3 py-2 rounded-2xl bg-[#F2F2F7] text-[13px] leading-relaxed">
+            <div class="flex items-center justify-between gap-2"><span>기사 <b>${svEsc(d.name)}</b>${d.vehicleNo ? ` · ${svEsc(d.vehicleNo)}` : ''}</span><span class="text-[11px] font-bold px-1.5 py-0.5 rounded-full border ${stt.chip[1]}">${stt.chip[0]}</span></div>
+            ${d.phone ? `<div>연락처 <a href="tel:${svEsc(d.phone)}" class="text-[#007AFF] font-semibold">${svEsc(d.phone)}</a></div>` : ''}
+            <div class="${st.c} font-semibold">${svEsc(st.t)}${!s.done && !s.arrived && ahead > 0 ? ` <span class="text-gray-500 font-normal">· 앞에 ${ahead}곳</span>` : ''}</div>
+            <div class="text-[12px] text-gray-500">현재 ${svEsc(stt.where)} · ${d.done}/${d.total} 완료</div>
+          </div>`;
+        }).join('')}
+        <div class="mt-2 flex gap-1.5">${ibBtn('data-ib-go="실시간 대시보드"', '실시간 대시보드')}${hits.length === 1 ? ibBtn(`data-ib-say="기사 ${svEsc(hits[0].d.name)}"`, `${svEsc(hits[0].d.name)} 기사님 배송지`) : ''}</div>`);
+    }
+    function ibDriverAnswer(d) {
+      const now = Date.now(), stt = svDashState(d);
+      const pct = d.total ? Math.round(d.done / d.total * 100) : 0;
+      const nextEta = d.next && !d.atStore ? ibStoreStatus(d.next, now) : null;
+      const late = d.stores.filter(s => !s.done && !s.arrived && s.eta && now - s.eta >= 180000).length;
+      ibBot(`<b>${svEsc(d.name)}</b> 기사님 <span class="text-[12px] text-gray-500">${ibFmtDate(svDrvDate)}${d.vehicleNo ? ' · ' + svEsc(d.vehicleNo) : ''}${d.vehicleType === '구간' ? ' · 구간' : ''}</span>
+        <div class="mt-1.5 px-3 py-2 rounded-2xl bg-[#F2F2F7] text-[13px] leading-relaxed">
+          <div class="flex items-center justify-between gap-2"><span class="font-semibold">${svEsc(stt.where)}</span><span class="text-[11px] font-bold px-1.5 py-0.5 rounded-full border ${stt.chip[1]}">${stt.chip[0]}</span></div>
+          ${nextEta && d.next ? `<div class="${nextEta.c} font-semibold">다음 ${svEsc(d.next.name)} · ${svEsc(nextEta.t)}</div>` : ''}
+          <div class="text-[12px] text-gray-600">남은 배송 <b>${d.total - d.done}곳</b> · ${d.done}/${d.total} 완료 (${pct}%)${late ? ` · <span class="text-rose-600 font-semibold">지연 ${late}곳</span>` : ''}${d.startedAt ? ` · 출발 ${d.startedAt}` : ''}</div>
+          <div class="mt-1 h-1.5 rounded-full bg-gray-200 overflow-hidden"><div class="h-full rounded-full ib-bar bg-emerald-500" style="width:${pct}%"></div></div>
+          ${d.phone ? `<div class="mt-1">연락처 <a href="tel:${svEsc(d.phone)}" class="text-[#007AFF] font-semibold">${svEsc(d.phone)}</a></div>` : ''}
+        </div>
+        <div class="mt-1.5 text-[11px] font-bold text-gray-400">매장별 시간</div>
+        <div class="mt-1 space-y-0.5 max-h-[260px] overflow-y-auto">${d.stores.map((s, i) => { const st = ibStoreStatus(s, now); return `<div class="flex items-center justify-between gap-2 text-[12.5px] px-1"><span class="min-w-0 truncate ${s.done ? 'text-gray-400' : 'text-gray-800 font-semibold'}">${s.done ? '✓' : (i + 1) + '.'} ${svEsc(s.name)}</span><span class="flex-none text-[11.5px] font-semibold ${st.c}">${svEsc(st.t)}</span></div>`; }).join('')}</div>
+        <div class="mt-2">${ibBtn('data-ib-go="실시간 대시보드"', '실시간 대시보드 열기')}</div>`);
+    }
+
+    // ----- 특이사항 현황 (특이사항 관리 표 기준) -----
+    async function ibSkillIssueStats(t) {
+      if (!isState.loaded) { try { await isLoad(); } catch (e) {} }
+      const rows = isState.rows || [];
+      const today = ibToday(0);
+      let from = null, to = null, label = '전체';
+      const dt = ibParseDate(t);
+      if (/이번\s*주|금주/.test(t)) { const d = new Date(); const day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day); from = ibIso(d); to = today; label = '이번 주'; }
+      else if (/지난\s*주/.test(t)) { const d = new Date(); const day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day - 7); from = ibIso(d); const e = new Date(d); e.setDate(e.getDate() + 6); to = ibIso(e); label = '지난주'; }
+      else if (/이번\s*달|금월/.test(t)) { from = today.slice(0, 8) + '01'; to = today; label = '이번 달'; }
+      else if (/지난\s*달|전월/.test(t)) { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); from = ibIso(d); const e = new Date(d.getFullYear(), d.getMonth() + 1, 0); to = ibIso(e); label = '지난달'; }
+      else if (dt) { from = to = dt.v; label = ibFmtDate(dt.v); }
+      const words = ibStrip(dt ? t.replace(dt.m, ' ') : t, /(특이사항|현황|통계|집계|몇\s*건|건수|얼마나|있(어|나|니|었어)?|보여\s*줘|알려\s*줘|알려|이번\s*(주|달)|지난\s*(주|달)|금주|금월|전월|전체|요약|은|는|이|가|의|좀|요)/g);
+      const contents = [...new Set([...(issueSheetOptions.content || []), ...rows.map(r => r.content).filter(Boolean)])];
+      const ct = contents.find(c => c && words.includes(c));
+      let storeQ = ct ? words.replace(ct, ' ').trim() : words;
+      let list = rows.filter(r => { const d = String(r.delivery_date || '').slice(0, 10); return (!from || d >= from) && (!to || d <= to); });
+      if (ct) list = list.filter(r => r.content === ct);
+      if (storeQ) { const f = list.filter(r => [r.store_name, r.product_name, r.store_code].some(v => v && String(v).includes(storeQ))); if (f.length || storeQ.length >= 2) list = f; }
+      const by = (k) => { const m = new Map(); list.forEach(r => { const v = r[k] || '(빈칸)'; m.set(v, (m.get(v) || 0) + 1); }); return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5); };
+      const cond = [label, ct, storeQ].filter(Boolean).join(' · ');
+      if (!list.length) { ibBot(`<b>${svEsc(cond)}</b> 특이사항이 없어요.`); return; }
+      const bar = (arr) => arr.map(([k, n]) => `<div class="flex items-center gap-2 text-[12.5px]"><span class="w-[86px] truncate text-gray-700">${svEsc(k)}</span><div class="flex-1 h-1.5 rounded-full bg-gray-200 overflow-hidden"><div class="h-full rounded-full bg-[#007AFF] ib-bar" style="width:${Math.round(n / list.length * 100)}%"></div></div><b class="w-8 text-right text-gray-900">${n}</b></div>`).join('');
+      ibBot(`<b>${svEsc(cond)}</b> 특이사항 <span class="text-[20px] font-extrabold text-gray-900">${list.length}건</span>
+        <div class="mt-1.5 px-3 py-2 rounded-2xl bg-[#F2F2F7] space-y-1"><div class="text-[11px] font-bold text-gray-400">내용별</div>${bar(by('content'))}</div>
+        <div class="mt-1.5 px-3 py-2 rounded-2xl bg-[#F2F2F7] space-y-1"><div class="text-[11px] font-bold text-gray-400">${storeQ ? '제품별' : '매장별'}</div>${bar(by(storeQ ? 'product_name' : 'store_name'))}</div>
+        <div class="mt-1.5 px-3 py-2 rounded-2xl bg-[#F2F2F7] space-y-1"><div class="text-[11px] font-bold text-gray-400">귀책별</div>${bar(by('fault'))}</div>
+        <div class="mt-2">${ibBtn('data-ib-go="특이사항 관리"', '특이사항 관리 열기')}</div>`);
+    }
+    const ibIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    // ----- 매장 주문 (주문 업로드 기준) -----
+    async function ibSkillOrder(t) {
+      const dt = ibParseDate(t);
+      let date = dt ? dt.v : null;
+      if (!date) { const { data } = await supabaseClient.from('order_data').select('delivery_date').order('delivery_date', { ascending: false }).limit(1); date = data && data[0] && data[0].delivery_date; }
+      if (!date) { ibBot('주문 업로드 자료가 아직 없어요.'); return; }
+      const q = ibStrip(dt ? t.replace(dt.m, ' ') : t, /(주문(량|수량|내역)?|출고(량|수량)?|몇\s*개|얼마나|뭐(야|예요)?|들어(왔어|와|온)|보여\s*줘|알려\s*줘|알려|은|는|이|가|의|좀|요|오늘|내일|어제)/g);
+      if (!q) { ibBot(`어느 매장의 주문을 볼까요? <span class="text-gray-400 text-[12px]">(${ibFmtDate(date)} 주문)</span>`); ib.awaitKind = 'order'; ib.await = (ans) => ibSkillOrder(`${date} ${ans} 주문`); return; }
+      const stores = (await ibStoresOn(date)).filter(s => s.code);
+      const words = q.split(' ');
+      let store = null, prodQ = '';
+      for (let n = words.length; n >= 1 && !store; n--) {
+        const head = words.slice(0, n).join(' '), r = ibRank(head, stores, 3);
+        if (r.length && r[0].s >= 80) { store = r[0].it; prodQ = words.slice(n).join(' '); }
+      }
+      const go = async (s, pq) => {
+        const { data } = await supabaseClient.from('order_data').select('product_code,product_name,order_qty,ship_qty,unit,temperature').eq('delivery_date', date).eq('store_code', s.code).limit(2000);
+        let items = data || [];
+        if (pq) { const f = items.filter(x => (x.product_name || '').includes(pq) || x.product_code === pq); if (f.length) items = f; else { const r = ibRank(pq, items.map(x => ({ code: x.product_code, name: x.product_name, x })), 10).filter(y => y.s >= 40); items = r.map(y => y.it.x); } }
+        if (!items.length) { ibBot(`${ibFmtDate(date)} <b>${svEsc(s.name)}</b> 주문${pq ? `에서 '${svEsc(pq)}'` : ''}을 찾지 못했어요.`); return; }
+        const sum = items.reduce((a, x) => a + (+x.order_qty || 0), 0);
+        ibBot(`<b>${svEsc(s.name)}</b> <span class="text-[12px] text-gray-500">${ibFmtDate(date)} 주문 · ${items.length}품목 · 합계 ${sum.toLocaleString()}</span>
+          <div class="mt-1.5 max-h-[260px] overflow-y-auto space-y-0.5 px-3 py-2 rounded-2xl bg-[#F2F2F7]">${items.slice(0, 80).map(x => `<div class="flex items-center justify-between gap-2 text-[12.5px]"><span class="min-w-0 truncate text-gray-800">${svEsc(x.product_name || x.product_code)}</span><span class="flex-none font-bold text-gray-900">${(+x.order_qty || 0).toLocaleString()}${x.unit ? `<span class="text-gray-400 font-normal text-[11px]"> ${svEsc(x.unit)}</span>` : ''}${x.ship_qty != null && +x.ship_qty !== +x.order_qty ? ` <span class="text-rose-600 text-[11px]">출고 ${(+x.ship_qty).toLocaleString()}</span>` : ''}</span></div>`).join('')}${items.length > 80 ? `<div class="text-[11px] text-gray-400">외 ${items.length - 80}품목</div>` : ''}</div>`);
+      };
+      if (store) { await go(store, prodQ); return; }
+      const r = ibRank(q, stores, 6);
+      if (r.length && r[0].s >= 40 && (r.length === 1 || r[0].s - r[1].s >= 10)) { ibYesNo(`<b>${svEsc(r[0].it.name)}</b> 맞나요? <span class="text-gray-400 text-[12px]">(${ibFmtDate(date)} 주문)</span>`, () => go(r[0].it, ''), () => ibBot('매장명을 다시 알려 주세요.')); return; }
+      if (r.length) { ibAskPick('choice', r.map(x => ({ name: x.it.name, code: x.it.code, it: x.it })), q, null, (p) => go(p.it, ''), '매장'); return; }
+      ibBot(`${ibFmtDate(date)} 주문에서 '${svEsc(q)}'${ibJosaWa(q)} 비슷한 매장을 찾지 못했어요.`);
+    }
+
+    // ----- 메뉴 이동 ("비용관리 열어줘") -----
+    const IB_MENUS = [['홈화면', '홈화면|홈 화면|메인'], ['특이사항 관리', '특이사항\\s*관리|특이사항\\s*시트'], ['비용관리', '비용\\s*관리|비용'], ['실시간 대시보드', '실시간\\s*대시보드|대시보드'], ['구간차량 관리', '구간\\s*차량|구간차량'],
+      ['업로드 관리', '업로드\\s*관리|배차\\s*업로드|주문\\s*업로드'], ['업로드 내역', '업로드\\s*내역'], ['연락처', '연락처'], ['파렛트 입고현황', '파렛트|팔레트'], ['매장정보 관리', '매장\\s*정보|매장정보']];
+    function ibMenuIntent(t) {
+      if (!/(열어|가\s*줘|이동|들어가|보여\s*줘|켜\s*줘|화면|메뉴|페이지)/.test(t)) return null;
+      const hit = IB_MENUS.find(([, re]) => new RegExp(re).test(t));
+      return hit ? hit[0] : null;
+    }
+    function ibGo(name) {
+      if (window.innerWidth < 1024) ibToggle(false);
+      if (name === '실시간 대시보드') { handleMenuClick('구간차량 관리'); setTimeout(() => { try { switchSectionTab('dashboard'); } catch (e) {} }, 420); return; }
+      handleMenuClick(name);
+    }
+
+    // ----- 가르친 답 (때때 개선함에서 등록한 질문 · 답) -----
+    async function ibTryFaq(t) {
+      const faq = await ibLoadFaq();
+      if (!faq.length) return false;
+      const r = ibRank(t, faq.map((f, i) => ({ code: '', name: f.q, f })), 3);
+      if (r.length && r[0].s >= 80) { ibBot(`${svEsc(r[0].it.f.a).replace(/\n/g, '<br>')}<div class="mt-1 text-[10.5px] text-gray-400">때때가 배운 답이에요</div>`); return true; }
+      return false;
+    }
+
+    // ----- 건의 · 불편 신고 -----
+    function ibAskFeedback(prefill) {
+      if (prefill) { ibSaveFeedback(prefill); return; }
+      ibBot('어떤 점이 불편하셨거나, 때때가 무엇을 더 했으면 좋겠나요? 편하게 적어 주세요. 관리자가 보고 때때를 고쳐 나갈게요.');
+      ib.awaitKind = 'feedback'; ib.await = (ans) => ibSaveFeedback(ans);
+    }
+    async function ibSaveFeedback(text) {
+      const ok = await ibLogFeedback('feedback', text, ibRecentText(8));
+      ibBot(ok ? '고마워요! 건의가 잘 전달됐어요 🙏 <span class="text-[11.5px] text-gray-500">(특이사항 관리 설정 &gt; 때때 개선함에서 볼 수 있어요)</span>' : '건의를 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.');
     }
 
     async function ibSend(textArg) {
@@ -11943,7 +12264,13 @@
           if (/^(__ok|네|응|맞아|맞아요|ㅇㅇ|예|yes)/i.test(t)) { await a.onYes(); return; }
           if (/^(__no|아니|아뇨|노|no)/i.test(t)) { if (a.onNo) await a.onNo(); return; }
         }
-        if (ib.await && !ib.step) { const fn = ib.await; ib.await = null; await fn(t); return; }
+        if (ib.await && !ib.step) {
+          // 답을 기다리는 중이라도 다른 종류의 질문을 하면 그 질문으로 넘어감 (건의는 그대로 받음)
+          const k = ib.awaitKind, it = ibIntent(t);
+          const other = k !== 'feedback' && (!!ibMenuIntent(t) || (it && it !== k && it !== 'register') || /^(안녕|하이|고마워|감사|버전|때때\s*버전)/.test(t) || (it === 'register' && /\s/.test(t) && k !== 'budget' && !/^\S+$/.test(t) && /\d+\s*(개|박스|ea|봉|팩)/i.test(t)));
+          if (!other) { const fn = ib.await; ib.await = null; ib.awaitKind = null; await fn(t); return; }
+          ib.await = null; ib.awaitKind = null;
+        }
         if (/^(도움말|사용 방법|help|\?)$/i.test(t)) { ibHelp(); ibRenderChips(); return; }
         if (/^(__cancel|취소|그만|처음|새로|초기화)$/.test(t)) { ib.draft = null; ib.pending = null; ib.step = null; ib.photo = null; ib.guess = null; ibBot('취소했어요. 새로 시작하려면 사진을 붙여넣거나 말씀해 주세요.'); ibRenderChips(); return; }
         if (ib.step === 'confirm') {
@@ -11974,12 +12301,20 @@
         if (ib.step && !isSentence) { await ibAnswer(ib.step, text); return; }
         // 새 질문 : 특이사항 등록이 아니면 홈페이지 도우미로 답변
         if (!ib.step && !ib.draft) {
+          if (ibSmallTalk(t)) return;
+          const menu = ibMenuIntent(t);
+          if (menu) { ibBot(`<b>${svEsc(menu)}</b> 화면을 열게요.`); ibGo(menu); return; }
+          if (/^(건의|불편|개선|제안|요청)(사항)?/.test(t) || /(불편해|개선해\s*줘|이상해|틀렸어|잘못\s*(알려|답))/.test(t)) { const rest = t.replace(/^(건의|불편|개선|제안|요청)(사항)?\s*[:：]?\s*/, ''); ibAskFeedback(rest.length >= 4 ? t : ''); return; }
+          if (await ibTryFaq(t)) return;
           const intent = ibIntent(t);
           if (intent === 'budget') { await ibSkillBudget(t); return; }
-          if (intent === 'dispatch') { await ibSkillDispatch(t); return; }
+          if (intent === 'stats') { await ibSkillIssueStats(t); return; }
+          if (intent === 'order') { await ibSkillOrder(t); return; }
+          if (intent === 'dispatch') { await ibSkillDispatch2(t); return; }
           if (intent === 'contact') { await ibSkillContact(t); return; }
           if (!intent && ibParse(t)._words.length <= 1 && !ibParseDate(t)) {
-            ibBot(`무엇을 도와드릴까요?<div class="mt-2 flex flex-wrap gap-1.5">${ibBtn('data-ib-suggest="1"', '특이사항 등록')}${ibBtn('data-ib-say="부서활동비 얼마나 남았어?"', '예산 잔액')}${ibBtn('data-ib-say="기사님 누구야?"', '배차 · 기사')}${ibBtn('data-ib-say="연락처 찾기"', '연락처')}</div>`);
+            ibLogFeedback('unanswered', t, ibRecentText(4));
+            ibCapabilities(`'${svEsc(t)}'${ibJosaRo(t)}는 아직 잘 모르겠어요. 이런 걸 도와드릴 수 있어요.`);
             return;
           }
         }
@@ -12343,6 +12678,101 @@
       if (replace && delCnt) showConfirmModal(run, '배송일 기준 덮어쓰기', `붙여넣은 배송일(${dates.length}일)의 기존 기록 <b>${delCnt.toLocaleString()}행</b>을 삭제하고 <b>${isBulk.rows.length.toLocaleString()}행</b>을 새로 등록합니다.<br>삭제한 기록은 되돌릴 수 없어요.`);
       else run();
     }
+
+    // ---------- 특이사항 관리 설정 > 때때 개선함 ----------
+    const ibImp = { tab: 'open', rows: [], faq: [], teachQ: '' };
+    async function ibOpenImprove() {
+      if (!(isLoggedIn && currentRole === 'office')) return;
+      ibCloseSettings();
+      ibImp.tab = 'open'; ibImp.teachQ = '';
+      const m = ibEl('ibImpModal'); m.classList.remove('opacity-0', 'pointer-events-none'); m.classList.add('opacity-100');
+      await ibImpLoad();
+    }
+    function ibCloseImprove() { const m = ibEl('ibImpModal'); m.classList.remove('opacity-100'); m.classList.add('opacity-0', 'pointer-events-none'); }
+    async function ibImpLoad() {
+      ibEl('ibImpBody').innerHTML = '<div class="py-8 text-center text-[13px] text-gray-400">불러오는 중…</div>';
+      const [fb] = await Promise.all([supabaseClient.from(IB_FB_TABLE).select('*').order('created_at', { ascending: false }).limit(300), ibLoadFaq(true)]);
+      ibImp.rows = fb.error ? [] : (fb.data || []);
+      ibImp.err = fb.error ? dbErrorMessage(fb.error) : '';
+      ibImp.faq = ibFaq.slice();
+      ibImpRender();
+      ibImpBadge();
+    }
+    async function ibImpBadge() {
+      try {
+        const { count } = await supabaseClient.from(IB_FB_TABLE).select('id', { count: 'exact', head: true }).eq('status', 'open');
+        const b = ibEl('ibImpBadge'); b.textContent = count ? String(count) : ''; b.classList.toggle('hidden', !count);
+      } catch (e) {}
+    }
+    function ibImpRender() {
+      ibEl('ibImpModal').querySelectorAll('[data-imp-tab]').forEach(b => b.classList.toggle('active', b.dataset.impTab === ibImp.tab));
+      const body = ibEl('ibImpBody');
+      const KIND = { feedback: ['건의', 'bg-blue-50 text-[#007AFF]'], unanswered: ['모른 질문', 'bg-amber-50 text-amber-700'], bad: ['답 오류', 'bg-red-50 text-[#FF3B30]'] };
+      const fmt = (ts) => { const d = new Date(ts); return isNaN(d) ? '' : `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+      if (ibImp.tab === 'faq') {
+        body.innerHTML = `<div class="p-3 rounded-2xl border border-[#AF52DE]/30 bg-[#AF52DE]/5">
+            <div class="text-[12px] font-bold text-gray-700">새 답 가르치기</div>
+            <input id="ibFaqQ" type="text" value="${svEsc(ibImp.teachQ)}" placeholder="질문 (예: 택배 마감 몇 시야?)" class="mt-1.5 w-full px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px] outline-none focus:ring-2 focus:ring-purple-200">
+            <textarea id="ibFaqA" rows="3" placeholder="때때가 할 답 (예: 택배 마감은 매일 16시예요.)" class="mt-1.5 w-full px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px] outline-none focus:ring-2 focus:ring-purple-200 resize-y"></textarea>
+            <div class="mt-1.5 flex justify-end"><button type="button" onclick="ibFaqAdd()" class="ios-btn-tap px-3.5 py-2 rounded-xl bg-[#AF52DE] text-white text-[12.5px] font-bold">가르치기</button></div>
+          </div>` + (ibImp.faq.length ? ibImp.faq.map((f, i) => `<div class="p-3 rounded-2xl border border-gray-200 bg-white">
+            <div class="flex items-start gap-2"><span class="flex-none text-[11px] font-bold text-[#AF52DE] mt-0.5">Q</span><div class="flex-1 min-w-0 text-[13px] font-semibold text-gray-900">${svEsc(f.q)}</div><button type="button" onclick="ibFaqDel(${i})" class="flex-none text-[11.5px] font-bold text-[#FF3B30]">삭제</button></div>
+            <div class="mt-1 flex items-start gap-2"><span class="flex-none text-[11px] font-bold text-gray-400 mt-0.5">A</span><div class="flex-1 min-w-0 text-[12.5px] text-gray-700 whitespace-pre-line">${svEsc(f.a)}</div></div>
+          </div>`).join('') : '<div class="py-6 text-center text-[12.5px] text-gray-400">아직 가르친 답이 없어요.</div>');
+        if (ibImp.teachQ) setTimeout(() => ibEl('ibFaqA') && ibEl('ibFaqA').focus(), 60);
+        return;
+      }
+      if (ibImp.err) { body.innerHTML = `<div class="py-6 text-center text-[12.5px] text-[#FF3B30]">불러오지 못했어요: ${svEsc(ibImp.err)}</div>`; return; }
+      const list = ibImp.rows.filter(r => (ibImp.tab === 'done') === (r.status === 'done'));
+      if (!list.length) { body.innerHTML = `<div class="py-8 text-center text-[12.5px] text-gray-400">${ibImp.tab === 'done' ? '처리한 항목이 없어요.' : '새 건의나 모른 질문이 없어요 👍'}</div>`; return; }
+      body.innerHTML = list.map(r => { const k = KIND[r.kind] || [r.kind, 'bg-gray-100 text-gray-600']; return `<div class="p-3 rounded-2xl border border-gray-200 bg-white">
+          <div class="flex items-center gap-2 text-[11px]"><span class="px-1.5 py-0.5 rounded-md font-bold ${k[1]}">${k[0]}</span><span class="text-gray-500">${svEsc(r.created_by || '알 수 없음')} · ${fmt(r.created_at)}</span></div>
+          <div class="mt-1.5 text-[13.5px] font-semibold text-gray-900 whitespace-pre-line break-words">${svEsc(r.text || '')}</div>
+          ${r.context ? `<details class="mt-1"><summary class="text-[11px] text-gray-400 cursor-pointer">대화 보기</summary><div class="mt-1 p-2 rounded-xl bg-gray-50 text-[11.5px] text-gray-600 whitespace-pre-line break-words">${svEsc(r.context)}</div></details>` : ''}
+          <div class="mt-2 flex flex-wrap gap-1.5">
+            ${r.kind === 'unanswered' ? `<button type="button" onclick="ibImpTeach(${r.id})" class="ios-btn-tap px-2.5 py-1 rounded-lg bg-[#AF52DE] text-white text-[11.5px] font-bold">답 가르치기</button>` : ''}
+            <button type="button" onclick="ibImpSet(${r.id}, '${r.status === 'done' ? 'open' : 'done'}')" class="ios-btn-tap px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 text-[11.5px] font-bold">${r.status === 'done' ? '다시 열기' : '처리 완료'}</button>
+            <button type="button" onclick="ibImpDel(${r.id})" class="ios-btn-tap px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-[#FF3B30] text-[11.5px] font-bold">삭제</button>
+          </div></div>`; }).join('');
+    }
+    ibEl('ibImpModal').addEventListener('click', (e) => { const b = e.target.closest('[data-imp-tab]'); if (b) { ibImp.tab = b.dataset.impTab; ibImp.teachQ = ''; ibImpRender(); } });
+    async function ibImpSet(id, status) {
+      const { error } = await supabaseClient.from(IB_FB_TABLE).update({ status }).eq('id', id);
+      if (error) { showToastNotification('저장 실패', dbErrorMessage(error), 'warning'); return; }
+      const r = ibImp.rows.find(x => x.id === id); if (r) r.status = status;
+      ibImpRender(); ibImpBadge();
+    }
+    function ibImpDel(id) {
+      showConfirmModal(async () => {
+        const { error } = await supabaseClient.from(IB_FB_TABLE).delete().eq('id', id);
+        if (error) { showToastNotification('삭제 실패', dbErrorMessage(error), 'warning'); return; }
+        ibImp.rows = ibImp.rows.filter(x => x.id !== id); ibImpRender(); ibImpBadge();
+      }, '항목 삭제', '이 건의(질문)를 삭제할까요?');
+    }
+    function ibImpTeach(id) {
+      const r = ibImp.rows.find(x => x.id === id); if (!r) return;
+      ibImp.teachQ = r.text || ''; ibImp.teachFrom = id; ibImp.tab = 'faq'; ibImpRender();
+    }
+    async function ibFaqSave(list) {
+      const res = await dbRun('때때 답 저장', async () => { await settingsSave([{ key: IB_FAQ_KEY, value: list }]); });
+      if (!res.ok) return false;
+      ibFaq = list.slice(); ibImp.faq = list.slice(); ibFaqLoaded = true;
+      return true;
+    }
+    async function ibFaqAdd() {
+      const q = ibEl('ibFaqQ').value.trim(), a = ibEl('ibFaqA').value.trim();
+      if (!q || !a) { showToastNotification('입력 확인', '질문과 답을 모두 적어 주세요.', 'warning'); return; }
+      const list = ibImp.faq.filter(f => f.q !== q).concat([{ q, a }]);
+      if (!(await ibFaqSave(list))) return;
+      if (ibImp.teachFrom) { await supabaseClient.from(IB_FB_TABLE).update({ status: 'done' }).eq('id', ibImp.teachFrom); const r = ibImp.rows.find(x => x.id === ibImp.teachFrom); if (r) r.status = 'done'; ibImp.teachFrom = null; ibImpBadge(); }
+      ibImp.teachQ = '';
+      ibImpRender();
+      showToastNotification('가르치기 완료', '이제 비슷한 질문에 때때가 바로 답해요.', 'success');
+    }
+    async function ibFaqDel(i) {
+      const list = ibImp.faq.slice(); list.splice(i, 1);
+      if (await ibFaqSave(list)) ibImpRender();
+    }
     async function ibOpenSettings() {
       if (!(isLoggedIn && currentRole === 'office')) { showToastNotification('접근 제한', '사무실 담당자만 설정할 수 있습니다.', 'warning'); return; }
       await ibLoadConn(true);
@@ -12350,6 +12780,7 @@
       const st = ibEl('ibSetStatus'); st.className = 'mt-2 text-[12px] text-gray-500 min-h-[18px]';
       st.textContent = ibConn.key ? '저장된 키가 있어요.' : '아직 키가 없어요. 키가 없으면 사진 유형을 직접 고르게 됩니다.';
       const m = ibEl('ibSetModal'); m.classList.remove('opacity-0', 'pointer-events-none'); m.classList.add('opacity-100');
+      ibImpBadge();
     }
     function ibCloseSettings() { const m = ibEl('ibSetModal'); m.classList.remove('opacity-100'); m.classList.add('opacity-0', 'pointer-events-none'); }
     async function ibTestConn() {
@@ -12392,6 +12823,17 @@
       else if (e.key === 'Escape') ibToggle(false);
     });
     ibEl('ibPanel').addEventListener('paste', (e) => e.stopPropagation());
+    // 예산 목록 안 검색 (입력하면 바로 추천 목록)
+    ibEl('ibPanel').addEventListener('input', (e) => {
+      const inp = e.target.closest('[data-ib-bsearch]'); if (!inp) return;
+      const box = inp.parentElement.querySelector('[data-ib-blist]'); if (box) box.innerHTML = ibBudgetListHtml(inp.value.trim());
+    });
+    ibEl('ibPanel').addEventListener('keydown', (e) => {
+      const inp = e.target.closest('[data-ib-bsearch]'); if (!inp) return;
+      e.stopPropagation();
+      if (e.isComposing || e.keyCode === 229) return;
+      if (e.key === 'Enter') { e.preventDefault(); const b = inp.parentElement.querySelector('[data-ib-bpick]'); if (b) b.click(); }
+    });
     ibEl('ibPanel').addEventListener('click', (e) => {
       const p = e.target.closest('[data-ib-pick]');
       if (p && ib.pending) {
@@ -12401,7 +12843,11 @@
       }
       const an = e.target.closest('[data-ib-ans]'); if (an) { ibSend(an.dataset.ibAns); return; }
       const sy = e.target.closest('[data-ib-say]'); if (sy) { ibSend(sy.dataset.ibSay); return; }
-      const gm = e.target.closest('[data-ib-go]'); if (gm) { if (window.innerWidth < 1024) ibToggle(false); handleMenuClick(gm.dataset.ibGo); return; }
+      const gm = e.target.closest('[data-ib-go]'); if (gm) { ibGo(gm.dataset.ibGo); return; }
+      const bp = e.target.closest('[data-ib-bpick]');
+      if (bp) { const x = (ib.budgetList || []).find(y => String(y.acc.id) === bp.dataset.ibBpick); if (x) { ib.await = null; ibPush('me', svEsc(x.acc.name)); ibBudgetAnswer(x.acc); } return; }
+      const ac = e.target.closest('[data-ib-act]');
+      if (ac) { const a = ac.dataset.ibAct; if (a === 'budget') { ibPush('me', '예산 잔액'); ibBudgetPicker(); } else if (a === 'feedback') { ibPush('me', '건의하기'); ibAskFeedback(); } return; }
       const ed = e.target.closest('[data-ib-edit]'); if (ed && ib.step === 'confirm') { ibEditField(ed.dataset.ibEdit); return; }
       const sg = e.target.closest('[data-ib-suggest]');
       if (sg) { const q = IB_SUGGESTIONS[+sg.dataset.ibSuggest]; if (q) ibSuggest(q.action, q.label); return; }
@@ -12416,6 +12862,7 @@
       const c = e.target.closest('[data-ib-chip]'); if (!c) return;
       const v = c.dataset.ibChip;
       if (v === '사진 넣기') { ibEl('ibFile').click(); return; }
+      if (v === '건의하기') { ibPush('me', '건의하기'); ibAskFeedback(); return; }
       if (/ $/.test(v)) { const el = ibEl('ibInput'); el.value = v; el.focus(); return; }
       ibSend(v);
     });
