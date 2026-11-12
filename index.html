@@ -1325,7 +1325,7 @@
       <div class="bg-white rounded-[28px] w-full max-w-3xl p-5 shadow-2xl border border-gray-100 flex flex-col max-h-[90vh]">
         <div class="flex items-center gap-2.5 pb-3 border-b border-gray-100 flex-shrink-0">
           <div class="w-8 h-8 rounded-xl bg-[#34C759]/10 text-[#34C759] flex items-center justify-center"><i class="ph-bold ph-upload-simple text-lg"></i></div>
-          <div class="min-w-0 flex-1"><h3 class="text-[17px] font-bold text-gray-900 tracking-tight">데이터 업로드</h3><p class="text-[11px] text-gray-500">엑셀에서 <b>배송일 ~ 자료등록</b> 18칸을 복사해 아래에 붙여넣으세요. 머리글 줄은 있어도 돼요.</p></div>
+          <div class="min-w-0 flex-1"><h3 class="text-[17px] font-bold text-gray-900 tracking-tight">데이터 업로드</h3><p class="text-[11px] text-gray-500">엑셀에서 <b>배송일 ~ 자료등록</b> 19칸을 복사해 아래에 붙여넣으세요. 머리글 줄은 있어도 돼요.</p></div>
           <button type="button" onclick="isCloseBulk()" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center flex-shrink-0" title="닫기"><i class="ph-bold ph-x"></i></button>
         </div>
         <div class="overflow-y-auto min-h-0 flex-1">
@@ -10048,6 +10048,7 @@
       { k: 'product_name', h: '제품명', w: 118, suggest: 'product' },
       { k: 'temperature', h: '온도', w: 46, auto: true },
       { k: 'unit', h: '단위', w: 44, auto: true },
+      { k: 'item_designation', h: '품목지정', w: 60, auto: true },
       { k: 'stock_type', h: '재고타입', w: 60, auto: true },
       { k: 'qty', h: '수량', w: 48 },
       { k: 'content', h: '내용', w: 90, opt: true },
@@ -10065,7 +10066,7 @@
     const isCellColor = (r, k) => isColors(r)[k] === 'red' ? 'red' : 'black';
     const IS_NODATA = '데이터 없음';
     // 자동 칸이지만 코드를 찾지 못한('데이터 없음') 경우 직접 입력 가능한 칸
-    const IS_NODATA_EDIT = { temperature: 'product', unit: 'product', stock_type: 'product' };
+    const IS_NODATA_EDIT = { temperature: 'product', unit: 'product', item_designation: 'product', stock_type: 'product' };
     const isNoDataNow = (row, g) => !!row && ((g === 'store' ? row.store_name : row.product_name) === IS_NODATA || isState.miss.has(row.id + '|' + (g === 'store' ? 'store_code' : 'product_code')));
     async function isNoDataEditable(row, col) {
       const g = IS_NODATA_EDIT[col.k]; if (!g || !row) return false;
@@ -10076,7 +10077,7 @@
       return !!f && !f.found;                                        // 이미 직접 입력해 둔 행도 계속 고칠 수 있게
     }
     const IS_STORE_AUTO = ['main_center', 'client_code', 'client_name', 'store_name'];
-    const IS_PRODUCT_AUTO = ['temperature', 'unit', 'stock_type', 'product_name'];
+    const IS_PRODUCT_AUTO = ['temperature', 'unit', 'item_designation', 'stock_type', 'product_name'];
     const IS_GUT_W = 52;
     const IS_COLORS = ['#007AFF', '#FF9500', '#34C759', '#AF52DE', '#FF2D55', '#32ADE6', '#FF3B30', '#5856D6', '#00A86B', '#C68E17'];
     const IS_USER_KEY = 'issue_sheet_user_v1';
@@ -10366,7 +10367,7 @@
       let res = null;
       try {
         const pick = async (useStore, useDate) => {
-          let q = supabaseClient.from('order_data').select('product_name,temperature,unit,stock_type').eq('product_code', code);
+          let q = supabaseClient.from('order_data').select('product_name,temperature,unit,item_designation,stock_type').eq('product_code', code);
           if (useStore) q = q.eq('store_code', store);
           if (useDate) q = q.eq('delivery_date', date);
           const { data } = await q.order('delivery_date', { ascending: false }).limit(1);
@@ -10376,12 +10377,12 @@
                        : ((store && await pick(true, false)) || await pick(false, false));
         let m = null;                                                    // 주문에 없으면 제품정보 업로드(product_master)로 보충
         if (!d) {
-          const r = await supabaseClient.from('product_master').select('product_name,temperature,stock_type').eq('product_code', code).order('updated_at', { ascending: false }).limit(1);
+          const r = await supabaseClient.from('product_master').select('product_name,temperature,item_designation,stock_type').eq('product_code', code).order('updated_at', { ascending: false }).limit(1);
           m = !r.error && r.data && r.data[0];
         }
-        res = d ? { found: true, product_name: d.product_name || IS_NODATA, temperature: d.temperature || '', unit: d.unit || '', stock_type: d.stock_type || '' }
-            : m ? { found: true, product_name: m.product_name || IS_NODATA, temperature: m.temperature || '', unit: '', stock_type: m.stock_type || '' }
-                : { found: false, product_name: IS_NODATA, temperature: '', unit: '', stock_type: '' };
+        res = d ? { found: true, product_name: d.product_name || IS_NODATA, temperature: d.temperature || '', unit: d.unit || '', item_designation: d.item_designation || '', stock_type: d.stock_type || '' }
+            : m ? { found: true, product_name: m.product_name || IS_NODATA, temperature: m.temperature || '', unit: '', item_designation: m.item_designation || '', stock_type: m.stock_type || '' }
+                : { found: false, product_name: IS_NODATA, temperature: '', unit: '', item_designation: '', stock_type: '' };
       } catch (e) { return null; }
       isState.cache.product.set(key, res);
       return res;
@@ -12188,7 +12189,7 @@
     // ----- 설정 : 때때 연결 (Supabase app_settings) -----
 
     // ---------- 데이터 업로드 (설정 > 텍스트 붙여넣기) ----------
-    //  배송일 ~ 자료등록 18칸을 엑셀에서 복사해 붙여넣으면 그대로(자동 칸 포함) 서버에 등록
+    //  배송일 ~ 자료등록 19칸을 엑셀에서 복사해 붙여넣으면 그대로(자동 칸 포함) 서버에 등록
     const isBulk = { rows: [], dates: [], fix: new Map(), probs: [] };
     // 엑셀 복사 텍스트(TSV) 읽기 : 칸 안 줄바꿈(Alt+Enter)은 엑셀이 "..." 로 감싸서 복사함
     function isParseTsv(txt) {
@@ -12255,7 +12256,7 @@
       const replace = isEl('isBulkModal').querySelector('input[name="isBulkMode"]:checked').value === 'replace';
       const msgs = [];
       if (bad.length) msgs.push(`__FIX__`);
-      if (wide.length) msgs.push(`18칸보다 많은 줄이 있어요(${wide.slice(0, 5).join(', ')}${wide.length > 5 ? ' …' : ''}). 넘친 칸은 무시돼요.`);
+      if (wide.length) msgs.push(`19칸보다 많은 줄이 있어요(${wide.slice(0, 5).join(', ')}${wide.length > 5 ? ' …' : ''}). 넘친 칸은 무시돼요.`);
       if (replace && isBulk.rows.some(r => !r.delivery_date)) msgs.push('덮어쓰기에서는 배송일이 빈 줄은 등록만 되고 지우는 기준에는 쓰이지 않아요.');
       const delCnt = replace ? isState.rows.filter(r => isBulk.dates.includes(String(r.delivery_date || '').slice(0, 10))).length : 0;
       const range = isBulk.dates.length ? ` · 배송일 ${isBulk.dates[0]}${isBulk.dates.length > 1 ? ' ~ ' + isBulk.dates[isBulk.dates.length - 1] : ''}` : '';
