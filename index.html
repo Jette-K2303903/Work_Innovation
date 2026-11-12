@@ -1281,9 +1281,15 @@
       <div class="bg-white rounded-[28px] w-full max-w-sm p-5 shadow-2xl border border-gray-100">
         <div class="flex items-center gap-2.5 pb-3 border-b border-gray-100">
           <div class="w-8 h-8 rounded-xl bg-blue-50 text-[#007AFF] flex items-center justify-center"><i class="ph-bold ph-gear-six text-lg"></i></div>
-          <div class="min-w-0"><h3 class="text-[17px] font-bold text-gray-900 tracking-tight">특이사항 관리 설정</h3><p class="text-[11px] text-gray-500">때때 사진 판단 연결</p></div>
+          <div class="min-w-0"><h3 class="text-[17px] font-bold text-gray-900 tracking-tight">특이사항 관리 설정</h3><p class="text-[11px] text-gray-500">데이터 업로드 · 때때 사진 판단 연결</p></div>
         </div>
-        <label class="block mt-3 text-[12px] font-semibold text-gray-600">때때 두뇌 주소</label>
+        <button type="button" onclick="isOpenBulk()" class="ios-btn-tap mt-3 w-full flex items-center gap-3 px-3.5 py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-2xl text-left transition-colors">
+          <span class="w-8 h-8 rounded-xl bg-[#34C759]/10 text-[#34C759] flex items-center justify-center flex-shrink-0"><i class="ph-bold ph-upload-simple text-lg"></i></span>
+          <span class="min-w-0 flex-1"><span class="block text-[14px] font-semibold text-gray-900">데이터 업로드</span><span class="block text-[11px] text-gray-500">엑셀에서 복사한 내용을 붙여넣어 한 번에 등록 (기본값 · 백데이터)</span></span>
+          <i class="ph-bold ph-caret-right text-gray-300"></i>
+        </button>
+        <div class="mt-3 pt-3 border-t border-gray-100 text-[11px] font-semibold text-gray-400">때때 사진 판단 연결</div>
+        <label class="block mt-2 text-[12px] font-semibold text-gray-600">때때 두뇌 주소</label>
         <input type="url" id="ibSetUrl" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[13px] font-mono border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
         <label class="block mt-3 text-[12px] font-semibold text-gray-600">봇 키 <span class="text-gray-400 font-normal">(때때 관리자 &gt; 봇 레지스트리에서 발급)</span></label>
         <input type="text" id="ibSetKey" autocomplete="off" spellcheck="false" placeholder="bk_ 로 시작하는 키" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[13px] font-mono border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
@@ -1293,6 +1299,37 @@
           <button type="button" onclick="ibCloseSettings()" class="ios-btn-tap py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[13.5px]">닫기</button>
           <button type="button" onclick="ibTestConn()" class="ios-btn-tap py-2.5 bg-white border border-gray-200 text-gray-800 font-semibold rounded-xl text-[13.5px]">연결 확인</button>
           <button type="button" onclick="ibSaveSettings()" class="ios-btn-tap py-2.5 bg-[#007AFF] text-white font-semibold rounded-xl text-[13.5px]">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- [특이사항 관리 : 데이터 업로드 (텍스트 붙여넣기)] -->
+    <div id="isBulkModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
+      <div class="bg-white rounded-[28px] w-full max-w-3xl p-5 shadow-2xl border border-gray-100 flex flex-col max-h-[90vh]">
+        <div class="flex items-center gap-2.5 pb-3 border-b border-gray-100 flex-shrink-0">
+          <div class="w-8 h-8 rounded-xl bg-[#34C759]/10 text-[#34C759] flex items-center justify-center"><i class="ph-bold ph-upload-simple text-lg"></i></div>
+          <div class="min-w-0 flex-1"><h3 class="text-[17px] font-bold text-gray-900 tracking-tight">데이터 업로드</h3><p class="text-[11px] text-gray-500">엑셀에서 <b>배송일 ~ 자료등록</b> 18칸을 복사해 아래에 붙여넣으세요. 머리글 줄은 있어도 돼요.</p></div>
+          <button type="button" onclick="isCloseBulk()" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center flex-shrink-0" title="닫기"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div class="overflow-y-auto min-h-0 flex-1">
+          <div id="isBulkCols" class="mt-3 flex flex-wrap gap-1"></div>
+          <textarea id="isBulkText" rows="7" spellcheck="false" oninput="isBulkParse()" placeholder="여기에 붙여넣기 (Ctrl + V)" class="mt-2 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[12px] font-mono border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200 whitespace-pre resize-y"></textarea>
+          <div class="mt-3 grid grid-cols-2 gap-2">
+            <label class="is-bulk-mode flex items-start gap-2 p-3 rounded-2xl border border-gray-200 cursor-pointer has-[:checked]:border-[#007AFF] has-[:checked]:bg-blue-50/60">
+              <input type="radio" name="isBulkMode" value="add" checked onchange="isBulkParse()" class="mt-0.5 accent-[#007AFF]">
+              <span><span class="block text-[13px] font-semibold text-gray-900">추가</span><span class="block text-[11px] text-gray-500">기존 기록은 그대로 두고 아래에 더해요</span></span>
+            </label>
+            <label class="is-bulk-mode flex items-start gap-2 p-3 rounded-2xl border border-gray-200 cursor-pointer has-[:checked]:border-[#FF3B30] has-[:checked]:bg-red-50/60">
+              <input type="radio" name="isBulkMode" value="replace" onchange="isBulkParse()" class="mt-0.5 accent-[#FF3B30]">
+              <span><span class="block text-[13px] font-semibold text-gray-900">배송일 기준 덮어쓰기</span><span class="block text-[11px] text-gray-500">붙여넣은 배송일들의 기존 기록을 지우고 새로 등록해요</span></span>
+            </label>
+          </div>
+          <p id="isBulkStatus" class="mt-3 text-[12px] text-gray-500 min-h-[18px]"></p>
+          <div id="isBulkPreview" class="mt-2 overflow-x-auto rounded-xl border border-gray-100 hidden"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mt-4 flex-shrink-0">
+          <button type="button" onclick="isCloseBulk()" class="ios-btn-tap py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[14px]">취소</button>
+          <button type="button" id="isBulkGo" onclick="isBulkUpload()" disabled class="ios-btn-tap py-2.5 bg-[#007AFF] text-white font-semibold rounded-xl text-[14px] disabled:opacity-40 disabled:pointer-events-none">업로드</button>
         </div>
       </div>
     </div>
@@ -10790,6 +10827,7 @@
           isDrawLayer();
         })
         .on('broadcast', { event: 'row' }, ({ payload }) => { if (payload && payload.row) { isMerge(payload.row); isRender(); } })
+        .on('broadcast', { event: 'reload' }, () => { isLoad(); })
         .on('broadcast', { event: 'del' }, ({ payload }) => { if (payload && payload.ids) { isState.rows = isState.rows.filter(r => !payload.ids.includes(r.id)); isRender(); } })
         .on('broadcast', { event: 'msg' }, ({ payload }) => { if (payload && payload.msg) isAddMsg(payload.msg, true); })
         .on('broadcast', { event: 'log' }, ({ payload }) => { if (payload && payload.logs) { payload.logs.forEach(isAddLog); isRenderLogs(); } })
@@ -12022,6 +12060,96 @@
       supabaseClient.from('issue_sheet_photos').update({ row_id: realId }).in('id', ids).then(() => {}, () => {});
     }
     // ----- 설정 : 때때 연결 (Supabase app_settings) -----
+
+    // ---------- 데이터 업로드 (설정 > 텍스트 붙여넣기) ----------
+    //  배송일 ~ 자료등록 18칸을 엑셀에서 복사해 붙여넣으면 그대로(자동 칸 포함) 서버에 등록
+    const isBulk = { rows: [], dates: [] };
+    function isBulkDate(v) {
+      v = String(v || '').trim(); if (!v) return '';
+      let d = isNormDate(v);
+      const m = !/^\d{4}-\d{2}-\d{2}$/.test(d) && v.match(/^(\d{1,2})[.\-\/월\s]+(\d{1,2})일?$/);
+      if (m) d = `${new Date().getFullYear()}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+      if (/^\d{2}[.\-\/]\d{1,2}[.\-\/]\d{1,2}$/.test(v)) { const p = v.split(/[.\-\/]/); d = `20${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`; }
+      return /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(new Date(d + 'T00:00:00')) ? d : null;
+    }
+    function isOpenBulk() {
+      if (!(isLoggedIn && currentRole === 'office')) { showToastNotification('접근 제한', '사무실 담당자만 업로드할 수 있습니다.', 'warning'); return; }
+      if (isNeedUser()) return;
+      ibCloseSettings();
+      isEl('isBulkCols').innerHTML = IS_COLS.map((c, i) => `<span class="px-1.5 py-0.5 rounded-md bg-gray-100 text-[10.5px] font-semibold text-gray-600">${i + 1}. ${svEsc(c.h)}</span>`).join('');
+      isEl('isBulkText').value = '';
+      isEl('isBulkModal').querySelector('input[value="add"]').checked = true;
+      isBulkParse();
+      const m = isEl('isBulkModal'); m.classList.remove('opacity-0', 'pointer-events-none'); m.classList.add('opacity-100');
+      setTimeout(() => isEl('isBulkText').focus(), 120);
+    }
+    function isCloseBulk() { const m = isEl('isBulkModal'); m.classList.remove('opacity-100'); m.classList.add('opacity-0', 'pointer-events-none'); }
+    function isBulkParse() {
+      const st = isEl('isBulkStatus'), pv = isEl('isBulkPreview'), go = isEl('isBulkGo');
+      const txt = isEl('isBulkText').value.replace(/\r/g, '');
+      let lines = txt.split('\n').filter(l => l.replace(/\t/g, '').trim() !== '');
+      isBulk.rows = []; isBulk.dates = [];
+      if (!lines.length) { st.className = 'mt-3 text-[12px] text-gray-500 min-h-[18px]'; st.textContent = '붙여넣으면 여기에서 미리 확인할 수 있어요.'; pv.classList.add('hidden'); go.disabled = true; return; }
+      if (/배송일/.test(lines[0].split('\t')[0])) lines = lines.slice(1);              // 머리글 줄 건너뛰기
+      const bad = [], wide = [];
+      lines.forEach((l, i) => {
+        const cells = l.split('\t');
+        if (cells.length > IS_COLS.length && cells.slice(IS_COLS.length).some(v => v.trim())) wide.push(i + 1);
+        const r = {};
+        IS_COLS.forEach((c, j) => { const v = (cells[j] ?? '').trim(); r[c.k] = v === '' ? null : v; });
+        if (r.delivery_date) { const d = isBulkDate(r.delivery_date); if (d === null) bad.push(i + 1); else r.delivery_date = d; }
+        if (Object.values(r).every(v => v == null)) return;
+        isBulk.rows.push(r);
+      });
+      isBulk.dates = [...new Set(isBulk.rows.map(r => r.delivery_date).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d || '')))].sort();
+      const replace = isEl('isBulkModal').querySelector('input[name="isBulkMode"]:checked').value === 'replace';
+      const msgs = [];
+      if (bad.length) msgs.push(`배송일을 읽지 못한 줄: ${bad.slice(0, 8).join(', ')}${bad.length > 8 ? ' …' : ''}`);
+      if (wide.length) msgs.push(`18칸보다 많은 줄이 있어요(${wide.slice(0, 5).join(', ')}${wide.length > 5 ? ' …' : ''}). 넘친 칸은 무시돼요.`);
+      if (replace && isBulk.rows.some(r => !r.delivery_date)) msgs.push('덮어쓰기에서는 배송일이 빈 줄은 등록만 되고 지우는 기준에는 쓰이지 않아요.');
+      const delCnt = replace ? isState.rows.filter(r => isBulk.dates.includes(String(r.delivery_date || '').slice(0, 10))).length : 0;
+      const range = isBulk.dates.length ? ` · 배송일 ${isBulk.dates[0]}${isBulk.dates.length > 1 ? ' ~ ' + isBulk.dates[isBulk.dates.length - 1] : ''}` : '';
+      st.className = 'mt-3 text-[12px] min-h-[18px] ' + (bad.length ? 'text-[#FF3B30]' : 'text-gray-600');
+      st.innerHTML = `<b>${isBulk.rows.length.toLocaleString()}행</b> 인식${range}${replace ? ` · 기존 <b class="text-[#FF3B30]">${delCnt.toLocaleString()}행</b> 삭제 예정` : ''}` + (msgs.length ? '<br>' + msgs.map(svEsc).join('<br>') : '');
+      const show = isBulk.rows.slice(0, 5);
+      pv.innerHTML = `<table class="text-[11px] whitespace-nowrap"><thead><tr>${IS_COLS.map(c => `<th class="px-2 py-1.5 bg-gray-50 text-gray-500 font-semibold text-left">${svEsc(c.h)}</th>`).join('')}</tr></thead><tbody>${show.map(r => `<tr class="border-t border-gray-100">${IS_COLS.map(c => `<td class="px-2 py-1 text-gray-800">${svEsc(r[c.k] ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>` + (isBulk.rows.length > 5 ? `<div class="px-2 py-1.5 text-[11px] text-gray-400 border-t border-gray-100">외 ${(isBulk.rows.length - 5).toLocaleString()}행</div>` : '');
+      pv.classList.toggle('hidden', !show.length);
+      go.disabled = !isBulk.rows.length || bad.length > 0;
+      go.textContent = replace ? '덮어쓰기 업로드' : '업로드';
+      go.classList.toggle('bg-[#FF3B30]', replace); go.classList.toggle('bg-[#007AFF]', !replace);
+    }
+    async function isBulkUpload() {
+      if (isNeedUser() || !isBulk.rows.length) return;
+      const replace = isEl('isBulkModal').querySelector('input[name="isBulkMode"]:checked').value === 'replace';
+      const dates = isBulk.dates.slice();
+      const delCnt = replace ? isState.rows.filter(r => dates.includes(String(r.delivery_date || '').slice(0, 10))).length : 0;
+      const run = async () => {
+        showBusy('업로드 중...');
+        let ok = 0, err = null, deleted = 0;
+        try {
+          if (replace && dates.length) {
+            for (let i = 0; i < dates.length && !err; i += 100) {
+              const { data, error } = await supabaseClient.from(IS_TABLE).delete().in('delivery_date', dates.slice(i, i + 100)).select('id');
+              if (error) err = error; else deleted += data ? data.length : isState.rows.filter(r => dates.slice(i, i + 100).includes(String(r.delivery_date || '').slice(0, 10))).length;
+            }
+          }
+          const now = new Date().toISOString();
+          for (let i = 0; i < isBulk.rows.length && !err; i += 500) {
+            const chunk = isBulk.rows.slice(i, i + 500).map(r => ({ ...r, created_by: isState.me, updated_by: isState.me, updated_at: now }));
+            const { error } = await supabaseClient.from(IS_TABLE).insert(chunk);
+            if (error) err = error; else ok += chunk.length;
+          }
+        } finally { hideBusy(); }
+        await isLoad();
+        isBroadcast('reload', {});
+        if (ok || deleted) isLog([{ action: '업로드', row_id: null, field_key: '', field: '', old_value: deleted ? `${deleted}행 삭제` : '', new_value: `${ok}행 등록${dates.length ? ` (배송일 ${dates[0]}${dates.length > 1 ? ' ~ ' + dates[dates.length - 1] : ''})` : ''}`, row_label: '데이터 업로드' }]);
+        if (err) { showToastNotification('업로드 중 오류', `${ok}행까지 등록했습니다. ${dbErrorMessage(err)}`, 'warning'); isBulkParse(); return; }
+        isCloseBulk();
+        showToastNotification('업로드 완료', `${ok.toLocaleString()}행을 등록했습니다.${deleted ? ` (기존 ${deleted.toLocaleString()}행 삭제)` : ''}`, 'success');
+      };
+      if (replace && delCnt) showConfirmModal(run, '배송일 기준 덮어쓰기', `붙여넣은 배송일(${dates.length}일)의 기존 기록 <b>${delCnt.toLocaleString()}행</b>을 삭제하고 <b>${isBulk.rows.length.toLocaleString()}행</b>을 새로 등록합니다.<br>삭제한 기록은 되돌릴 수 없어요.`);
+      else run();
+    }
     async function ibOpenSettings() {
       if (!(isLoggedIn && currentRole === 'office')) { showToastNotification('접근 제한', '사무실 담당자만 설정할 수 있습니다.', 'warning'); return; }
       await ibLoadConn(true);
