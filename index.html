@@ -97,6 +97,18 @@
     .is-table td.is-red { color: #FF3B30 !important; }
     .is-table td.is-bold { font-weight: 800 !important; }
     .is-table td .is-fr { color: #FF3B30; }
+    .is-red-tg { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; vertical-align: middle; font-size: 10.5px; font-weight: 700; color: #9CA3AF; }
+    .is-red-tg-sw { position: relative; width: 28px; height: 16px; border-radius: 9px; background: #D1D5DB; transition: background .2s; }
+    .is-red-tg-sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: left .2s; }
+    .is-red-tg.on { color: #FF3B30; } .is-red-tg.on .is-red-tg-sw { background: #FF3B30; } .is-red-tg.on .is-red-tg-sw::after { left: 14px; }
+    #hoPrintRoot { display: none; }
+    @media print {
+      @page { size: A4 portrait; margin: 0 0.1in; }
+      body.ho-printing > *:not(#hoPrintRoot) { display: none !important; }
+      body.ho-printing #hoPrintRoot { display: block !important; }
+      body.ho-printing { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .ho-noprint { display: none !important; }
+    }
     .is-rsz { position: absolute; top: 0; right: -4px; width: 8px; height: 100%; cursor: col-resize; z-index: 5; }
     .is-rsz:hover, .is-rsz:active { background: linear-gradient(to right, transparent 3px, #007AFF 3px, #007AFF 5px, transparent 5px); }
     .is-table tr.is-pend td { background: #E8F8EC !important; cursor: pointer; }
@@ -2314,7 +2326,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.033</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.034</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -10211,7 +10223,7 @@
       { k: 'subject', h: '주체', w: 56, opt: true },
       { k: 'fault', h: '귀책', w: 56, opt: true },
       { k: 'inbound', h: '입고', w: 56, opt: true, fixed: ['-', '입고'] },
-      { k: 'data_reg', h: '자료등록', w: 64, opt: true, fixed: ['-', '입고'] }
+      { k: 'data_reg', h: '자료등록', w: 64, opt: true, fixed: ['-', '등록'] }
     ];
     IS_COLS.forEach(c => { if (c.auto) c.ro = true; });
     const IS_EDIT = IS_COLS.filter(c => !c.ro).map(c => c.k);
@@ -10433,32 +10445,18 @@
     async function isOpenApplyAsync() {
       if (isNeedUser()) return;
       const lists = isAllLists();
-      if (!lists.length) { showToastNotification('탭 없음', '먼저 탭을 추가해 주세요.', 'warning'); return; }
       const checked = [...isState.checked].filter(id => id > 0).map(id => isFindRow(id)).filter(Boolean);
-      let rows;
-      if (checked.length) {
-        rows = checked.filter(r => String(r.inbound || '').trim() === '입고');
-        if (!rows.length) { showToastNotification('입고 확인', "입고 칸이 '입고'인 행만 적용할 수 있어요.", 'warning'); return; }
-      } else {
-        // 체크가 없으면 : 입고 = '입고' 인데 아직 어느 목록에도 안 들어간 행
-        const cand = isState.rows.filter(r => String(r.inbound || '').trim() === '입고');
-        if (!cand.length) { showToastNotification('적용할 행 없음', "입고 칸을 '입고'로 바꾸거나 행을 체크한 뒤 적용을 눌러 주세요.", 'warning'); return; }
-        const done = new Set();
-        try {
-          const ids = cand.map(r => r.id);
-          for (let i = 0; i < ids.length; i += 200) {
-            const part = ids.slice(i, i + 200);
-            const [a, b] = await Promise.all([supabaseClient.from(IS_TAB_ITEMS).select('source_row_id').in('source_row_id', part), supabaseClient.from(IS_TAB_OUT).select('source_row_id').in('source_row_id', part)]);
-            (a.data || []).concat(b.data || []).forEach(x => x.source_row_id && done.add(x.source_row_id));
-          }
-        } catch (e) {}
-        rows = cand.filter(r => !done.has(r.id));
-        if (!rows.length) { showToastNotification('적용할 행 없음', "입고 행이 모두 이미 목록에 들어가 있어요.", 'info'); return; }
-      }
-      isState.applyRows = rows;
+      const pool = (checked.length ? checked : isState.rows).filter(r => !isLocked(r.id));
+      const inRows = pool.filter(r => String(r.inbound || '').trim() === '입고');          // 입고 → 목록에 추가 후 '입고완료'
+      const regRows = pool.filter(r => String(r.data_reg || '').trim() === '등록');       // 자료등록 → 인수인계 등록 후 '등록완료'
+      if (!inRows.length && !regRows.length) { showToastNotification('적용할 행 없음', `${checked.length ? '체크한 행 중 ' : ''}입고 '입고' 또는 자료등록 '등록'인 행이 없어요.`, 'warning'); return; }
+      isState.applyRows = inRows; isState.applyReg = regRows;
+      if (!inRows.length) { await isApplyReg(regRows); return; }
+      if (!lists.length) { showToastNotification('탭 없음', '먼저 탭을 추가해 주세요.', 'warning'); return; }
+      const rows = inRows;
       const guess = (r) => { const n = `${r.client_name || ''} ${r.store_name || ''}`; const l = lists.find(x => n.includes(x.tab.name)); return l ? l.key : ''; };
       const opt = (sel) => `<option value="">목록 선택</option>` + lists.map(l => `<option value="${svEsc(l.key)}" ${sel === l.key ? 'selected' : ''}>${svEsc(l.name)}</option>`).join('');
-      isEl('isApplySub').textContent = `입고 ${rows.length}건 · 제품마다 들어갈 목록을 고르고 비고를 확인한 뒤 확정해 주세요.`;
+      isEl('isApplySub').textContent = `입고 ${rows.length}건 · 제품마다 들어갈 목록을 고르고 비고를 확인한 뒤 확정해 주세요.${regRows.length ? ` (자료등록 ${regRows.length}건은 확정할 때 인수인계에 함께 등록돼요)` : ''}`;
       isEl('isApplyAll').innerHTML = opt('');
       isEl('isApplyList').innerHTML = rows.map((r, i) => `<div class="p-2.5 rounded-2xl border border-gray-200 bg-gray-50" data-apply-i="${i}">
           <div class="flex items-center gap-2"><span class="flex-1 min-w-0 truncate text-[13px] font-bold text-gray-900">${svEsc(r.product_name || '(제품명 없음)')}</span><span class="flex-none font-mono text-[11px] text-[#007AFF]">${svEsc(r.product_code || '')}</span><span class="flex-none text-[12px] font-bold text-gray-700">${svEsc(r.qty || '')}</span></div>
@@ -10468,6 +10466,27 @@
             <input type="text" data-apply-note value="${svEsc(String(r.detail || '').replace(/\n/g, ' '))}" placeholder="비고" class="px-2 py-1.5 rounded-lg bg-white border border-gray-200 text-[12.5px]">
           </div></div>`).join('');
       isDlShow('isApplyModal', true);
+    }
+    // 상태 바꾸기 (입고완료 · 등록완료) : 바로 저장하고 모두에게 반영
+    async function isSetRowsStatus(ids, patch) {
+      if (!ids.length) return;
+      const { data, error } = await supabaseClient.from(IS_TABLE).update({ ...patch, updated_by: isState.me, updated_at: new Date().toISOString() }).in('id', ids).select();
+      if (error) { showToastNotification('상태 변경 실패', dbErrorMessage(error), 'warning'); return; }
+      (data || []).forEach(row => { isQueueDb({ eventType: 'UPDATE', new: row }); isBroadcast('row', { row }); });
+      ids.forEach(id => { const d = isState.drafts.get(id); if (d) Object.keys(patch).forEach(k => delete d.patch[k]); });
+    }
+    async function isApplyReg(rows) {
+      if (!rows.length) return 0;
+      showBusy('인수인계 등록 중...');
+      let n = 0;
+      try { for (const r of rows) { const ok = await hoAddFromRow(r); if (ok) n++; } } finally { hideBusy(); }
+      const done = rows.slice(0, n).map(r => r.id);
+      await isSetRowsStatus(done, { data_reg: '등록완료' });
+      if (n) {
+        isLog([{ action: '적용', row_id: null, field_key: '', field: '', old_value: '', new_value: `자료등록 ${n}건 → 인수인계 (출고일 ${hoTomorrow()})`, row_label: '적용' }]);
+        showToastNotification('인수인계 등록', `자료등록 ${n}건을 인수인계(출고일 ${hoTomorrow()})에 빨간 글씨로 등록했어요.`, 'success');
+      }
+      return n;
     }
     function isCloseApply() { isDlShow('isApplyModal', false); }
     function isApplySetAll(v) { if (!v) return; isEl('isApplyList').querySelectorAll('[data-apply-list]').forEach(s => { s.value = v; }); }
@@ -10488,7 +10507,9 @@
         by.forEach((n, k) => isBroadcast('tabitems', { tab: k }));
         const sum = [...by.entries()].map(([k, n]) => `${isListName(k)} ${n}건`).join(', ');
         isLog([{ action: '적용', row_id: null, field_key: '', field: '', old_value: '', new_value: sum, row_label: '적용' }]);
-        showToastNotification('적용 완료', sum, 'success');
+        await isSetRowsStatus(picks.filter(p => !p.r._new).map(p => p.r.id), { inbound: '입고완료' });
+        showToastNotification('적용 완료', sum + ' · 입고완료로 바꿨어요.', 'success');
+        if ((isState.applyReg || []).length) await isApplyReg(isState.applyReg);
       } catch (e) { showToastNotification('적용 실패', dbErrorMessage(e), 'warning'); }
       finally { hideBusy(); }
     }
@@ -10501,7 +10522,7 @@
     function isListsOf(t) { return IS_SUB_LISTS[t.id] || [{ key: t.id, title: '' }]; }
     function isAllLists() {                       // [{ key, tab, name }] 모든 탭의 모든 목록
       const out = [];
-      isAllTabs().filter(t => t.id !== 'home').forEach(t => isListsOf(t).forEach(l => out.push({ key: l.key, tab: t, name: l.title ? `${t.name} · ${l.title.replace(' 차감이고 리스트', '')}` : t.name, title: l.title })));
+      isAllTabs().filter(t => t.id !== 'home' && t.id !== 'handover').forEach(t => isListsOf(t).forEach(l => out.push({ key: l.key, tab: t, name: l.title ? `${t.name} · ${l.title.replace(' 차감이고 리스트', '')}` : t.name, title: l.title })));
       return out;
     }
     const isListName = (key) => (isAllLists().find(l => l.key === key) || { name: key }).name;
@@ -10524,6 +10545,7 @@
     }
     function isReloadTabLists() { const t = isAllTabs().find(x => x.id === isTabSt.tab); if (t && isState.tab !== 'home') isListsOf(t).forEach(l => isLoadTabItems(l.key)); }
     function isRenderTabPane(t) {
+      if (t.id === 'handover') { isTabSt.tab = null; hoRenderPane(); return; }
       isTabSt.tab = t.id;
       const lists = isListsOf(t);
       isEl('isTabPane').innerHTML = lists.map((l, i) => `
@@ -10781,6 +10803,23 @@
       if (!qty) { showToastNotification('수량 입력', '수량을 입력해 주세요.', 'warning'); isEl('isManQty').focus(); return; }
       const p = isMan.pick && isMan.pick.product_name === name ? isMan.pick : null;
       const tab = isMan.key;
+      if (p && p.product_code) {                                        // 같은 목록에 같은 제품코드가 있으면 수량 합산
+        const ex = await supabaseClient.from(IS_TAB_ITEMS).select('*').eq('tab', tab).eq('product_code', p.product_code).order('id').limit(1);
+        const old = ex.data && ex.data[0];
+        const a = old ? parseFloat(old.qty) : NaN, b = parseFloat(qty);
+        if (old && !isNaN(a) && !isNaN(b)) {
+          const sum = String(Math.round((a + b) * 1000) / 1000);
+          const addNote = isEl('isManNote').value.trim();
+          const note = addNote ? [old.note, addNote].filter(Boolean).join(' / ') : old.note;
+          const { error } = await supabaseClient.from(IS_TAB_ITEMS).update({ qty: sum, note: note || null }).eq('id', old.id);
+          if (error) { showToastNotification('등록 실패', dbErrorMessage(error), 'warning'); return; }
+          isCloseManual(); isBroadcast('tabitems', { tab });
+          isLog([{ action: '수정', row_id: null, field_key: '', field: '', old_value: `${old.product_name} ${old.qty}`, new_value: `${isListName(tab)} 수기등록 합산 · ${old.product_name} ${sum}`, row_label: '수기등록' }]);
+          showToastNotification('수량 합산', `${old.product_name} ${old.qty} + ${qty} = ${sum}`, 'success');
+          isLoadTabItems(tab);
+          return;
+        }
+      }
       const { error } = await supabaseClient.from(IS_TAB_ITEMS).insert({ tab, product_code: p ? p.product_code : null, product_name: name, temperature: p ? p.temperature : null, qty, note: isEl('isManNote').value.trim() || null, created_by: isState.me });
       if (error) { showToastNotification('등록 실패', dbErrorMessage(error), 'warning'); return; }
       isCloseManual();
@@ -10882,6 +10921,233 @@
         }
       } catch (e) { console.warn('원앤원 재고 자동 기입 실패(무시):', e); }
     }
+    // ========== 인수인계 탭 (엑셀 시트처럼 · 인쇄) ==========
+    //  A 11.00 / B 19.20 / C 41.25 / D 56.40, 1행 18.75 · 2~4행 30 · 내용행 기본 200(pt, 사용자가 조절)
+    //  A2 출고일 · B2 =TODAY()+1 · C2:D2 밀양센터 주간 → 야간 인수인계 / A4 순번 · 5행부터 번호 + B:D 병합 내용
+    const HO_TABLE = 'handover_items';
+    const HO_COLS_PX = [11, 19.2, 41.25, 56.4].map(w => Math.floor(w * 7 + 5));
+    const HO_W = HO_COLS_PX.reduce((a, b) => a + b, 0);
+    const hoPt = (pt) => Math.round(pt * 4 / 3);                   // pt → px
+    const hoTomorrow = () => ibToday(1);
+    const hoSt = { date: null, rows: [], zoom: 0, edit: null, loading: false };
+    function hoFmtOf(r) { const v = r && r.fmt; return { c: v && v.c === 'red' ? 'red' : '', b: !!(v && v.b), r: (v && Array.isArray(v.r)) ? v.r : [] }; }
+    function hoFmtPack(f) { const o = {}; if (f.c) o.c = f.c; if (f.b) o.b = 1; if (f.r && f.r.length) o.r = f.r; return Object.keys(o).length ? o : null; }
+    function hoCellHtml(r) {
+      const t = String(r.content || ''), f = hoFmtOf(r);
+      if (!f.r.length) return svEsc(t);
+      const a = isRunsToFlags(f.r, t.length); let h = '', s = 0;
+      for (let i = 1; i <= t.length; i++) if (i === t.length || a[i] !== a[s]) { const seg = svEsc(t.slice(s, i)), fl = a[s]; h += fl ? `<span style="${fl.includes('r') ? 'color:#FF0000;' : ''}${fl.includes('b') ? 'font-weight:800;' : ''}">${seg}</span>` : seg; s = i; }
+      return h;
+    }
+    // 서식 바꾸기 (특이사항 홈화면과 같은 방식 : 칸 전체 / 드래그한 글자)
+    function hoApplyRange(f, oldT, T, a, b, kind, val) {
+      let flags = isRunsToFlags(isRebaseRuns(f.r, oldT, T), T.length);
+      if (kind === 'color' && f.c === 'red' && val !== 'red') { flags = flags.map(x => isFlagSet(x, 'r', true)); f.c = ''; }
+      if (kind === 'bold' && f.b) { flags = flags.map(x => isFlagSet(x, 'b', true)); f.b = false; }
+      if (kind === 'bold') { const all = flags.slice(a, b).every(x => x.includes('b')); for (let i = a; i < b; i++) flags[i] = isFlagSet(flags[i], 'b', !all); }
+      else for (let i = a; i < b; i++) flags[i] = isFlagSet(flags[i], 'r', val === 'red');
+      f.r = isFlagsToRuns(flags);
+      return f;
+    }
+    async function hoLoad() {
+      if (!hoSt.date) hoSt.date = hoTomorrow();
+      hoSt.loading = true;
+      try {
+        const { data, error } = await supabaseClient.from(HO_TABLE).select('*').eq('out_date', hoSt.date).order('sort_order', { ascending: true }).order('id', { ascending: true }).limit(500);
+        if (error) throw error;
+        hoSt.rows = data || []; hoSt.err = '';
+      } catch (e) { hoSt.err = dbErrorMessage(e); }
+      hoSt.loading = false;
+      hoRenderSheet();
+    }
+    function hoRenderPane() {
+      if (!hoSt.date) hoSt.date = hoTomorrow();
+      isEl('isTabPane').innerHTML = `
+        <div class="bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-3 sm:p-4 flex flex-col min-h-0">
+          <div class="flex items-center gap-2 flex-wrap mb-3">
+            <div class="w-9 h-9 rounded-xl bg-blue-50 text-[#007AFF] flex items-center justify-center"><i class="ph-bold ph-clipboard-text text-lg"></i></div>
+            <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">인수인계</h3><p id="hoMeta" class="text-[11.5px] text-gray-500"></p></div>
+            <div class="ml-auto flex items-center gap-1.5 flex-wrap">
+              <div class="flex items-center gap-0.5 bg-gray-100 rounded-xl p-0.5"><button type="button" onclick="hoMoveDate(-1)" class="ios-btn-tap w-8 h-8 rounded-lg hover:bg-white"><i class="ph-bold ph-caret-left"></i></button><input type="date" id="hoDate" onchange="hoSetDate(this.value)" class="bg-transparent text-[12.5px] font-bold px-1 w-[124px]"><button type="button" onclick="hoMoveDate(1)" class="ios-btn-tap w-8 h-8 rounded-lg hover:bg-white"><i class="ph-bold ph-caret-right"></i></button></div>
+              <button type="button" onmousedown="event.preventDefault()" onclick="hoFormat('color','black')" class="ios-btn-tap px-2.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-900 text-[12.5px] font-bold">검정</button>
+              <button type="button" onmousedown="event.preventDefault()" onclick="hoFormat('color','red')" class="ios-btn-tap px-2.5 py-2 rounded-xl bg-white border border-gray-200 text-[#FF3B30] text-[12.5px] font-bold">빨강</button>
+              <button type="button" onmousedown="event.preventDefault()" onclick="hoFormat('bold')" class="ios-btn-tap px-2.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-900 text-[12.5px] font-extrabold" title="굵게 (Ctrl+B)">굵게</button>
+              <button type="button" onclick="hoAdd()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-plus"></i>행 추가</button>
+              <label class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gray-100 text-[11.5px] font-semibold text-gray-600" title="인쇄 배율 (자동이면 글이 잘리지 않게 맞춤)">배율 <input type="range" id="hoZoom" min="40" max="100" step="1" oninput="hoSetZoom(this.value)" class="w-[80px] accent-[#007AFF]"><span id="hoZoomTxt" class="w-[60px]"></span></label>
+              <button type="button" onclick="hoSetZoom(0)" class="ios-btn-tap px-2.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12px] font-bold">자동</button>
+              <button type="button" onclick="hoPrint()" class="ios-btn-tap px-3.5 py-2 rounded-xl bg-[#007AFF] text-white text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-printer"></i>인쇄</button>
+            </div>
+          </div>
+          <div class="overflow-auto rounded-xl border border-gray-200 bg-[#F2F2F7] p-3 flex-1 min-h-0"><div id="hoSheet" class="relative mx-auto bg-white shadow-sm" style="width:${HO_W}px"></div></div>
+          <p class="mt-2 text-[11px] text-gray-400">내용 칸을 눌러 바로 적어요. 글자를 드래그한 뒤 검정 · 빨강 · 굵게(Ctrl+B)로 서식을 바꿀 수 있어요. 행 아래쪽 끝을 끌면 높이가 바뀌어요. 파란 점선은 인쇄할 때 쪽이 나뉘는 위치예요.</p>
+        </div>`;
+      isEl('hoDate').value = hoSt.date;
+      hoRenderSheet();
+      hoLoad();
+    }
+    function hoSheetHtml(print) {
+      const d = hoSt.date || hoTomorrow(), m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d), wk = m ? '일월화수목금토'[new Date(+m[1], +m[2] - 1, +m[3]).getDay()] : '';
+      const bd = 'border:1px solid #000;';
+      const cell = (st, html) => `<td style="${st}">${html}</td>`;
+      const rows = hoSt.rows;
+      const ttl = 'font-size:18pt;font-weight:700;';
+      let h = `<table style="width:${HO_W}px;border-collapse:collapse;table-layout:fixed;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;color:#000">
+        <colgroup>${HO_COLS_PX.map(w => `<col style="width:${w}px">`).join('')}</colgroup>
+        <tr style="height:${hoPt(18.75)}px"><td colspan="4"></td></tr>
+        <tr style="height:${hoPt(30)}px">${cell(`${ttl}text-align:center;vertical-align:middle`, '출고일')}${cell(`${ttl}text-align:center;vertical-align:middle`, m ? `${+m[2]}/${+m[3]}(${wk})` : '')}<td colspan="2" style="${ttl}text-align:center;vertical-align:middle">밀양센터 주간 → 야간 인수인계</td></tr>
+        <tr style="height:${hoPt(30)}px"><td colspan="4"></td></tr>
+        <tr style="height:${hoPt(30)}px">${cell(`${rows.length ? bd : ''}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle`, '순번')}<td colspan="3" style="${rows.length ? bd : ''}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle">내용</td></tr>`;
+      rows.forEach((r, i) => {
+        const f = hoFmtOf(r), hpx = hoPt(+r.height_pt || 200);
+        const editing = !print && hoSt.edit && hoSt.edit.id === r.id;
+        h += `<tr data-ho-row="${r.id}" style="height:${hpx}px;break-inside:avoid;page-break-inside:avoid">
+          <td style="${bd}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle;position:relative">${i + 1}${print ? '' : `<button type="button" data-ho-del="${r.id}" class="ho-noprint rounded-full bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-[#FF3B30]" style="position:absolute;left:4px;top:4px;width:24px;height:24px;font-size:11px" title="이 행 삭제"><i class="ph-bold ph-x"></i></button>`}</td>
+          <td colspan="3" style="${bd}position:relative;vertical-align:middle;padding:6px 10px">
+            <div ${print ? '' : `data-ho-cell="${r.id}"`} style="min-height:${hpx - 14}px;font-size:18pt;line-height:1.35;white-space:pre-wrap;word-break:break-all;${f.c ? 'color:#FF0000;' : ''}${f.b ? 'font-weight:800;' : 'font-weight:400;'}${print ? '' : 'cursor:text;'}display:flex;align-items:center"><div style="width:100%">${editing ? '' : (hoCellHtml(r) || (print ? '' : '<span style="color:#C7C7CC;font-weight:400">내용을 입력하세요</span>'))}</div></div>
+            ${print ? '' : `<div data-ho-rsz="${r.id}" class="ho-noprint" style="position:absolute;left:0;right:0;bottom:-4px;height:8px;cursor:row-resize;z-index:10" title="끌어서 높이 조절"></div>`}
+          </td></tr>`;
+      });
+      return h + '</table>';
+    }
+    function hoAutoZoom() {                                            // 쪽 너비 · 가장 큰 행이 한 쪽에 들어가도록
+      const pageW = (210 / 25.4 - 0.2) * 96, pageH = 297 / 25.4 * 96;
+      let z = pageW / HO_W;
+      const sheet = isEl('hoSheet');
+      if (sheet) sheet.querySelectorAll('tr[data-ho-row]').forEach(tr => { const h = tr.getBoundingClientRect().height / (hoSt.viewZoom || 1); if (h * z > pageH - 4) z = (pageH - 4) / h; });
+      return Math.max(0.3, Math.min(1, z));
+    }
+    function hoZoom() { const auto = hoAutoZoom(); return hoSt.zoom ? Math.min(hoSt.zoom / 100, auto) : auto; }   // 수동 배율도 잘리지 않게 보정
+    function hoRenderSheet() {
+      const sheet = isEl('hoSheet'); if (!sheet) return;
+      sheet.innerHTML = hoSheetHtml(false) + (hoSt.rows.length ? '' : `<div class="ho-noprint py-6 text-center text-[13px] text-gray-400">${hoSt.loading ? '불러오는 중…' : hoSt.err ? '불러오지 못했어요: ' + svEsc(hoSt.err) : "'행 추가'를 눌러 인수인계 내용을 적어 주세요."}</div>`);
+      const meta = isEl('hoMeta'); if (meta) meta.textContent = `출고일 ${hoSt.date} · ${hoSt.rows.length}건`;
+      // 쪽 나뉨 위치 (인쇄 배율 기준)
+      const z = hoZoom(), pageH = 297 / 25.4 * 96 / z;
+      let y = 0, page = pageH; const marks = [];
+      sheet.querySelectorAll(':scope > table > tbody > tr, :scope > table > tr').forEach(tr => { const h = tr.offsetHeight; if (y + h > page) { marks.push(y); page = y + pageH; } y += h; });
+      sheet.querySelectorAll('.ho-pagebreak').forEach(e => e.remove());
+      marks.forEach(my => sheet.insertAdjacentHTML('beforeend', `<div class="ho-pagebreak ho-noprint absolute left-0 right-0 border-t-2 border-dashed border-[#007AFF]/60 pointer-events-none" style="top:${my}px"></div>`));
+      const zr = isEl('hoZoom'), zt = isEl('hoZoomTxt');
+      if (zr) zr.value = Math.round(z * 100);
+      if (zt) zt.textContent = `${Math.round(z * 100)}%${hoSt.zoom ? '' : ' 자동'}`;
+      if (hoSt.edit) hoOpenEditor(hoSt.edit.id, true);
+    }
+    function hoSetZoom(v) { hoSt.zoom = +v || 0; hoRenderSheet(); }
+    function hoSetDate(v) { if (!v) return; hoCommitEdit(); hoSt.date = v; hoLoad(); }
+    function hoMoveDate(d) { const x = new Date((hoSt.date || hoTomorrow()) + 'T00:00:00'); x.setDate(x.getDate() + d); hoSetDate(ibIso(x)); const el = isEl('hoDate'); if (el) el.value = hoSt.date; }
+    async function hoAdd(content, fmt, sourceRowId, date) {
+      if (isNeedUser()) return null;
+      const d = date || hoSt.date || hoTomorrow();
+      const { data: last } = await supabaseClient.from(HO_TABLE).select('sort_order').eq('out_date', d).order('sort_order', { ascending: false }).limit(1);
+      const so = ((last && last[0] && +last[0].sort_order) || 0) + 1;
+      const row = { out_date: d, content: content || '', fmt: fmt === undefined ? { b: 1 } : fmt, height_pt: 200, sort_order: so, source_row_id: sourceRowId || null, created_by: isState.me };
+      const { data, error } = await supabaseClient.from(HO_TABLE).insert(row).select().single();
+      if (error) { showToastNotification('인수인계 추가 실패', dbErrorMessage(error), 'warning'); return null; }
+      isBroadcast('handover', {});
+      if (isState.tab === 'handover' && d === hoSt.date) { hoSt.rows.push(data); hoRenderSheet(); if (!content) hoOpenEditor(data.id); }
+      return data;
+    }
+    async function hoSave(id, patch) {
+      const { error } = await supabaseClient.from(HO_TABLE).update({ ...patch, updated_at: new Date().toISOString() }).eq('id', id);
+      if (error) { showToastNotification('인수인계 저장 실패', dbErrorMessage(error), 'warning'); return false; }
+      const r = hoSt.rows.find(x => x.id === id); if (r) Object.assign(r, patch);
+      isBroadcast('handover', {});
+      return true;
+    }
+    function hoOpenEditor(id, keep) {
+      const r = hoSt.rows.find(x => x.id === id); if (!r) return;
+      const cell = document.querySelector(`[data-ho-cell="${id}"]`); if (!cell) return;
+      const old = hoSt.edit && hoSt.edit.el && hoSt.edit.id === id ? hoSt.edit.el : null;
+      const ta = old || document.createElement('textarea');
+      if (!old) { ta.value = r.content || ''; ta.spellcheck = false; }
+      const f = hoFmtOf(r);
+      Object.assign(ta.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', padding: '6px 10px', border: '2px solid #007AFF', outline: 'none', resize: 'none', background: '#fff', fontSize: '18pt', lineHeight: '1.35', fontWeight: f.b ? '800' : '400', color: f.c ? '#FF0000' : '#000', fontFamily: 'inherit', zIndex: 5 });
+      cell.parentElement.appendChild(ta);
+      hoSt.edit = { id, el: ta, orig: r.content || '' };
+      if (!old) {
+        ta.addEventListener('keydown', (e) => {
+          e.stopPropagation();
+          if (e.isComposing || e.keyCode === 229) return;
+          if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyB' || String(e.key).toLowerCase() === 'b')) { e.preventDefault(); hoFormat('bold'); }
+          else if (e.key === 'Escape') { e.preventDefault(); hoSt.edit = null; ta.remove(); hoRenderSheet(); }
+        });
+        ta.addEventListener('blur', () => { setTimeout(() => { if (hoSt.edit && hoSt.edit.el === ta && document.activeElement !== ta) hoCommitEdit(); }, 120); });
+        if (!keep) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+      }
+    }
+    async function hoCommitEdit() {
+      const ed = hoSt.edit; if (!ed) return;
+      hoSt.edit = null;
+      const r = hoSt.rows.find(x => x.id === ed.id), v = ed.el.value;
+      ed.el.remove();
+      if (r && v !== (r.content || '')) {
+        const f = hoFmtOf(r); f.r = isRebaseRuns(f.r, r.content || '', v);
+        await hoSave(r.id, { content: v, fmt: hoFmtPack(f) });
+      }
+      hoRenderSheet();
+    }
+    // 서식 : 드래그한 글자가 있으면 그 글자만, 없으면 편집 중인 칸 전체
+    async function hoFormat(kind, val) {
+      const ed = hoSt.edit;
+      if (!ed) { showToastNotification('서식', '내용 칸을 눌러 글자를 고른 뒤 눌러 주세요.', 'info'); return; }
+      const r = hoSt.rows.find(x => x.id === ed.id); if (!r) return;
+      const T = ed.el.value, a = ed.el.selectionStart, b = ed.el.selectionEnd;
+      let f = hoFmtOf(r);
+      if (a != null && b != null && a !== b) f = hoApplyRange(f, r.content || '', T, a, b, kind, val);
+      else {
+        f.r = isRebaseRuns(f.r, r.content || '', T);
+        if (kind === 'bold') { f.b = !f.b; f.r = f.r.map(x => [x[0], x[1], isFlagSet(x[2], 'b', false)]); }
+        else { f.c = val === 'red' ? 'red' : ''; f.r = f.r.map(x => [x[0], x[1], isFlagSet(x[2], 'r', false)]); }
+      }
+      hoSt.edit = null; ed.el.remove();
+      await hoSave(r.id, { content: T, fmt: hoFmtPack(f) });
+      hoRenderSheet();
+    }
+    // 이벤트 : 칸 누르기 · 행 삭제 · 높이 끌기
+    document.addEventListener('mousedown', (e) => {
+      if (!isEl('hoSheet') || !e.target.closest('#hoSheet')) return;
+      const rz = e.target.closest('[data-ho-rsz]');
+      if (rz) {
+        e.preventDefault();
+        const id = +rz.dataset.hoRsz, r = hoSt.rows.find(x => x.id === id), tr = rz.closest('tr'); if (!r || !tr) return;
+        const y0 = e.clientY, h0 = tr.getBoundingClientRect().height;
+        const move = (ev) => { const px = Math.max(hoPt(30), h0 + ev.clientY - y0); tr.style.height = px + 'px'; const c = tr.querySelector('[data-ho-cell]'); if (c) c.style.minHeight = (px - 14) + 'px'; };
+        const up = async (ev) => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); const px = Math.max(hoPt(30), h0 + ev.clientY - y0); await hoSave(id, { height_pt: Math.round(px * 3 / 4 * 100) / 100 }); hoRenderSheet(); };
+        document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+        return;
+      }
+      const del = e.target.closest('[data-ho-del]');
+      if (del) {
+        e.preventDefault();
+        const id = +del.dataset.hoDel;
+        showConfirmModal(async () => {
+          const { error } = await supabaseClient.from(HO_TABLE).delete().eq('id', id);
+          if (error) { showToastNotification('삭제 실패', dbErrorMessage(error), 'warning'); return; }
+          hoSt.rows = hoSt.rows.filter(x => x.id !== id); isBroadcast('handover', {}); hoRenderSheet();
+        }, '인수인계 행 삭제', '이 행을 삭제할까요? 순번은 자동으로 다시 매겨져요.');
+        return;
+      }
+      const c = e.target.closest('[data-ho-cell]');
+      if (c && !(hoSt.edit && hoSt.edit.id === +c.dataset.hoCell)) { if (isNeedUser()) return; e.preventDefault(); const id = +c.dataset.hoCell; if (hoSt.edit) hoCommitEdit().then(() => hoOpenEditor(id)); else hoOpenEditor(id); }
+    });
+    // 인쇄 : 여백 좌우 0.1인치 · 위아래 0, 쪽 너비에 맞춰 자동 배율 (글이 잘리지 않게)
+    function hoBuildPrint() {
+      let root = isEl('hoPrintRoot');
+      if (!root) { root = document.createElement('div'); root.id = 'hoPrintRoot'; document.body.appendChild(root); }
+      root.innerHTML = `<div style="zoom:${hoZoom()}">${hoSheetHtml(true)}</div>`;
+      document.body.classList.add('ho-printing');
+    }
+    function hoPrint() { hoCommitEdit(); hoBuildPrint(); setTimeout(() => window.print(), 50); }
+    window.addEventListener('beforeprint', () => { if (isState.tab === 'handover' && !isEl('issueSheetViewArea').classList.contains('hidden')) hoBuildPrint(); });
+    window.addEventListener('afterprint', () => { document.body.classList.remove('ho-printing'); const r = isEl('hoPrintRoot'); if (r) r.innerHTML = ''; });
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'p' && isState.tab === 'handover' && !isEl('issueSheetViewArea').classList.contains('hidden')) { e.preventDefault(); hoPrint(); }
+    });
+    // 자료등록 '등록' → 적용 → 인수인계 자동 등록 (빨간 글씨)
+    async function hoAddFromRow(r) {
+      const text = `■ 자료등록건\n제품명 : ${r.product_name || ''}\n수량 : ${r.qty || ''}\n\n${r.detail || ''}`;
+      return hoAdd(text, { c: 'red', b: 1 }, r.id, hoTomorrow());
+    }
     function isFindRow(id) {
       if (isPendId(id)) return isPendFind(id);
       const base = isState.rows.find(r => r.id === id);
@@ -10899,9 +11165,10 @@
       const q = isState.q.toLowerCase();
       const fs = Object.entries(isState.filters);
       const cf = Object.entries(isState.colorFilters);
-      const list = isRowsAll().filter(r => r._new || ((!q || IS_COLS.some(c => String(r[c.k] ?? '').toLowerCase().includes(q))) && fs.every(([k, set]) => set.has(String(r[k] ?? ''))) && cf.every(([k, c]) => isCellColor(r, k) === c)));
+      const red = isState.redOnly;
+      const list = isRowsAll().filter(r => r._new || ((!red || isCellColor(r, 'detail') === 'red') && (!q || IS_COLS.some(c => String(r[c.k] ?? '').toLowerCase().includes(q))) && fs.every(([k, set]) => set.has(String(r[k] ?? ''))) && cf.every(([k, c]) => isCellColor(r, k) === c)));
       // 묶음 : 0 보통(배송일순) → 1 상세내용에 빨간 글자 있는 행(배송일 상관없이 아래) → 2 새로 추가 중인 행
-      const grp = (r) => r._new ? 2 : (r[IS_COLOR_KEY] && isCellColor(r, 'detail') === 'red' ? 1 : 0);
+      const grp = (r) => r._new ? 2 : 0;
       const keyed = list.map(r => ({ r, g: grp(r) }));
       keyed.sort((x, y) => {
         if (x.g !== y.g) return x.g - y.g;
@@ -10920,8 +11187,11 @@
       isEl('isCols').innerHTML = `<col style="width:${IS_GUT_W}px">` + IS_COLS.map(c => `<col style="width:${c.w}px">`).join('');
       Object.assign(isEl('isTable').style, { width: '100%', minWidth: total + 'px' });
       isEl('isHead').innerHTML = `<th class="is-gut"><input type="checkbox" id="isCheckAll" class="w-3.5 h-3.5 align-middle cursor-pointer" title="전체 선택"></th>`
-        + IS_COLS.map(c => `<th title="${svEsc(c.h)}${c.auto ? ' (자동)' : ''}" style="${c.auto ? 'color:#9CA3AF' : ''}"><span class="is-rsz" data-rsz="${c.k}" title="끌어서 너비 조절"></span>${svEsc(c.h)}<button type="button" class="is-th-btn" data-is-filter="${c.k}" title="${svEsc(c.h)} 필터"><i class="ph-bold ph-caret-down text-[10px]"></i></button></th>`).join('');
-      isEl('isHead').addEventListener('click', (e) => { const b = e.target.closest('[data-is-filter]'); if (b) { e.stopPropagation(); isOpenFilter(b.dataset.isFilter, b); } });
+        + IS_COLS.map(c => `<th title="${svEsc(c.h)}${c.auto ? ' (자동)' : ''}" style="${c.auto ? 'color:#9CA3AF' : ''}"><span class="is-rsz" data-rsz="${c.k}" title="끌어서 너비 조절"></span>${svEsc(c.h)}<button type="button" class="is-th-btn" data-is-filter="${c.k}" title="${svEsc(c.h)} 필터"><i class="ph-bold ph-caret-down text-[10px]"></i></button>${c.k === 'detail' ? '<button type="button" class="is-red-tg" data-red-toggle title="미처리 내역 : 상세내용에 빨간 글자가 있는 행만 보기"><span class="is-red-tg-lbl">미처리</span><span class="is-red-tg-sw"></span></button>' : ''}</th>`).join('');
+      isEl('isHead').addEventListener('click', (e) => {
+        const tg = e.target.closest('[data-red-toggle]');
+        if (tg) { e.stopPropagation(); isState.redOnly = !isState.redOnly; isRender(); showToastNotification('미처리 내역', isState.redOnly ? '상세내용에 빨간 글자가 있는 행만 보여요.' : '모든 행을 보여요.', 'info'); return; }
+        const b = e.target.closest('[data-is-filter]'); if (b) { e.stopPropagation(); isOpenFilter(b.dataset.isFilter, b); } });
       isEl('isCheckAll').addEventListener('change', (e) => {
         const rows = isRowsView();
         if (e.target.checked) { rows.forEach(r => { if (!r._pend) isState.checked.add(r.id); }); isRender(); return; }
@@ -11023,6 +11293,7 @@
       if (all) { const rr = rows.filter(r => !r._pend), n = rr.filter(r => isState.checked.has(r.id)).length; all.checked = rr.length > 0 && n === rr.length; all.indeterminate = n > 0 && n < rr.length; }
       isEl('isDelBtn').textContent = isState.checked.size ? `선택 삭제 (${isState.checked.size})` : '선택 삭제';
       document.querySelectorAll('#isHead [data-is-filter]').forEach(b => b.classList.toggle('on', !!isState.filters[b.dataset.isFilter] || !!isState.colorFilters[b.dataset.isFilter]));
+      const tgl = document.querySelector('[data-red-toggle]'); if (tgl) tgl.classList.toggle('on', !!isState.redOnly);
       const nf = new Set([...Object.keys(isState.filters), ...Object.keys(isState.colorFilters)]).size;
       isEl('isFilterReset').classList.toggle('hidden', !nf);
       isEl('isFilterReset').querySelector('span').textContent = `필터 초기화 (${nf})`;
@@ -11195,7 +11466,7 @@
       isCloseEditor(true);
       const v = String(value ?? '').trim();
       const fc = IS_COLS.find(c => c.k === ed.col);
-      if (fc && fc.fixed && v && !fc.fixed.includes(v)) { showToastNotification('선택 확인', `${fc.h} 칸은 ${fc.fixed.map(x => `'${x}'`).join(' 또는 ')}만 넣을 수 있어요.`, 'warning'); return; }
+      if (fc && fc.fixed && v && !fc.fixed.includes(v) && v !== String(ed.orig ?? '').trim()) { showToastNotification('선택 확인', `${fc.h} 칸은 ${fc.fixed.map(x => `'${x}'`).join(' 또는 ')}만 넣을 수 있어요.`, 'warning'); return; }
       if (v !== String(ed.orig ?? '').trim()) {
         const row = isFindRow(ed.id), f = row ? isFmtGet(row, ed.col) : null;
         if (f && f.r.length) {
@@ -11592,16 +11863,19 @@
     function isDlPick(scope) {
       if (scope === 'date' && !isDl.sel) return;
       isDl.scope = scope;
-      isEl('isDlFmtSub').textContent = scope === 'all' ? `전체 데이터 · ${isState.rows.length.toLocaleString()}건` : `배송일 ${isDl.sel}`;
+      const nChk = [...isState.checked].filter(id => id > 0 && isState.rows.some(r => r.id === id && (scope === 'all' || String(r.delivery_date || '').slice(0, 10) !== isDl.sel))).length;
+      isEl('isDlFmtSub').textContent = (scope === 'all' ? `전체 데이터 · ${isState.rows.length.toLocaleString()}건` : `배송일 ${isDl.sel}`) + (scope !== 'all' && nChk ? ` + 체크한 행 ${nChk}건` : '');
       const COLORS = ['#007AFF', '#FF9500', '#34C759', '#AF52DE', '#FF2D55', '#5856D6'];
-      const opts = [{ id: 'all', name: '전체 고객사', icon: 'ph-buildings' }].concat(isAllTabs().filter(t => t.id !== 'home' && t.id !== 'onenone'));
+      const opts = [{ id: 'all', name: '전체 고객사', icon: 'ph-buildings' }].concat(isAllTabs().filter(t => t.id !== 'home' && t.id !== 'onenone' && t.id !== 'handover'));
       isEl('isDlFmtList').innerHTML = opts.map((t, i) => `<button type="button" onclick="isDlRun('${svEsc(t.id)}')" class="ios-btn-tap w-full flex items-center gap-2.5 px-3.5 py-3 rounded-2xl bg-gray-50 border border-gray-200 text-left hover:bg-blue-50"><i class="ph-bold ${t.icon || 'ph-folder-simple'} text-lg" style="color:${COLORS[i % COLORS.length]}"></i><span class="flex-1 text-[14px] font-semibold text-gray-900">${svEsc(t.name)}</span><i class="ph-bold ph-download-simple text-gray-300"></i></button>`).join('');
       isDlShow('isDlFmtModal', true);
     }
     function isCloseDlFmt() { isDlShow('isDlFmtModal', false); }
     async function isDlRun(fmt) {
-      const base = (isDl.scope === 'all' ? isState.rows.slice() : isState.rows.filter(r => String(r.delivery_date || '').slice(0, 10) === isDl.sel))
-        .sort((a, b) => { const da = a.delivery_date || '', db = b.delivery_date || ''; return da < db ? -1 : da > db ? 1 : a.id - b.id; });
+      const scoped = isDl.scope === 'all' ? isState.rows.slice() : isState.rows.filter(r => String(r.delivery_date || '').slice(0, 10) === isDl.sel);
+      const ids = new Set(scoped.map(r => r.id));
+      [...isState.checked].filter(id => id > 0 && !ids.has(id)).forEach(id => { const r = isState.rows.find(x => x.id === id); if (r) { scoped.push(r); ids.add(id); } });   // 체크한 행은 날짜와 상관없이 포함
+      const base = scoped.sort((a, b) => { const da = a.delivery_date || '', db = b.delivery_date || ''; return da < db ? -1 : da > db ? 1 : a.id - b.id; });
       const rows = xlRowsFor(fmt, base);
       const tab = isAllTabs().find(t => t.id === fmt);
       const label = fmt === 'all' ? '전체고객사' : (tab ? tab.name : fmt).replace(/\s/g, '');
@@ -12038,7 +12312,13 @@
       isRenderTabs();
       isRenderOptionLists();
     }
-    function isAllTabs() { return [IS_TAB_HOME].concat(isState.tabs.map(t => ({ ...t, icon: IS_TAB_ICONS[t.id] || 'ph-folder-simple', custom: true }))); }
+    const IS_TAB_HANDOVER = { id: 'handover', name: '인수인계', icon: 'ph-clipboard-text', fixed: true };
+    function isAllTabs() {
+      const list = isState.tabs.map(t => ({ ...t, icon: IS_TAB_ICONS[t.id] || 'ph-folder-simple', custom: true }));
+      const i = list.findIndex(t => t.id === 'onenone');               // 인수인계 : 원앤원 바로 옆 (없으면 맨 끝)
+      list.splice(i >= 0 ? i + 1 : list.length, 0, IS_TAB_HANDOVER);
+      return [IS_TAB_HOME].concat(list);
+    }
     function isRenderTabs() {
       const box = isEl('isTabs');
       if (!isAllTabs().some(t => t.id === isState.tab)) isState.tab = 'home';
@@ -12049,6 +12329,7 @@
     function isSwitchTab(id) {
       if (isState.tab === id) return;
       if (isState.edit) isCommit(isState.edit.el.value, null);
+      if (hoSt.edit) hoCommitEdit();
       isState.tab = id;
       isRenderTabs();
       const home = id === 'home';
@@ -12196,6 +12477,7 @@
         .on('broadcast', { event: 'reload' }, () => { isLoad(); })
         .on('broadcast', { event: 'pend' }, () => { isLoadPending(); })
         .on('broadcast', { event: 'colw' }, () => { isLoadColW(); })
+        .on('broadcast', { event: 'handover' }, () => { if (isState.tab === 'handover' && !hoSt.edit) hoLoad(); })
         .on('broadcast', { event: 'onstock' }, () => { if (isEl('onStockBox')) onLoad(); })
         .on('broadcast', { event: 'tabitems' }, ({ payload }) => { if (payload && payload.tab && isState.tab !== 'home' && isEl('isTabBody_' + payload.tab)) isLoadTabItems(payload.tab); })
         .on('broadcast', { event: 'del' }, ({ payload }) => { if (payload && payload.ids) payload.ids.forEach(id => isQueueDb({ eventType: 'DELETE', old: { id } })); })
@@ -12215,6 +12497,7 @@
         isState.dbCh = supabaseClient.channel('issue-sheet-db')
           .on('postgres_changes', { event: '*', schema: 'public', table: IS_TABLE }, (pl) => isQueueDb(pl))
           .on('postgres_changes', { event: '*', schema: 'public', table: INCIDENT_TABLE }, () => { clearTimeout(isState.pendT); isState.pendT = setTimeout(isLoadPending, 400); })
+          .on('postgres_changes', { event: '*', schema: 'public', table: HO_TABLE }, () => { if (isState.tab === 'handover' && !hoSt.edit) { clearTimeout(isState.hoT); isState.hoT = setTimeout(hoLoad, 400); } })
           .on('postgres_changes', { event: '*', schema: 'public', table: ON_TABLE }, () => { if (isEl('onStockBox')) { clearTimeout(isState.onT); isState.onT = setTimeout(onLoad, 400); } })
           .on('postgres_changes', { event: '*', schema: 'public', table: IS_TAB_ITEMS }, () => { if (isState.tab !== 'home' && isTabSt.tab) { clearTimeout(isState.tabT); isState.tabT = setTimeout(isReloadTabLists, 400); } })
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: IS_MSG_TABLE }, (pl) => isAddMsg(pl.new, true))
