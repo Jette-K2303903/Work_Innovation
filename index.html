@@ -94,7 +94,10 @@
     .is-table th.is-gut { z-index: 4; }
     .is-table td.is-ro { background: #FCFCFD; color: #6B7280; cursor: default; }
     .is-table td.is-sel { box-shadow: inset 0 0 0 2px #007AFF; }
-    .is-table td.is-red { color: #FF3B30 !important; font-weight: 700; }
+    .is-table td.is-red { color: #FF3B30 !important; }
+    .is-table td.is-bold { font-weight: 800 !important; }
+    .is-table td .is-fr { color: #FF3B30; }
+    .is-table td .is-fb { font-weight: 800; }
     .is-table tr.is-mlrow td { vertical-align: top; padding-top: 8px; line-height: 16px; }
     .is-table td.is-ml { white-space: pre; }
     textarea#isEditor { padding: 6px; line-height: 16px; resize: none; overflow: hidden; white-space: pre; }
@@ -1194,12 +1197,14 @@
         <button type="button" id="isSaveBtn" onclick="isSaveDrafts()" class="ios-btn-tap px-3.5 py-2 rounded-xl bg-[#007AFF] text-white text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-floppy-disk"></i><span>저장</span></button>
         <div class="relative">
           <button type="button" id="isColorBtn" onmousedown="event.preventDefault()" onclick="isToggleColorMenu()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-800 text-[12.5px] font-bold flex items-center gap-1" title="글자색"><span class="font-extrabold leading-none border-b-[3px] border-[#FF3B30] px-0.5">A</span>글자색</button>
-          <div id="isColorMenu" onmousedown="event.preventDefault()" class="hidden absolute left-0 top-full mt-1.5 z-[45] w-[220px] bg-white rounded-2xl border border-gray-200 shadow-2xl p-2.5 space-y-2">
+          <div id="isColorMenu" onmousedown="event.preventDefault()" class="hidden absolute left-0 top-full mt-1.5 z-[45] w-[248px] bg-white rounded-2xl border border-gray-200 shadow-2xl p-2.5 space-y-2">
+            <div id="isFmtSelBox" class="hidden p-2 -m-0.5 rounded-xl bg-blue-50/70 border border-blue-100"><div class="flex justify-between text-[10.5px] font-bold text-[#007AFF] px-0.5 mb-1"><span>드래그한 글자</span><span id="isFmtSelHint"></span></div>
+              <div class="grid grid-cols-3 gap-1.5"><button type="button" onclick="isFmtSelection('color','black')" class="py-1.5 rounded-lg bg-white text-[12px] font-bold text-gray-900">검정</button><button type="button" onclick="isFmtSelection('color','red')" class="py-1.5 rounded-lg bg-white text-[12px] font-bold text-[#FF3B30]">빨강</button><button type="button" onclick="isFmtSelection('bold')" class="py-1.5 rounded-lg bg-white text-[12px] font-extrabold text-gray-900">굵게</button></div></div>
             <div><div class="flex justify-between text-[10.5px] font-bold text-gray-400 px-0.5 mb-1"><span>선택한 칸</span><span id="isColorCellHint"></span></div>
-              <div class="grid grid-cols-2 gap-1.5"><button type="button" data-color-scope="cell" onclick="isSetColor('cell','black')" class="py-1.5 rounded-lg bg-gray-100 text-[12px] font-bold text-gray-900 disabled:opacity-40">검정</button><button type="button" data-color-scope="cell" onclick="isSetColor('cell','red')" class="py-1.5 rounded-lg bg-red-50 text-[12px] font-bold text-[#FF3B30] disabled:opacity-40">빨강</button></div></div>
+              <div class="grid grid-cols-3 gap-1.5"><button type="button" data-color-scope="cell" onclick="isSetColor('cell','black')" class="py-1.5 rounded-lg bg-gray-100 text-[12px] font-bold text-gray-900 disabled:opacity-40">검정</button><button type="button" data-color-scope="cell" onclick="isSetColor('cell','red')" class="py-1.5 rounded-lg bg-red-50 text-[12px] font-bold text-[#FF3B30] disabled:opacity-40">빨강</button><button type="button" data-color-scope="cell" onclick="isSetBold('cell')" class="py-1.5 rounded-lg bg-gray-100 text-[12px] font-extrabold text-gray-900 disabled:opacity-40">굵게</button></div></div>
             <div><div class="flex justify-between text-[10.5px] font-bold text-gray-400 px-0.5 mb-1"><span>행 전체</span><span id="isColorRowsHint"></span></div>
-              <div class="grid grid-cols-2 gap-1.5"><button type="button" data-color-scope="rows" onclick="isSetColor('rows','black')" class="py-1.5 rounded-lg bg-gray-100 text-[12px] font-bold text-gray-900 disabled:opacity-40">검정</button><button type="button" data-color-scope="rows" onclick="isSetColor('rows','red')" class="py-1.5 rounded-lg bg-red-50 text-[12px] font-bold text-[#FF3B30] disabled:opacity-40">빨강</button></div></div>
-            <p class="text-[10.5px] text-gray-400 leading-snug px-0.5">바꾼 뒤 저장을 눌러야 모두에게 반영돼요. 열 이름의 ▾ 에서 색 기준으로 걸러 볼 수 있어요.</p>
+              <div class="grid grid-cols-3 gap-1.5"><button type="button" data-color-scope="rows" onclick="isSetColor('rows','black')" class="py-1.5 rounded-lg bg-gray-100 text-[12px] font-bold text-gray-900 disabled:opacity-40">검정</button><button type="button" data-color-scope="rows" onclick="isSetColor('rows','red')" class="py-1.5 rounded-lg bg-red-50 text-[12px] font-bold text-[#FF3B30] disabled:opacity-40">빨강</button><button type="button" data-color-scope="rows" onclick="isSetBold('rows')" class="py-1.5 rounded-lg bg-gray-100 text-[12px] font-extrabold text-gray-900 disabled:opacity-40">굵게</button></div></div>
+            <p class="text-[10.5px] text-gray-400 leading-snug px-0.5">칸을 두 번 눌러 글자를 드래그하면 그 글자만 바꿀 수 있어요. 굵게는 <b>Ctrl+B</b>. 바꾼 뒤 저장을 눌러야 모두에게 반영돼요.</p>
           </div>
         </div>
         <button type="button" id="isFilterReset" onclick="isClearFilter()" class="hidden ios-btn-tap px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-funnel-x"></i><span>필터 초기화</span></button>
@@ -10124,7 +10129,43 @@
     const IS_SAVE_KEYS = IS_COLS.map(c => c.k).concat(['text_colors']);   // text_colors : 칸별 글자색 {"detail":"red"} (JSON 문자열)
     const IS_COLOR_KEY = 'text_colors';
     function isColors(r) { try { const o = r && r[IS_COLOR_KEY] ? JSON.parse(r[IS_COLOR_KEY]) : {}; return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
-    const isCellColor = (r, k) => isColors(r)[k] === 'red' ? 'red' : 'black';
+    // 칸 서식 : 'red'(예전 형식) 또는 { c:'red', b:1, r:[[시작, 끝, 'b'|'r'|'br'], ...] } (r = 드래그한 글자 구간)
+    function isFmtGet(row, k) {
+      const v = isColors(row)[k];
+      if (!v) return { c: '', b: false, r: [] };
+      if (v === 'red') return { c: 'red', b: false, r: [] };
+      return { c: v.c === 'red' ? 'red' : '', b: !!v.b, r: Array.isArray(v.r) ? v.r.filter(x => Array.isArray(x) && x[1] > x[0] && x[2]) : [] };
+    }
+    function isFmtPut(o, k, f) {
+      const r = (f.r || []).filter(x => x[1] > x[0] && x[2]);
+      if (!f.c && !f.b && !r.length) { delete o[k]; return; }
+      if (f.c === 'red' && !f.b && !r.length) { o[k] = 'red'; return; }
+      const v = {}; if (f.c) v.c = f.c; if (f.b) v.b = 1; if (r.length) v.r = r; o[k] = v;
+    }
+    const isFlagSet = (f, ch, on) => { let s = String(f || '').replace(ch, ''); if (on) s += ch; return s.split('').sort().join(''); };
+    function isRunsToFlags(runs, len) { const a = new Array(len).fill(''); (runs || []).forEach(([s, e, f]) => { for (let i = Math.max(0, s); i < Math.min(len, e); i++) a[i] = f; }); return a; }
+    function isFlagsToRuns(a) { const out = []; let s = 0; for (let i = 1; i <= a.length; i++) if (i === a.length || a[i] !== a[s]) { if (a[s]) out.push([s, i, a[s]]); s = i; } return out; }
+    function isRebaseRuns(runs, oldT, newT) {               // 글자를 고쳐도 서식 구간이 같은 글자를 따라가도록
+      oldT = String(oldT || ''); newT = String(newT || '');
+      if (!runs || !runs.length || oldT === newT) return runs || [];
+      let p = 0; while (p < oldT.length && p < newT.length && oldT[p] === newT[p]) p++;
+      let q = 0; while (q < oldT.length - p && q < newT.length - p && oldT[oldT.length - 1 - q] === newT[newT.length - 1 - q]) q++;
+      const a = isRunsToFlags(runs, oldT.length), ins = newT.length - p - q, fill = p > 0 ? a[p - 1] : '';
+      return isFlagsToRuns(a.slice(0, p).concat(new Array(Math.max(0, ins)).fill(fill), a.slice(oldT.length - q)));
+    }
+    function isCellHtml(r, k, v) {
+      const t = String(v ?? ''), f = isFmtGet(r, k);
+      if (!f.r.length || !t) return svEsc(t);
+      const a = isRunsToFlags(f.r, t.length); let h = '', s = 0;
+      for (let i = 1; i <= t.length; i++) if (i === t.length || a[i] !== a[s]) {
+        const seg = svEsc(t.slice(s, i)), fl = a[s];
+        h += fl ? `<span class="${fl.includes('r') ? 'is-fr' : ''}${fl.includes('b') ? ' is-fb' : ''}">${seg}</span>` : seg;
+        s = i;
+      }
+      return h;
+    }
+    const isCellColor = (r, k) => { const f = isFmtGet(r, k); return f.c === 'red' || f.r.some(x => String(x[2]).includes('r')) ? 'red' : 'black'; };
+    const isFmtDesc = (v) => { if (!v) return '기본'; if (v === 'red') return '빨강'; const p = []; if (v.c === 'red') p.push('빨강'); if (v.b) p.push('굵게'); if (v.r && v.r.length) p.push('일부 글자 서식'); return p.join('·') || '기본'; };
     const IS_NODATA = '데이터 없음';
     // 자동 칸이지만 코드를 찾지 못한('데이터 없음') 경우 직접 입력 가능한 칸
     const IS_NODATA_EDIT = { temperature: 'product', unit: 'product', item_designation: 'product', stock_type: 'product' };
@@ -10320,10 +10361,11 @@
           ${IS_COLS.map(c => {
             const mine = r._mine.has(c.k), rem = !mine && r._rem && (r._rem.keys.has(c.k) || r._rem.isNew);
             const nodata = c.ro && IS_NODATA_EDIT[c.k] && isNoDataNow(r, IS_NODATA_EDIT[c.k]);
-            const cls = [c.ml && ln > 1 ? 'is-ml' : '', isCellColor(r, c.k) === 'red' ? 'is-red' : '', c.ro && !nodata ? 'is-ro' : '', nodata && r[c.k] === IS_NODATA ? 'is-miss' : '', mine ? 'is-dirty' : '', rem ? 'is-rdirty' : '', isState.miss.has(r.id + '|' + c.k) ? 'is-miss' : '', isState.sel && isState.sel.id === r.id && isState.sel.col === c.k ? 'is-sel' : ''].filter(Boolean).join(' ');
+            const fm = r[IS_COLOR_KEY] ? isFmtGet(r, c.k) : null;
+            const cls = [c.ml && ln > 1 ? 'is-ml' : '', fm && fm.c === 'red' ? 'is-red' : '', fm && fm.b ? 'is-bold' : '', c.ro && !nodata ? 'is-ro' : '', nodata && r[c.k] === IS_NODATA ? 'is-miss' : '', mine ? 'is-dirty' : '', rem ? 'is-rdirty' : '', isState.miss.has(r.id + '|' + c.k) ? 'is-miss' : '', isState.sel && isState.sel.id === r.id && isState.sel.col === c.k ? 'is-sel' : ''].filter(Boolean).join(' ');
             const v = r[c.k] ?? '';
             const tip = rem ? remTitle : nodata ? `${v || '(빈칸)'} · 데이터가 없어 직접 입력할 수 있습니다` : String(v);
-            return `<td data-col="${c.k}" class="${cls}" title="${svEsc(tip)}">${svEsc(v)}</td>`;
+            return `<td data-col="${c.k}" class="${cls}" title="${svEsc(tip)}">${fm && fm.r.length ? isCellHtml(r, c.k, v) : svEsc(v)}</td>`;
           }).join('')}
         </tr>`;
         }).join('') + spacer(o[rows.length] - o[e]);
@@ -10456,6 +10498,11 @@
           if (e.key === 'Enter' && sg.idx >= 0) { e.preventDefault(); isSugPick(sg.idx); return; }
           if (e.key === 'Escape') { e.preventDefault(); isSugClose(); return; }
         }
+        if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.code === 'KeyB' || String(e.key).toLowerCase() === 'b')) {   // 굵게
+          e.preventDefault();
+          if (isEditSel()) isFmtSelection('bold'); else isSetBold('cell');
+          return;
+        }
         if (e.key === 'Enter' && col.ml && (e.altKey || e.shiftKey)) {          // 칸 안 줄바꿈
           e.preventDefault();
           const a = el.selectionStart, b = el.selectionEnd;
@@ -10502,7 +10549,14 @@
       const ed = isState.edit; if (!ed) return;
       isCloseEditor(true);
       const v = String(value ?? '').trim();
-      if (v !== String(ed.orig ?? '').trim()) await isSetCell(ed.id, ed.col, v);
+      if (v !== String(ed.orig ?? '').trim()) {
+        const row = isFindRow(ed.id), f = row ? isFmtGet(row, ed.col) : null;
+        if (f && f.r.length) {
+          f.r = isRebaseRuns(f.r, String(ed.orig ?? ''), v);
+          const o = isColors(row); isFmtPut(o, ed.col, f);
+          await isDraftSet(ed.id, { [ed.col]: v, [IS_COLOR_KEY]: Object.keys(o).length ? JSON.stringify(o) : '' });
+        } else await isSetCell(ed.id, ed.col, v);
+      }
       if (move === 'down') isMove(1, 0); else if (move === 'right') isMove(0, 1); else if (move === 'left') isMove(0, -1);
     }
 
@@ -10759,12 +10813,12 @@
             isBroadcast('row', { row: data });
             IS_SAVE_KEYS.filter(k => k in pick && String(before[k] ?? '') !== String(data[k] ?? '')).forEach(k => {
               if (k === IS_COLOR_KEY) {
-                const a = isColors(before), b = isColors(data), ks = [...new Set([...Object.keys(a), ...Object.keys(b)])].filter(x => a[x] !== b[x]);
-                const nm = (x) => (IS_COLS.find(c => c.k === x) || {}).h || x, cl = (v) => v === 'red' ? '빨강' : '검정';
+                const a = isColors(before), b = isColors(data), ks = [...new Set([...Object.keys(a), ...Object.keys(b)])].filter(x => JSON.stringify(a[x] ?? null) !== JSON.stringify(b[x] ?? null));
+                const nm = (x) => (IS_COLS.find(c => c.k === x) || {}).h || x, cl = isFmtDesc;
                 if (ks.length > 3) {                                      // 행 전체처럼 여러 칸이면 한 줄로
                   const to = [...new Set(ks.map(x => cl(b[x])))].join('/');
-                  logs.push({ action: '수정', row_id: id, field_key: IS_COLOR_KEY, field: `글자색 (${ks.length}칸)`, old_value: '', new_value: to, row_label: isRowLabel(data) });
-                } else ks.forEach(x => logs.push({ action: '수정', row_id: id, field_key: x, field: `${nm(x)} 글자색`, old_value: cl(a[x]), new_value: cl(b[x]), row_label: isRowLabel(data) }));
+                  logs.push({ action: '수정', row_id: id, field_key: IS_COLOR_KEY, field: `글자 서식 (${ks.length}칸)`, old_value: '', new_value: to, row_label: isRowLabel(data) });
+                } else ks.forEach(x => logs.push({ action: '수정', row_id: id, field_key: x, field: `${nm(x)} 글자 서식`, old_value: cl(a[x]), new_value: cl(b[x]), row_label: isRowLabel(data) }));
                 return;
               }
               logs.push({ action: '수정', row_id: id, field_key: k, field: (IS_COLS.find(c => c.k === k) || {}).h || k, old_value: String(before[k] ?? ''), new_value: String(data[k] ?? ''), row_label: isRowLabel(data) });
@@ -10971,18 +11025,68 @@
         const c = isState.sel ? IS_COLS.find(x => x.k === isState.sel.col) : null;
         isEl('isColorCellHint').textContent = c ? `${c.h} 칸` : '칸을 먼저 선택';
         isEl('isColorMenu').querySelectorAll('[data-color-scope="cell"]').forEach(b => b.disabled = !c);
+        const sel = isEditSel();
+        isEl('isFmtSelBox').classList.toggle('hidden', !sel);
+        if (sel) isEl('isFmtSelHint').textContent = `'${sel.text.length > 8 ? sel.text.slice(0, 8) + '…' : sel.text}' ${sel.text.length}자`;
+      }
+    }
+    function isEditSel() {                    // 편집 중인 칸에서 드래그한 글자
+      const ed = isState.edit; if (!ed || !ed.el) return null;
+      const a = ed.el.selectionStart, b = ed.el.selectionEnd;
+      if (a == null || b == null || a === b) return null;
+      return { a, b, text: ed.el.value.slice(a, b) };
+    }
+    // 드래그한 글자만 빨강/검정/굵게 → 바로 반영해서 보여줌 (편집 칸은 닫힘)
+    async function isFmtSelection(kind, val) {
+      isToggleColorMenu(false);
+      const ed = isState.edit, sel = isEditSel();
+      if (!ed || !sel) return false;
+      if (isNeedUser()) return false;
+      const raw = ed.el.value, lead = raw.length - raw.replace(/^\s+/, '').length, T = raw.trim();
+      const a = Math.max(0, sel.a - lead), b = Math.min(T.length, sel.b - lead);
+      const id = ed.id, col = ed.col, row = isFindRow(id);
+      const f = isFmtGet(row, col);
+      let flags = isRunsToFlags(isRebaseRuns(f.r, String(ed.orig ?? ''), T), T.length);
+      if (kind === 'color' && f.c === 'red' && val !== 'red') { flags = flags.map(x => isFlagSet(x, 'r', true)); f.c = ''; }   // 칸 전체 빨강 → 글자별로 풀어서 일부만 검정
+      if (kind === 'bold' && f.b) { flags = flags.map(x => isFlagSet(x, 'b', true)); f.b = false; }
+      if (kind === 'bold') { const all = flags.slice(a, b).every(x => x.includes('b')); for (let i = a; i < b; i++) flags[i] = isFlagSet(flags[i], 'b', !all); }
+      else for (let i = a; i < b; i++) flags[i] = isFlagSet(flags[i], 'r', val === 'red');
+      f.r = isFlagsToRuns(flags);
+      const o = isColors(row); isFmtPut(o, col, f);
+      isCloseEditor(true);
+      const patch = { [IS_COLOR_KEY]: Object.keys(o).length ? JSON.stringify(o) : '' };
+      if (T !== String(ed.orig ?? '').trim()) patch[col] = T;
+      await isDraftSet(id, patch);
+      return true;
+    }
+    // 칸 전체 · 체크한 행 굵게 (이미 모두 굵으면 해제)
+    async function isSetBold(scope) {
+      isToggleColorMenu(false);
+      if (isNeedUser()) return;
+      if (scope === 'cell' && isState.edit) await isCommit(isState.edit.el.value, null);
+      const targets = [];
+      if (scope === 'cell') { if (!isState.sel) return; targets.push([isState.sel.id, [isState.sel.col]]); }
+      else [...isState.checked].forEach(id => targets.push([id, IS_COLS.map(c => c.k)]));
+      if (!targets.length) return;
+      const allBold = targets.every(([id, keys]) => { const r = isFindRow(id); return r && keys.every(k => isFmtGet(r, k).b); });
+      for (const [id, keys] of targets) {
+        const row = isFindRow(id); if (!row) continue;
+        const o = isColors(row);
+        keys.forEach(k => { const f = isFmtGet(row, k); f.b = !allBold; if (!allBold) f.r = f.r.map(x => [x[0], x[1], isFlagSet(x[2], 'b', false)]); isFmtPut(o, k, f); });
+        await isDraftSet(id, { [IS_COLOR_KEY]: Object.keys(o).length ? JSON.stringify(o) : '' }, true);
       }
     }
     async function isSetColor(scope, color) {
       isToggleColorMenu(false);
       if (isNeedUser()) return;
+      if (scope === 'cell' && isState.edit) await isCommit(isState.edit.el.value, null);
       const targets = [];                                         // [id, [keys]]
       if (scope === 'cell') { if (!isState.sel) return; targets.push([isState.sel.id, [isState.sel.col]]); }
       else [...isState.checked].forEach(id => targets.push([id, IS_COLS.map(c => c.k)]));
       for (const [id, keys] of targets) {
         const row = isFindRow(id); if (!row) continue;
         const o = isColors(row);
-        keys.forEach(k => { if (color === 'red') o[k] = 'red'; else delete o[k]; });
+        keys.forEach(k => { const f = isFmtGet(row, k); f.c = color === 'red' ? 'red' : ''; f.r = f.r.map(x => [x[0], x[1], isFlagSet(x[2], 'r', false)]); isFmtPut(o, k, f); });
         await isDraftSet(id, { [IS_COLOR_KEY]: Object.keys(o).length ? JSON.stringify(o) : '' }, true);
       }
       if (targets.length) showToastNotification('글자색 변경', `${color === 'red' ? '빨간색' : '검정색'}으로 바꿨어요. 저장을 눌러야 반영됩니다.`, 'success');
@@ -11418,6 +11522,7 @@
         const c = IS_COLS.find(x => x.k === isState.sel.col), id = isState.sel.id;
         if (c && (!c.ro || IS_NODATA_EDIT[c.k]) && !isNeedUser()) isCanEdit(isFindRow(id), c).then(ok => { if (ok) isSetCell(id, c.k, ''); });
       }
+      else if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyB' || k.toLowerCase() === 'b') && isState.sel) { e.preventDefault(); isSetBold('cell'); }
       else if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'c' && isState.sel) {
         const r = isFindRow(isState.sel.id);
         if (r && navigator.clipboard) navigator.clipboard.writeText(String(r[isState.sel.col] ?? '')).catch(() => {});
