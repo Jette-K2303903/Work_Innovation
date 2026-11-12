@@ -97,6 +97,8 @@
     .is-table td.is-red { color: #FF3B30 !important; }
     .is-table td.is-bold { font-weight: 800 !important; }
     .is-table td .is-fr { color: #FF3B30; }
+    .is-rsz { position: absolute; top: 0; right: -4px; width: 8px; height: 100%; cursor: col-resize; z-index: 5; }
+    .is-rsz:hover, .is-rsz:active { background: linear-gradient(to right, transparent 3px, #007AFF 3px, #007AFF 5px, transparent 5px); }
     .is-table tr.is-pend td { background: #E8F8EC !important; cursor: pointer; }
     .is-table tr.is-pend:hover td { background: #D6F3DE !important; }
     .is-table tr.is-pend td.is-gut { box-shadow: inset 3px 0 0 #34C759; }
@@ -1425,9 +1427,10 @@
     </div>
     <div id="isDlFmtModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
       <div class="bg-white rounded-[28px] w-full max-w-xs p-5 shadow-2xl border border-gray-100">
-        <h3 class="text-[16px] font-bold text-gray-900 tracking-tight">어떤 양식으로 받을까요?</h3>
+        <h3 class="text-[16px] font-bold text-gray-900 tracking-tight">어느 고객사 양식으로 받을까요?</h3>
         <p id="isDlFmtSub" class="text-[11.5px] text-gray-500 mt-0.5"></p>
-        <div class="mt-3 space-y-2">
+        <div id="isDlFmtList" class="mt-3 space-y-2 max-h-[52vh] overflow-y-auto"></div>
+        <div class="hidden">
           <button type="button" onclick="isDlRun('wellstory')" class="ios-btn-tap w-full flex items-center gap-2.5 px-3.5 py-3 rounded-2xl bg-gray-50 border border-gray-200 text-left hover:bg-blue-50"><i class="ph-bold ph-envelope-simple text-[#007AFF] text-lg"></i><span class="flex-1 text-[14px] font-semibold text-gray-900">웰스토리 메일</span><i class="ph-bold ph-caret-right text-gray-300"></i></button>
           <button type="button" onclick="isDlRun('distrib')" class="ios-btn-tap w-full flex items-center gap-2.5 px-3.5 py-3 rounded-2xl bg-gray-50 border border-gray-200 text-left hover:bg-blue-50"><i class="ph-bold ph-envelope-simple text-[#FF9500] text-lg"></i><span class="flex-1 text-[14px] font-semibold text-gray-900">유통물류 메일</span><i class="ph-bold ph-caret-right text-gray-300"></i></button>
           <button type="button" onclick="isDlRun('onenone')" class="ios-btn-tap w-full flex items-center gap-2.5 px-3.5 py-3 rounded-2xl bg-gray-50 border border-gray-200 text-left hover:bg-blue-50"><i class="ph-bold ph-envelope-simple text-[#34C759] text-lg"></i><span class="flex-1 text-[14px] font-semibold text-gray-900">원앤원 메일</span><i class="ph-bold ph-caret-right text-gray-300"></i></button>
@@ -1449,6 +1452,24 @@
           <button type="button" onclick="isPendAction('reject')" class="ios-btn-tap py-2.5 bg-white border border-gray-200 text-[#FF3B30] font-semibold rounded-xl text-[14px]">취소</button>
           <button type="button" onclick="isPendAction('wait')" class="ios-btn-tap py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[14px]">대기</button>
           <button type="button" onclick="isPendAction('confirm')" class="ios-btn-tap py-2.5 bg-[#34C759] text-white font-semibold rounded-xl text-[14px]">확정</button>
+        </div>
+      </div>
+    </div>
+    <!-- [특이사항 관리 : 탭 수기등록] -->
+    <div id="isManModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
+      <div class="bg-white rounded-[28px] w-full max-w-sm p-5 shadow-2xl border border-gray-100">
+        <h3 id="isManTitle" class="text-[16px] font-bold text-gray-900 tracking-tight">수기등록</h3>
+        <label class="block mt-3 text-[12px] font-semibold text-gray-600">제품명</label>
+        <div class="relative">
+          <input type="text" id="isManName" oninput="isManInput()" autocomplete="off" placeholder="제품명 또는 제품코드" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[14px] border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
+          <div id="isManSug" class="hidden absolute left-0 right-0 top-full mt-1 z-10 max-h-[240px] overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-xl"></div>
+        </div>
+        <p id="isManInfo" class="mt-1.5 text-[11.5px] text-gray-500 min-h-[17px]"></p>
+        <label class="block mt-2 text-[12px] font-semibold text-gray-600">수량</label>
+        <input type="text" id="isManQty" inputmode="decimal" placeholder="예: 3" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[14px] border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
+        <div class="grid grid-cols-2 gap-2 mt-4">
+          <button type="button" onclick="isCloseManual()" class="ios-btn-tap py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[14px]">취소</button>
+          <button type="button" onclick="isManSave()" class="ios-btn-tap py-2.5 bg-[#007AFF] text-white font-semibold rounded-xl text-[14px]">저장</button>
         </div>
       </div>
     </div>
@@ -2263,7 +2284,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.028</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.029</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -5333,6 +5354,7 @@
       hideBusy();
       if (!res.ok) return;
       palletRecords = [...toSave, ...palletRecords];
+      palletSyncOnenone(toSave);
       pendingNewRows = [];
       currentPalletPage = 1;
       renderPalletTable();
@@ -5582,6 +5604,7 @@
       });
       hideBusy();
       if (!res.ok) return;
+      palletSyncOnenone([recordData]);
       if (id) {
         const index = palletRecords.findIndex(r => r.id === id);
         if (index !== -1) palletRecords[index] = recordData;
@@ -5629,6 +5652,7 @@
         hideBusy();
         if (!res.ok) return;
         palletRecords = palletRecords.filter(item => !selectedPalletIds.has(item.id));
+        palletSyncOnenone([], ids);
         selectedPalletIds.clear();
         renderPalletTable();
         showModal('삭제 완료', `선택하신 ${count}건의 파렛트 내역이 삭제되었습니다.`);
@@ -10410,21 +10434,26 @@
             <div class="w-9 h-9 rounded-xl bg-blue-50 text-[#007AFF] flex items-center justify-center"><i class="ph-bold ${t.icon} text-lg"></i></div>
             <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">${svEsc(t.name)}</h3><p id="isTabMeta" class="text-[11.5px] text-gray-500">불러오는 중…</p></div>
             <div class="ml-auto flex gap-2">
+              <button type="button" onclick="isOpenManual()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-pencil-simple-line"></i>수기등록</button>
               <button type="button" onclick="isLoadTabItems('${svEsc(t.id)}')" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-arrows-clockwise"></i>새로고침</button>
               <button type="button" id="isTabOutBtn" onclick="isTabOut()" class="ios-btn-tap px-3.5 py-2 rounded-xl bg-[#FF9500] text-white text-[12.5px] font-bold flex items-center gap-1 disabled:opacity-40"><i class="ph-bold ph-truck"></i><span>출고</span></button>
             </div>
           </div>
           <div class="overflow-auto rounded-xl border border-gray-200/80">
-            <table class="w-full text-[13px] border-collapse min-w-[520px]">
+            <table id="isTabTable" class="text-[13px] border-collapse" style="table-layout:fixed">
+              <colgroup id="isTabCols"></colgroup>
               <thead class="bg-gray-50 sticky top-0"><tr class="text-[12px] text-gray-500">
-                <th class="w-10 px-2 py-2 text-center"><input type="checkbox" id="isTabAll" class="w-3.5 h-3.5 align-middle"></th>
-                <th class="px-2 py-2 text-left w-[110px]">제품코드</th><th class="px-2 py-2 text-left">제품명</th><th class="px-2 py-2 text-left w-[70px]">온도</th><th class="px-2 py-2 text-right w-[70px]">수량</th>
+                <th class="px-2 py-2 text-center"><input type="checkbox" id="isTabAll" class="w-3.5 h-3.5 align-middle"></th>
+                ${IS_TAB_COLS.map(c => `<th class="relative px-2 py-2 ${c.k === 'qty' ? 'text-right' : 'text-left'} truncate">${svEsc(c.h)}<span class="is-rsz" data-rsz="${c.k}" data-rsz-scope="tab" title="끌어서 너비 조절"></span></th>`).join('')}
               </tr></thead>
               <tbody id="isTabBody"></tbody>
             </table>
           </div>
-          <p class="mt-2 text-[11px] text-gray-400">홈화면에서 행을 체크하고 <b>적용</b>을 누르면 이 탭에 추가돼요. 출고할 행을 체크하고 <b>출고</b>를 누르면 목록에서 빠져요.</p>
-        </div>`;
+          <p class="mt-2 text-[11px] text-gray-400">홈화면에서 행을 체크하고 <b>적용</b>을 누르거나 <b>수기등록</b>으로 추가해요. 출고할 행을 체크하고 <b>출고</b>를 누르면 목록에서 빠져요. 머리글 오른쪽 끝을 끌면 칸 너비가 바뀌어요.</p>
+        </div>
+        ${t.id === 'onenone' ? '<div id="onStockBox" class="mt-3 bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4 sm:p-5"></div>' : ''}`;
+      isApplyColW();
+      if (t.id === 'onenone') { onRender(); onLoad(); }
       isEl('isTabAll').addEventListener('change', (e) => { isTabSt.checked = e.target.checked ? new Set(isTabSt.rows.map(r => r.id)) : new Set(); isRenderTabBody(); });
       isEl('isTabBody').addEventListener('change', (e) => { const c = e.target.closest('[data-tab-check]'); if (!c) return; const id = +c.dataset.tabCheck; if (c.checked) isTabSt.checked.add(id); else isTabSt.checked.delete(id); isRenderTabBody(); });
       isRenderTabBody();
@@ -10459,6 +10488,207 @@
         isLog([{ action: '출고', row_id: null, field_key: '', field: '', old_value: '', new_value: `${tab.name} 탭 ${ids.length}행 출고`, row_label: '출고' }]);
         showToastNotification('출고 완료', `${ids.length}행을 출고 처리했어요.`, 'success');
       }, '출고', `${svEsc(tab.name)} 탭에서 체크한 <b>${ids.length}행</b>을 출고 처리할까요?<br>출고한 행은 목록에서 빠져요.`);
+    }
+    // ========== 표 칸 너비 (홈화면 · 탭) : 머리글 오른쪽 끝을 끌어서 조절 → 모두에게 같이 적용 · 수정 기록 ==========
+    const IS_COLW_KEY = 'issue_sheet_colw';
+    const IS_TAB_COLS = [{ k: 'product_code', h: '제품코드', w: 110 }, { k: 'product_name', h: '제품명', w: 280 }, { k: 'temperature', h: '온도', w: 70 }, { k: 'qty', h: '수량', w: 80 }];
+    const IS_HOME_W0 = Object.fromEntries(IS_COLS.map(c => [c.k, c.w]));
+    let isColW = { home: {}, tab: {} };
+    async function isLoadColW() {
+      try {
+        const { data } = await supabaseClient.from(SETTINGS_TABLE).select('value').eq('key', IS_COLW_KEY).limit(1);
+        const v = data && data[0] && data[0].value;
+        isColW = { home: (v && v.home) || {}, tab: (v && v.tab) || {} };
+      } catch (e) {}
+      isApplyColW();
+    }
+    function isApplyColW() {
+      IS_COLS.forEach(c => { const w = +isColW.home[c.k]; c.w = w >= 30 ? w : IS_HOME_W0[c.k]; });
+      IS_TAB_COLS.forEach(c => { const w = +isColW.tab[c.k]; if (w >= 30) c.w = w; });
+      if (isEl('isHead') && isEl('isHead').children.length) {
+        const total = IS_GUT_W + IS_COLS.reduce((a, c) => a + c.w, 0);
+        isEl('isCols').innerHTML = `<col style="width:${IS_GUT_W}px">` + IS_COLS.map(c => `<col style="width:${c.w}px">`).join('');
+        isEl('isTable').style.minWidth = total + 'px';
+        isPlaceEditor(); isDrawLayer();
+      }
+      const tc = isEl('isTabCols');
+      if (tc) { tc.innerHTML = `<col style="width:40px">` + IS_TAB_COLS.map(c => `<col style="width:${c.w}px">`).join(''); const tt = isEl('isTabTable'); if (tt) tt.style.width = (40 + IS_TAB_COLS.reduce((a, c) => a + c.w, 0)) + 'px'; }
+    }
+    function isStartResize(e, scope, key) {
+      e.preventDefault(); e.stopPropagation();
+      const list = scope === 'home' ? IS_COLS : IS_TAB_COLS;
+      const col = list.find(c => c.k === key); if (!col) return;
+      const x0 = e.clientX, w0 = col.w;
+      document.body.style.cursor = 'col-resize';
+      const move = (ev) => { col.w = Math.max(36, Math.round(w0 + ev.clientX - x0)); isColW[scope][key] = col.w; isApplyColW(); };
+      const up = async () => {
+        document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
+        document.body.style.cursor = '';
+        if (col.w === w0) return;
+        try { await settingsSave([{ key: IS_COLW_KEY, value: isColW }]); } catch (err) { showToastNotification('너비 저장 실패', dbErrorMessage(err), 'warning'); return; }
+        isBroadcast('colw', {});
+        isLog([{ action: '수정', row_id: null, field_key: 'colw', field: `열 너비 · ${col.h}`, old_value: `${w0}px`, new_value: `${col.w}px`, row_label: scope === 'home' ? '표 크기 (홈화면)' : '표 크기 (탭)' }]);
+      };
+      document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+    }
+    document.addEventListener('mousedown', (e) => {
+      const h = e.target.closest('[data-rsz]'); if (!h) return;
+      if (!(isLoggedIn && currentRole === 'office')) return;
+      isStartResize(e, h.dataset.rszScope || 'home', h.dataset.rsz);
+    }, true);
+
+    // ========== 탭 : 수기등록 (제품정보 업로드에서 제품명 추천 → 제품코드 · 온도 자동) ==========
+    const isMan = { pick: null, timer: 0, seq: 0 };
+    function isOpenManual() {
+      if (isNeedUser()) return;
+      const t = isAllTabs().find(x => x.id === isTabSt.tab); if (!t) return;
+      isMan.pick = null;
+      isEl('isManTitle').textContent = `${t.name} · 수기등록`;
+      ['isManName', 'isManQty'].forEach(id => { isEl(id).value = ''; });
+      isEl('isManInfo').textContent = '제품명을 입력하면 제품정보 업로드에서 찾아 드려요.';
+      isEl('isManSug').innerHTML = ''; isEl('isManSug').classList.add('hidden');
+      isDlShow('isManModal', true);
+      setTimeout(() => isEl('isManName').focus(), 120);
+    }
+    function isCloseManual() { isDlShow('isManModal', false); }
+    function isManInput() {
+      isMan.pick = null;
+      isEl('isManInfo').textContent = '목록에서 제품을 고르면 제품코드 · 온도가 자동으로 채워져요.';
+      clearTimeout(isMan.timer);
+      const kw = isEl('isManName').value.trim();
+      if (!kw) { isEl('isManSug').classList.add('hidden'); return; }
+      isMan.timer = setTimeout(async () => {
+        const seq = ++isMan.seq;
+        let items = [];
+        try {
+          const like = `%${homeLikeEsc(kw)}%`;
+          const { data } = await supabaseClient.from('product_master').select('product_code,product_name,temperature').or(`product_name.ilike.${like},product_code.ilike.${like}`).limit(30);
+          items = data || [];
+          if (!items.length) { const r = await supabaseClient.from('product_master').select('product_code,product_name,temperature').ilike('product_name', like).limit(30); items = r.data || []; }
+        } catch (e) {}
+        if (seq !== isMan.seq) return;
+        isMan.items = items;
+        const box = isEl('isManSug');
+        box.innerHTML = items.length ? items.map((it, i) => `<button type="button" data-man="${i}" class="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-blue-50 border-b border-gray-100 last:border-0"><span class="flex-1 min-w-0 truncate text-[13px] font-semibold text-gray-900">${svEsc(it.product_name || '')}</span><span class="flex-none font-mono text-[11px] text-[#007AFF]">${svEsc(it.product_code || '')}</span><span class="flex-none text-[11px] text-gray-500">${svEsc(it.temperature || '')}</span></button>`).join('')
+          : `<div class="px-3 py-2.5 text-[12px] text-gray-400">제품정보에서 '${svEsc(kw)}'${ibJosaWa(kw)} 맞는 제품이 없어요. 그대로 저장할 수도 있어요.</div>`;
+        box.classList.remove('hidden');
+      }, 200);
+    }
+    function isManChoose(i) {
+      const it = (isMan.items || [])[i]; if (!it) return;
+      isMan.pick = it;
+      isEl('isManName').value = it.product_name || '';
+      isEl('isManInfo').innerHTML = `제품코드 <b class="font-mono text-gray-900">${svEsc(it.product_code || '-')}</b> · 온도 <b class="text-gray-900">${svEsc(it.temperature || '-')}</b>`;
+      isEl('isManSug').classList.add('hidden');
+      isEl('isManQty').focus();
+    }
+    async function isManSave() {
+      const name = isEl('isManName').value.trim(), qty = isEl('isManQty').value.trim();
+      if (!name) { isEl('isManName').focus(); return; }
+      if (!qty) { showToastNotification('수량 입력', '수량을 입력해 주세요.', 'warning'); isEl('isManQty').focus(); return; }
+      const p = isMan.pick && isMan.pick.product_name === name ? isMan.pick : null;
+      const tab = isTabSt.tab;
+      const { error } = await supabaseClient.from(IS_TAB_ITEMS).insert({ tab, product_code: p ? p.product_code : null, product_name: name, temperature: p ? p.temperature : null, qty, created_by: isState.me });
+      if (error) { showToastNotification('등록 실패', dbErrorMessage(error), 'warning'); return; }
+      isCloseManual();
+      isBroadcast('tabitems', { tab });
+      const t = isAllTabs().find(x => x.id === tab) || { name: '' };
+      isLog([{ action: '추가', row_id: null, field_key: '', field: '', old_value: '', new_value: `${t.name} 수기등록 · ${name} ${qty}`, row_label: '수기등록' }]);
+      showToastNotification('등록 완료', `${name} ${qty}을(를) 등록했어요.`, 'success');
+      isLoadTabItems(tab);
+    }
+    document.addEventListener('click', (e) => { const b = e.target.closest('[data-man]'); if (b) isManChoose(+b.dataset.man); });
+
+    // ========== 원앤원 재고 상자 (구분 입고 + / 출고 - · 파렛트 입고현황 천안 자동 기입) ==========
+    const ON_TABLE = 'onenone_stock';
+    const ON_COLS = [['kpp_n11', 'KPP N11'], ['kpp_n12', 'KPP N12'], ['aj_11a', 'AJ 11A'], ['aj_12a', 'AJ 12A'], ['kimchi_l', '김치 P박스(大)'], ['kimchi_s', '김치 P박스(小)'], ['kimchi_lid', '김치 P박스 뚜껑'], ['normal_box', '일반 P박스']];
+    const onSt = { rows: [], err: '', loading: false };
+    async function onLoad() {
+      onSt.loading = true;
+      try {
+        const all = [];
+        for (let from = 0; from < 20000; from += 1000) {
+          const { data, error } = await supabaseClient.from(ON_TABLE).select('*').order('entry_date', { ascending: false }).order('id', { ascending: false }).range(from, from + 999);
+          if (error) throw error;
+          all.push(...(data || []));
+          if (!data || data.length < 1000) break;
+        }
+        onSt.rows = all; onSt.err = '';
+      } catch (e) { onSt.err = dbErrorMessage(e); }
+      onSt.loading = false;
+      onRender();
+    }
+    function onRender() {
+      const box = isEl('onStockBox'); if (!box) return;
+      const today = isToday(), d = new Date();
+      const lbl = `${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}(${'일월화수목금토'[d.getDay()]}) 기준 재고`;
+      const sum = Object.fromEntries(ON_COLS.map(([k]) => [k, 0]));
+      onSt.rows.forEach(r => { if (r.entry_date && r.entry_date > today) return; const sg = r.kind === '출고' ? -1 : 1; ON_COLS.forEach(([k]) => { sum[k] += sg * (+r[k] || 0); }); });
+      const td = 'px-2 py-1.5 border border-gray-300 text-center';
+      box.innerHTML = `
+        <div class="flex items-center gap-2 mb-2"><h4 class="text-[15px] font-bold text-gray-900">원앤원 재고</h4><span class="text-[11px] text-gray-500">입고 + · 출고 − · 파렛트 입고현황(상하차지 천안)은 자동으로 들어와요</span></div>
+        <div class="overflow-x-auto rounded-xl">
+          <table class="pallet-table w-full border-collapse min-w-[860px] text-[12.5px]">
+            <thead><tr style="background:#44546A;color:#fff">
+              <th colspan="2" class="${td} !text-white font-bold" style="background:#44546A;color:#fff">구분</th>
+              ${ON_COLS.map(([, h]) => `<th class="${td} font-bold" style="background:#44546A;color:#fff">${svEsc(h)}</th>`).join('')}
+              <th class="${td} font-bold" style="background:#44546A;color:#fff">비고</th><th class="${td}" style="background:#44546A;color:#fff;width:44px"></th>
+            </tr></thead>
+            <tbody>
+              <tr style="background:#DDEBF7" class="font-bold text-black"><td colspan="2" class="${td}">${lbl}</td>${ON_COLS.map(([k]) => `<td class="${td} ${sum[k] < 0 ? 'text-[#FF3B30]' : ''}">${sum[k].toLocaleString()}</td>`).join('')}<td class="${td}"></td><td class="${td}"></td></tr>
+              <tr class="new-inline-row">
+                <td class="${td}"><input type="date" id="onNewDate" value="${today}" class="inline-cell-input w-[118px] px-1 py-1 rounded-lg bg-white border border-gray-200 text-[12px]"></td>
+                <td class="${td}"><select id="onNewKind" class="inline-cell-input px-1 py-1 rounded-lg bg-white border border-gray-200 text-[12px]"><option>입고</option><option>출고</option></select></td>
+                ${ON_COLS.map(([k]) => `<td class="${td}"><input type="number" min="0" inputmode="numeric" data-on-new="${k}" class="inline-cell-input w-[64px] px-1 py-1 rounded-lg bg-white border border-gray-200 text-[12px] text-center"></td>`).join('')}
+                <td class="${td}"><input type="text" id="onNewNote" placeholder="비고" class="inline-cell-input w-[120px] px-1 py-1 rounded-lg bg-white border border-gray-200 text-[12px]"></td>
+                <td class="${td}"><button type="button" onclick="onAdd()" class="ios-btn-tap px-2 py-1 rounded-lg bg-[#007AFF] text-white text-[11.5px] font-bold">등록</button></td>
+              </tr>
+              ${onSt.rows.length ? onSt.rows.slice(0, 300).map(r => `<tr>
+                <td class="${td}">${svEsc(String(r.entry_date || '').slice(2).replace(/-/g, '.'))}</td>
+                <td class="${td} font-bold ${r.kind === '출고' ? 'text-[#FF3B30]' : 'text-[#007AFF]'}">${svEsc(r.kind)}</td>
+                ${ON_COLS.map(([k]) => `<td class="${td}">${+r[k] ? (r.kind === '출고' ? '-' : '') + (+r[k]).toLocaleString() : ''}</td>`).join('')}
+                <td class="${td} text-left text-[12px] text-gray-600 max-w-[200px] truncate" title="${svEsc(r.note || '')}">${r.source_pallet_id ? '<span class="px-1 rounded bg-gray-100 text-gray-500 text-[10.5px] font-bold mr-1">자동</span>' : ''}${svEsc(r.note || '')}</td>
+                <td class="${td}"><button type="button" onclick="onDel(${r.id})" class="text-[#FF3B30] text-[11.5px] font-bold" title="삭제">삭제</button></td></tr>`).join('')
+                : `<tr><td colspan="${ON_COLS.length + 4}" class="${td} text-gray-400 py-4">${onSt.err ? '불러오지 못했어요: ' + svEsc(onSt.err) : onSt.loading ? '불러오는 중…' : '아직 기록이 없어요.'}</td></tr>`}
+            </tbody>
+          </table>
+        </div>`;
+    }
+    async function onAdd() {
+      if (isNeedUser()) return;
+      const row = { entry_date: isEl('onNewDate').value || isToday(), kind: isEl('onNewKind').value, note: isEl('onNewNote').value.trim() || null, created_by: isState.me };
+      let any = false;
+      document.querySelectorAll('[data-on-new]').forEach(i => { const v = parseInt(i.value || '0', 10) || 0; row[i.dataset.onNew] = Math.max(0, v); if (v) any = true; });
+      if (!any) { showToastNotification('수량 입력', '한 칸 이상 수량을 입력해 주세요.', 'warning'); return; }
+      const { error } = await supabaseClient.from(ON_TABLE).insert(row);
+      if (error) { showToastNotification('등록 실패', dbErrorMessage(error), 'warning'); return; }
+      isBroadcast('onstock', {});
+      isLog([{ action: '추가', row_id: null, field_key: '', field: '', old_value: '', new_value: `원앤원 재고 ${row.kind} (${row.entry_date})`, row_label: '원앤원 재고' }]);
+      onLoad();
+    }
+    function onDel(id) {
+      const r = onSt.rows.find(x => x.id === id); if (!r) return;
+      showConfirmModal(async () => {
+        const { error } = await supabaseClient.from(ON_TABLE).delete().eq('id', id);
+        if (error) { showToastNotification('삭제 실패', dbErrorMessage(error), 'warning'); return; }
+        isBroadcast('onstock', {}); onLoad();
+      }, '재고 기록 삭제', `${svEsc(r.entry_date || '')} ${svEsc(r.kind)} 기록을 삭제할까요?${r.source_pallet_id ? '<br><span style="color:#8E8E93">파렛트 입고현황에서 자동으로 들어온 기록이에요. 파렛트 기록을 다시 저장하면 다시 들어와요.</span>' : ''}`);
+    }
+    // 파렛트 입고현황 → 원앤원 재고 (상하차지 천안 · KPP N11/N12 · AJ 11A/12A만)
+    async function palletSyncOnenone(recs, deletedIds) {
+      if (!supabaseClient) return;
+      try {
+        if (deletedIds && deletedIds.length) await supabaseClient.from(ON_TABLE).delete().in('source_pallet_id', deletedIds.map(String));
+        for (const r of (recs || [])) {
+          if (!r || r.id == null) continue;
+          const sum = (+r.kppN11 || 0) + (+r.kppN12 || 0) + (+r.aj11A || 0) + (+r.aj12A || 0);
+          const kind = r.type === '입고' ? '입고' : (r.type === '출고' || r.type === '반납') ? '출고' : null;
+          if (!String(r.location || '').includes('천안') || !kind || !sum) { await supabaseClient.from(ON_TABLE).delete().eq('source_pallet_id', String(r.id)); continue; }
+          const row = { entry_date: r.date || null, kind, kpp_n11: +r.kppN11 || 0, kpp_n12: +r.kppN12 || 0, aj_11a: +r.aj11A || 0, aj_12a: +r.aj12A || 0,
+                        note: `파렛트 ${r.type}${r.carNum && r.carNum !== '-' ? ' · ' + r.carNum : ''}${r.note && r.note !== '-' ? ' · ' + r.note : ''}`, source_pallet_id: String(r.id), created_by: r.worker || null };
+          await supabaseClient.from(ON_TABLE).upsert(row, { onConflict: 'source_pallet_id' });
+        }
+      } catch (e) { console.warn('원앤원 재고 자동 기입 실패(무시):', e); }
     }
     function isFindRow(id) {
       if (isPendId(id)) return isPendFind(id);
@@ -10498,7 +10728,7 @@
       isEl('isCols').innerHTML = `<col style="width:${IS_GUT_W}px">` + IS_COLS.map(c => `<col style="width:${c.w}px">`).join('');
       Object.assign(isEl('isTable').style, { width: '100%', minWidth: total + 'px' });
       isEl('isHead').innerHTML = `<th class="is-gut"><input type="checkbox" id="isCheckAll" class="w-3.5 h-3.5 align-middle cursor-pointer" title="전체 선택"></th>`
-        + IS_COLS.map(c => `<th title="${svEsc(c.h)}${c.auto ? ' (자동)' : ''}" style="${c.auto ? 'color:#9CA3AF' : ''}">${svEsc(c.h)}<button type="button" class="is-th-btn" data-is-filter="${c.k}" title="${svEsc(c.h)} 필터"><i class="ph-bold ph-caret-down text-[10px]"></i></button></th>`).join('');
+        + IS_COLS.map(c => `<th title="${svEsc(c.h)}${c.auto ? ' (자동)' : ''}" style="${c.auto ? 'color:#9CA3AF' : ''}"><span class="is-rsz" data-rsz="${c.k}" title="끌어서 너비 조절"></span>${svEsc(c.h)}<button type="button" class="is-th-btn" data-is-filter="${c.k}" title="${svEsc(c.h)} 필터"><i class="ph-bold ph-caret-down text-[10px]"></i></button></th>`).join('');
       isEl('isHead').addEventListener('click', (e) => { const b = e.target.closest('[data-is-filter]'); if (b) { e.stopPropagation(); isOpenFilter(b.dataset.isFilter, b); } });
       isEl('isCheckAll').addEventListener('change', (e) => {
         const rows = isRowsView();
@@ -11165,16 +11395,206 @@
       if (scope === 'date' && !isDl.sel) return;
       isDl.scope = scope;
       isEl('isDlFmtSub').textContent = scope === 'all' ? `전체 데이터 · ${isState.rows.length.toLocaleString()}건` : `배송일 ${isDl.sel}`;
+      const COLORS = ['#007AFF', '#FF9500', '#34C759', '#AF52DE', '#FF2D55', '#5856D6'];
+      const opts = [{ id: 'all', name: '전체 고객사', icon: 'ph-buildings' }].concat(isAllTabs().filter(t => t.id !== 'home' && t.id !== 'onenone'));
+      isEl('isDlFmtList').innerHTML = opts.map((t, i) => `<button type="button" onclick="isDlRun('${svEsc(t.id)}')" class="ios-btn-tap w-full flex items-center gap-2.5 px-3.5 py-3 rounded-2xl bg-gray-50 border border-gray-200 text-left hover:bg-blue-50"><i class="ph-bold ${t.icon || 'ph-folder-simple'} text-lg" style="color:${COLORS[i % COLORS.length]}"></i><span class="flex-1 text-[14px] font-semibold text-gray-900">${svEsc(t.name)}</span><i class="ph-bold ph-download-simple text-gray-300"></i></button>`).join('');
       isDlShow('isDlFmtModal', true);
     }
     function isCloseDlFmt() { isDlShow('isDlFmtModal', false); }
-    function isDlRun(fmt) {
-      const f = IS_DL_FORMATS[fmt]; if (!f) return;
-      const rows = (isDl.scope === 'all' ? isState.rows.slice() : isState.rows.filter(r => String(r.delivery_date || '').slice(0, 10) === isDl.sel))
+    async function isDlRun(fmt) {
+      const base = (isDl.scope === 'all' ? isState.rows.slice() : isState.rows.filter(r => String(r.delivery_date || '').slice(0, 10) === isDl.sel))
         .sort((a, b) => { const da = a.delivery_date || '', db = b.delivery_date || ''; return da < db ? -1 : da > db ? 1 : a.id - b.id; });
-      if (!rows.length) { showToastNotification('다운로드', '받을 자료가 없습니다.', 'warning'); return; }
-      isDownloadRows(rows, `${f.label.replace(/\s/g, '')}_특이사항_${isDl.scope === 'all' ? '전체' : isDl.sel}`);
-      isCloseDlFmt(); isCloseDl();
+      const rows = xlRowsFor(fmt, base);
+      const tab = isAllTabs().find(t => t.id === fmt);
+      const label = fmt === 'all' ? '전체고객사' : (tab ? tab.name : fmt).replace(/\s/g, '');
+      const tag = isDl.scope === 'all' ? '전체' : isDl.sel;
+      if (!rows.length && fmt !== 'distrib') { showToastNotification('다운로드', `${fmt === 'all' ? '' : label + ' '}받을 자료가 없습니다.`, 'warning'); return; }
+      if (fmt === 'all') { isDownloadRows(rows, `${label}_특이사항_${tag}`); isCloseDlFmt(); isCloseDl(); return; }
+      showBusy('엑셀 만드는 중... (사진 포함)');
+      try {
+        await costLoadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
+        if (fmt === 'wellstory') await xlWellstory(rows, `웰스토리_특이사항_${tag}.xlsx`);
+        else if (fmt === 'distrib') await xlDistrib(rows, `유통물류_특이사항_${tag}.xlsx`, { all: isDl.scope === 'all', date: isDl.sel });
+        else await xlGeneric(rows, `${label}_특이사항_${tag}.xlsx`, tab ? tab.name : label);
+        isCloseDlFmt(); isCloseDl();
+      } catch (e) { console.error(e); showToastNotification('다운로드 실패', '엑셀을 만들지 못했어요: ' + (e.message || e), 'warning'); }
+      finally { hideBusy(); }
+    }
+    // ========== 다운로드 양식 (고객사별 엑셀 : 서식 · 병합 · 사진 포함, ExcelJS) ==========
+    //  웰스토리 : 1건당 4줄 블록 / 유통물류 : 간선현황 + 특이사항 시트 / 추가한 탭 : 특이사항 시트 양식 / 전체 : 기본 표
+    const XL_GREEN = 'FFE2EFDA', XL_GOLD = 'FFFFF2CC', XL_SLATE = 'FF44546A', XL_BLUE = 'FFDDEBF7';
+    const xlFill = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+    const xlBorder = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    const xlCenter = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    const xlColPx = (w) => Math.floor(w * 7 + 5);
+    function xlBox(ws, r1, c1, r2, c2, opt = {}) {      // 범위 테두리 · 가운데 정렬
+      for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) {
+        const cell = ws.getRow(r).getCell(c);
+        cell.border = xlBorder;
+        if (opt.center !== false) cell.alignment = xlCenter;
+      }
+    }
+    function xlSaveBlob(buf, name) {
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+      document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    }
+    // 사진 : 칸 크기에 맞게 줄이고 150PPI 정도로 압축 (JPEG)
+    async function xlCompress(blob, boxW, boxH) {
+      const bm = await createImageBitmap(blob);
+      const k = Math.min(boxW / bm.width, boxH / bm.height, 1e9);
+      const dispW = Math.max(1, Math.round(bm.width * k)), dispH = Math.max(1, Math.round(bm.height * k));
+      const scale = 150 / 96;                                        // 화면 96dpi → 150PPI
+      const cw = Math.max(1, Math.round(dispW * scale)), ch = Math.max(1, Math.round(dispH * scale));
+      const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+      const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch); g.drawImage(bm, 0, 0, cw, ch);
+      if (bm.close) bm.close();
+      const out = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.82));
+      return { buf: await out.arrayBuffer(), w: dispW, h: dispH };
+    }
+    // 특이사항 행의 사진 찾기 : 현장 접수(업로드 내역) 사진 → 때때로 붙인 사진
+    async function xlRowPhotos(rows) {
+      const ids = rows.map(r => r.id).filter(id => id > 0), out = new Map();
+      for (let i = 0; i < ids.length; i += 200) {
+        const part = ids.slice(i, i + 200);
+        try {
+          const { data } = await supabaseClient.from(INCIDENT_TABLE).select('issue_row_id,photos').in('issue_row_id', part);
+          (data || []).forEach(x => { const ph = (x.photos || [])[0]; if (ph && !out.has(x.issue_row_id)) out.set(x.issue_row_id, { url: ph.url || (ph.path ? supabaseClient.storage.from(INCIDENT_BUCKET).getPublicUrl(ph.path).data.publicUrl : '') }); });
+        } catch (e) {}
+        try {
+          const { data } = await supabaseClient.from('issue_sheet_photos').select('row_id,storage_path').in('row_id', part).order('id');
+          (data || []).forEach(x => { if (!out.has(x.row_id)) out.set(x.row_id, { path: x.storage_path }); });
+        } catch (e) {}
+      }
+      return out;
+    }
+    async function xlFetchPhoto(src) {
+      try {
+        if (src.path) { const { data, error } = await supabaseClient.storage.from(IB_PHOTO_BUCKET).download(src.path); if (error) throw error; return data; }
+        if (src.url) { const r = await fetch(src.url); if (!r.ok) throw new Error(r.status); return await r.blob(); }
+      } catch (e) { console.warn('사진을 불러오지 못함', e); }
+      return null;
+    }
+    async function xlPhotosFor(rows, boxW, boxH) {
+      const src = await xlRowPhotos(rows), imgs = new Map();
+      const jobs = [...src.entries()];
+      for (let i = 0; i < jobs.length; i += 6) {
+        await Promise.all(jobs.slice(i, i + 6).map(async ([id, s]) => { const b = await xlFetchPhoto(s); if (b) { try { imgs.set(id, await xlCompress(b, boxW, boxH)); } catch (e) {} } }));
+      }
+      return imgs;
+    }
+    function xlPlaceImage(wb, ws, img, col0, row0, boxW, boxH) {      // col0 · row0 : 0부터 (칸 왼쪽 위)
+      const id = wb.addImage({ buffer: img.buf, extension: 'jpeg' });
+      const offX = Math.max(0, (boxW - img.w) / 2), offY = Math.max(0, (boxH - img.h) / 2);
+      ws.addImage(id, { tl: { col: col0, row: row0, nativeColOff: Math.round(offX * 9525), nativeRowOff: Math.round(offY * 9525) }, ext: { width: img.w, height: img.h }, editAs: 'oneCell' });
+    }
+    const xlWeek = (d) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || ''); return m ? '일월화수목금토'[new Date(+m[1], +m[2] - 1, +m[3]).getDay()] : ''; };
+    // 매장 주소 → 김해(경남 · 부산 · 울산) / 왜관(대구 · 경북)
+    async function xlStoreRegions(codes) {
+      const out = new Map(), list = [...new Set(codes.filter(Boolean))];
+      for (let i = 0; i < list.length; i += 200) {
+        const part = list.slice(i, i + 200);
+        try { const { data } = await supabaseClient.from('store_master').select('store_code,address').in('store_code', part); (data || []).forEach(x => { if (x.address) out.set(x.store_code, x.address); }); } catch (e) {}
+        const miss = part.filter(c => !out.has(c));
+        if (miss.length) { try { const { data } = await supabaseClient.from('dispatch_data').select('business_code,address').in('business_code', miss).limit(2000); (data || []).forEach(x => { if (x.address && !out.has(x.business_code)) out.set(x.business_code, x.address); }); } catch (e) {} }
+      }
+      const reg = new Map();
+      out.forEach((addr, code) => {
+        if (/^(경상남도|경남|부산|울산)/.test(addr.trim())) reg.set(code, 'gimhae');
+        else if (/^(대구|경상북도|경북)/.test(addr.trim())) reg.set(code, 'waegwan');
+      });
+      return reg;
+    }
+
+    async function xlWellstory(rows, name) {
+      const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('웰스토리');
+      [0.85, 0.38, 22.63, 67.13, 7, 7, 7].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+      const c2 = ws.getCell('C2'); c2.value = { formula: 'TODAY()' }; c2.numFmt = 'mm"월" dd"일"(aaa)'; c2.font = { bold: true };
+      const e2 = ws.getCell('E2'); e2.value = '김해'; e2.font = { bold: true }; e2.fill = xlFill(XL_GREEN); e2.alignment = xlCenter;
+      const f2 = ws.getCell('F2'); f2.value = '왜관'; f2.font = { bold: true }; f2.fill = xlFill(XL_GOLD); f2.alignment = xlCenter;
+      ws.getCell('C4').value = '배송일자 / 거래처명'; ws.getCell('D4').value = '제품명 및 비고';
+      ws.mergeCells('E4:G4'); ws.getCell('E4').value = '사진';
+      ['C4', 'D4', 'E4'].forEach(a => { ws.getCell(a).font = { bold: true }; });
+      const H = [30, 22, 26, 26];                                       // 1건 4줄 높이(pt)
+      const boxW = xlColPx(7) * 3 - 8, boxH = Math.round(H.reduce((a, b) => a + b, 0) * 4 / 3) - 8;
+      const [imgs, regs] = await Promise.all([xlPhotosFor(rows, boxW, boxH), xlStoreRegions(rows.map(r => r.store_code))]);
+      rows.forEach((r, i) => {
+        const s = 5 + i * 4;
+        H.forEach((h, k) => { ws.getRow(s + k).height = h; });
+        ws.getCell(`C${s}`).value = String(r.delivery_date || '').slice(0, 10);
+        ws.getCell(`C${s + 1}`).value = r.store_code || '';
+        ws.mergeCells(`C${s + 2}:C${s + 3}`); ws.getCell(`C${s + 2}`).value = r.store_name || '';
+        ws.getCell(`D${s}`).value = [r.product_code, r.product_name].filter(Boolean).join(' ');
+        ws.mergeCells(`D${s + 1}:D${s + 3}`); ws.getCell(`D${s + 1}`).value = r.detail || '';
+        ws.mergeCells(`E${s}:G${s + 3}`);
+        const reg = regs.get(r.store_code);
+        if (reg) [s, s + 1, s + 2].forEach(rr => { ws.getCell(`C${rr}`).fill = xlFill(reg === 'gimhae' ? XL_GREEN : XL_GOLD); });
+        const img = imgs.get(r.id);
+        if (img) xlPlaceImage(wb, ws, img, 4, s - 1, boxW + 8, boxH + 8);
+      });
+      xlBox(ws, 4, 3, 4 + rows.length * 4, 7);
+      xlSaveBlob(await wb.xlsx.writeBuffer(), name);
+    }
+    function xlIssueSheet(wb, rows, imgs, title, sheetName) {
+      const ws = wb.addWorksheet(sheetName);
+      [10.5, 8.5, 16.13, 10.25, 20.88, 12, 50.75, 5.5, 6.25, 6.38, 6.38, 6.5, 8.25, 32.75, 8].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+      ws.getColumn(10).hidden = true;                                 // J : 품목지정 숨김
+      ws.mergeCells('A1:E1');
+      const a1 = ws.getCell('A1'); a1.value = { formula: 'TODAY()' }; a1.numFmt = `yyyy-mm-dd"${title}"`; a1.font = { bold: true, size: 12 };
+      const heads = ['메인센터', '일자', '브랜드', '거래처코드', '거래처명', '제품코드', '제품명', '온도', '단위', '품목지정', '재고타입', '수량', '구분', '상세내용', '사진'];
+      heads.forEach((h, i) => { const c = ws.getRow(2).getCell(i + 1); c.value = h; c.font = { bold: true }; c.fill = xlFill(XL_GREEN); });
+      const PH = 45, boxW = xlColPx(8) - 6, boxH = Math.round(PH * 4 / 3) - 6;
+      rows.forEach((r, i) => {
+        const n = 3 + i, row = ws.getRow(n);
+        const q = parseFloat(r.qty);
+        [r.main_center, String(r.delivery_date || '').slice(0, 10), r.client_name, r.store_code, r.store_name, r.product_code, r.product_name, r.temperature, r.unit, r.item_designation, r.stock_type, isNaN(q) ? (r.qty || '') : q, r.content, r.detail, '']
+          .forEach((v, k) => { row.getCell(k + 1).value = v ?? ''; });
+        const img = imgs && imgs.get(r.id);
+        if (img) { row.height = PH; xlPlaceImage(wb, ws, img, 14, n - 1, boxW + 6, boxH + 6); }
+      });
+      xlBox(ws, 2, 1, 2 + rows.length, 15);
+      return { ws, boxW, boxH };
+    }
+    async function xlDistrib(rows, name, scope) {
+      const wb = new ExcelJS.Workbook();
+      // 간선현황 (파렛트 입고현황 기준)
+      if (!palletRecords.length) { try { await palletLoadAll(); } catch (e) {} }
+      const pal = palletRecords.filter(r => scope.all || r.date === scope.date);
+      const ws = wb.addWorksheet('간선현황');
+      for (let i = 1; i <= 14; i++) ws.getColumn(i).width = 10.5;
+      ws.getColumn(15).width = 46.13;
+      ['간선입고일', '요일', '상차지', '하차지', '소속', '차량번호', '톤수', '도착시간', 'KPP 전표', '아주전표', 'KPP 실물', '아주실물', 'KPP 차이량', '아주차이량', '비고']
+        .forEach((h, i) => { const c = ws.getRow(1).getCell(i + 1); c.value = h; c.font = { bold: true }; c.fill = xlFill(XL_GREEN); });
+      const list = pal.map(r => {
+        const loc = !r.location || r.location === '-' ? '' : (r.location.includes('천안') ? '천안(원앤원)' : r.location);
+        const out = r.type === '출고' || r.type === '반납';
+        return { date: r.date, from: out ? '밀양센터' : loc, to: out ? loc : '밀양센터', car: cleanCarNumber(r.carNum), ton: r.ton && r.ton !== '-' ? r.ton : '', time: r.arrivalTime && r.arrivalTime !== '-' ? r.arrivalTime : '',
+                 kpp: (parseInt(r.kppN11 || 0, 10) + parseInt(r.kppN12 || 0, 10)), aj: (parseInt(r.aj11A || 0, 10) + parseInt(r.aj12A || 0, 10)), note: r.note && r.note !== '-' ? r.note : '', chonan: loc.includes('천안') };
+      }).sort((a, b) => (a.date || '').localeCompare(b.date || '') || (b.chonan - a.chonan) || (a.time || '99:99').localeCompare(b.time || '99:99'));
+      list.forEach((x, i) => {
+        const n = 2 + i, row = ws.getRow(n);
+        [x.date, xlWeek(x.date), x.from, x.to, '구간', x.car, x.ton, x.time, x.kpp, x.aj, null, null, { formula: `I${n}-K${n}` }, { formula: `J${n}-L${n}` }, x.note].forEach((v, k) => { row.getCell(k + 1).value = v; });
+      });
+      xlBox(ws, 1, 1, 1 + list.length, 15);
+      // 특이사항
+      const imgs = await xlPhotosFor(rows, xlColPx(8) - 6, 54);
+      xlIssueSheet(wb, rows, imgs, '밀양센터 유통물류 배송특이사항', '특이사항');
+      xlSaveBlob(await wb.xlsx.writeBuffer(), name);
+    }
+    async function xlGeneric(rows, name, tabName) {
+      const wb = new ExcelJS.Workbook();
+      const imgs = await xlPhotosFor(rows, xlColPx(8) - 6, 54);
+      xlIssueSheet(wb, rows, imgs, `밀양센터 ${tabName} 배송특이사항`, '특이사항');
+      xlSaveBlob(await wb.xlsx.writeBuffer(), name);
+    }
+    // 고객사 이름으로 행 고르기 : 웰스토리 · 원앤원은 이름으로, 유통물류는 나머지 / 추가 탭은 그 이름
+    function xlRowsFor(fmt, rows) {
+      const has = (r, w) => String(r.client_name || '').includes(w) || String(r.store_name || '').includes(w);
+      if (fmt === 'all') return rows;
+      if (fmt === 'wellstory') return rows.filter(r => has(r, '웰스토리'));
+      if (fmt === 'distrib') return rows.filter(r => !has(r, '웰스토리') && !has(r, '원앤원'));
+      const t = isAllTabs().find(x => x.id === fmt);
+      return t ? rows.filter(r => has(r, t.name)) : rows;
     }
     function isDownloadRows(rows, name) {
       if (typeof XLSX === 'undefined') { showToastNotification('다운로드 오류', '엑셀 기능을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.', 'warning'); return; }
@@ -11498,6 +11918,8 @@
         .on('broadcast', { event: 'row' }, ({ payload }) => { if (payload && payload.row) isQueueDb({ eventType: 'UPDATE', new: payload.row }); })
         .on('broadcast', { event: 'reload' }, () => { isLoad(); })
         .on('broadcast', { event: 'pend' }, () => { isLoadPending(); })
+        .on('broadcast', { event: 'colw' }, () => { isLoadColW(); })
+        .on('broadcast', { event: 'onstock' }, () => { if (isEl('onStockBox')) onLoad(); })
         .on('broadcast', { event: 'tabitems' }, ({ payload }) => { if (payload && payload.tab === isTabSt.tab && isState.tab !== 'home') isLoadTabItems(isTabSt.tab); })
         .on('broadcast', { event: 'del' }, ({ payload }) => { if (payload && payload.ids) payload.ids.forEach(id => isQueueDb({ eventType: 'DELETE', old: { id } })); })
         .on('broadcast', { event: 'msg' }, ({ payload }) => { if (payload && payload.msg) isAddMsg(payload.msg, true); })
@@ -11516,6 +11938,7 @@
         isState.dbCh = supabaseClient.channel('issue-sheet-db')
           .on('postgres_changes', { event: '*', schema: 'public', table: IS_TABLE }, (pl) => isQueueDb(pl))
           .on('postgres_changes', { event: '*', schema: 'public', table: INCIDENT_TABLE }, () => { clearTimeout(isState.pendT); isState.pendT = setTimeout(isLoadPending, 400); })
+          .on('postgres_changes', { event: '*', schema: 'public', table: ON_TABLE }, () => { if (isEl('onStockBox')) { clearTimeout(isState.onT); isState.onT = setTimeout(onLoad, 400); } })
           .on('postgres_changes', { event: '*', schema: 'public', table: IS_TAB_ITEMS }, () => { if (isState.tab !== 'home' && isTabSt.tab) { clearTimeout(isState.tabT); isState.tabT = setTimeout(() => isLoadTabItems(isTabSt.tab), 400); } })
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: IS_MSG_TABLE }, (pl) => isAddMsg(pl.new, true))
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: IS_LOG_TABLE }, (pl) => { isAddLog(pl.new); isRenderLogs(); })
@@ -13614,6 +14037,7 @@
       isApplyPanels();
       isState.tab = 'x'; isSwitchTab('home');
       isLoadTabs();
+      isLoadColW();
       isRender();
       isLoad();
       isLoadPending();
