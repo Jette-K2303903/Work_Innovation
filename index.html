@@ -92,6 +92,7 @@
     .is-table th.is-gut { z-index: 4; }
     .is-table td.is-ro { background: #FCFCFD; color: #6B7280; cursor: default; }
     .is-table td.is-sel { box-shadow: inset 0 0 0 2px #007AFF; }
+    .is-table td.is-red { color: #FF3B30 !important; font-weight: 700; }
     .is-table td.is-miss { background: #FEF2F2; color: #DC2626; }
     .is-table tr.is-checked td { background: #EFF6FF; }
     .is-table tr:hover td.is-gut { color: #4B5563; }
@@ -1186,6 +1187,16 @@
         <input type="search" id="isSearch" oninput="isState.q = this.value.trim(); isRender()" placeholder="거래처 · 제품 · 내용 검색" class="flex-1 min-w-[160px] px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-blue-200">
         <button type="button" onclick="isAddRow()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-plus"></i>행 추가</button>
         <button type="button" id="isSaveBtn" onclick="isSaveDrafts()" class="ios-btn-tap px-3.5 py-2 rounded-xl bg-[#007AFF] text-white text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-floppy-disk"></i><span>저장</span></button>
+        <div class="relative">
+          <button type="button" id="isColorBtn" onmousedown="event.preventDefault()" onclick="isToggleColorMenu()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-800 text-[12.5px] font-bold flex items-center gap-1" title="글자색"><span class="font-extrabold leading-none border-b-[3px] border-[#FF3B30] px-0.5">A</span>글자색</button>
+          <div id="isColorMenu" onmousedown="event.preventDefault()" class="hidden absolute left-0 top-full mt-1.5 z-[45] w-[220px] bg-white rounded-2xl border border-gray-200 shadow-2xl p-2.5 space-y-2">
+            <div><div class="flex justify-between text-[10.5px] font-bold text-gray-400 px-0.5 mb-1"><span>선택한 칸</span><span id="isColorCellHint"></span></div>
+              <div class="grid grid-cols-2 gap-1.5"><button type="button" data-color-scope="cell" onclick="isSetColor('cell','black')" class="py-1.5 rounded-lg bg-gray-100 text-[12px] font-bold text-gray-900 disabled:opacity-40">검정</button><button type="button" data-color-scope="cell" onclick="isSetColor('cell','red')" class="py-1.5 rounded-lg bg-red-50 text-[12px] font-bold text-[#FF3B30] disabled:opacity-40">빨강</button></div></div>
+            <div><div class="flex justify-between text-[10.5px] font-bold text-gray-400 px-0.5 mb-1"><span>행 전체</span><span id="isColorRowsHint"></span></div>
+              <div class="grid grid-cols-2 gap-1.5"><button type="button" data-color-scope="rows" onclick="isSetColor('rows','black')" class="py-1.5 rounded-lg bg-gray-100 text-[12px] font-bold text-gray-900 disabled:opacity-40">검정</button><button type="button" data-color-scope="rows" onclick="isSetColor('rows','red')" class="py-1.5 rounded-lg bg-red-50 text-[12px] font-bold text-[#FF3B30] disabled:opacity-40">빨강</button></div></div>
+            <p class="text-[10.5px] text-gray-400 leading-snug px-0.5">바꾼 뒤 저장을 눌러야 모두에게 반영돼요. 열 이름의 ▾ 에서 색 기준으로 걸러 볼 수 있어요.</p>
+          </div>
+        </div>
         <button type="button" id="isFilterReset" onclick="isClearFilter()" class="hidden ios-btn-tap px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-funnel-x"></i><span>필터 초기화</span></button>
         <button type="button" id="isDelBtn" onclick="isDeleteChecked()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-red-600 text-[12.5px] font-bold">선택 삭제</button>
         <button type="button" onclick="isDownload()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-microsoft-excel-logo"></i>엑셀</button>
@@ -1240,6 +1251,12 @@
       <!-- 칸별 필터 -->
       <div id="isFilterPop" class="hidden fixed z-[46] w-[240px] bg-white rounded-2xl border border-gray-200 shadow-2xl p-3">
         <div class="flex items-center justify-between mb-2"><b id="isFpTitle" class="text-[13px] text-gray-900"></b><button type="button" onclick="isCloseFilter()" class="w-6 h-6 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"><i class="ph-bold ph-x text-[10px]"></i></button></div>
+        <div class="mb-2"><div class="text-[10.5px] font-bold text-gray-400 mb-1">색 기준 필터</div>
+          <div id="isFpColor" class="grid grid-cols-3 gap-1 p-0.5 rounded-lg bg-gray-100">
+            <button type="button" data-fpc="" class="py-1 rounded-md text-[11.5px] font-bold text-gray-600">전체</button>
+            <button type="button" data-fpc="red" class="py-1 rounded-md text-[11.5px] font-bold text-[#FF3B30] flex items-center justify-center gap-1"><span class="w-2 h-2 rounded-full bg-[#FF3B30]"></span>빨간색</button>
+            <button type="button" data-fpc="black" class="py-1 rounded-md text-[11.5px] font-bold text-gray-900 flex items-center justify-center gap-1"><span class="w-2 h-2 rounded-full bg-gray-900"></span>검정색</button>
+          </div></div>
         <input type="search" id="isFpSearch" placeholder="값 검색" class="w-full px-2.5 py-1.5 rounded-lg bg-gray-100 border border-gray-200 text-[12px] outline-none mb-2">
         <label class="flex items-center gap-2 px-1 py-1 text-[12px] font-bold text-gray-700 border-b border-gray-100"><input type="checkbox" id="isFpAll" class="w-3.5 h-3.5">전체 선택</label>
         <div id="isFpList" class="max-h-[220px] overflow-y-auto py-1"></div>
@@ -1313,7 +1330,7 @@
         </div>
         <div class="overflow-y-auto min-h-0 flex-1">
           <div id="isBulkCols" class="mt-3 flex flex-wrap gap-1"></div>
-          <textarea id="isBulkText" rows="7" spellcheck="false" oninput="isBulkParse()" placeholder="여기에 붙여넣기 (Ctrl + V)" class="mt-2 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[12px] font-mono border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200 whitespace-pre resize-y"></textarea>
+          <textarea id="isBulkText" rows="7" spellcheck="false" oninput="isBulk.fix.clear(); isBulkParse()" placeholder="여기에 붙여넣기 (Ctrl + V)" class="mt-2 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[12px] font-mono border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200 whitespace-pre resize-y"></textarea>
           <div class="mt-3 grid grid-cols-2 gap-2">
             <label class="is-bulk-mode flex items-start gap-2 p-3 rounded-2xl border border-gray-200 cursor-pointer has-[:checked]:border-[#007AFF] has-[:checked]:bg-blue-50/60">
               <input type="radio" name="isBulkMode" value="add" checked onchange="isBulkParse()" class="mt-0.5 accent-[#007AFF]">
@@ -1330,6 +1347,21 @@
         <div class="grid grid-cols-2 gap-2 mt-4 flex-shrink-0">
           <button type="button" onclick="isCloseBulk()" class="ios-btn-tap py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[14px]">취소</button>
           <button type="button" id="isBulkGo" onclick="isBulkUpload()" disabled class="ios-btn-tap py-2.5 bg-[#007AFF] text-white font-semibold rounded-xl text-[14px] disabled:opacity-40 disabled:pointer-events-none">업로드</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- [특이사항 관리 : 데이터 업로드 > 문제 줄 확인 · 수정] -->
+    <div id="isBulkFixModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
+      <div class="bg-white rounded-[28px] w-full max-w-lg p-5 shadow-2xl border border-gray-100 flex flex-col max-h-[86vh]">
+        <div class="flex items-center gap-2.5 pb-3 border-b border-gray-100 flex-shrink-0">
+          <div class="w-8 h-8 rounded-xl bg-red-50 text-[#FF3B30] flex items-center justify-center"><i class="ph-bold ph-warning text-lg"></i></div>
+          <div class="min-w-0 flex-1"><h3 class="text-[17px] font-bold text-gray-900 tracking-tight">확인이 필요한 줄 <span id="isBulkFixCount" class="text-[#FF3B30]"></span></h3><p class="text-[11px] text-gray-500">배송일을 읽지 못한 줄이에요. 맞는 날짜를 적거나, 이 줄을 빼고 올릴 수 있어요.</p></div>
+        </div>
+        <div id="isBulkFixList" class="mt-3 space-y-2 overflow-y-auto min-h-0 flex-1"></div>
+        <div class="grid grid-cols-2 gap-2 mt-4 flex-shrink-0">
+          <button type="button" onclick="isCloseBulkFix()" class="ios-btn-tap py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[14px]">닫기</button>
+          <button type="button" onclick="isApplyBulkFix()" class="ios-btn-tap py-2.5 bg-[#007AFF] text-white font-semibold rounded-xl text-[14px]">고친 내용 적용</button>
         </div>
       </div>
     </div>
@@ -2135,7 +2167,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.022</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.023</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -10027,7 +10059,10 @@
     ];
     IS_COLS.forEach(c => { if (c.auto) c.ro = true; });
     const IS_EDIT = IS_COLS.filter(c => !c.ro).map(c => c.k);
-    const IS_SAVE_KEYS = IS_COLS.map(c => c.k);
+    const IS_SAVE_KEYS = IS_COLS.map(c => c.k).concat(['text_colors']);   // text_colors : 칸별 글자색 {"detail":"red"} (JSON 문자열)
+    const IS_COLOR_KEY = 'text_colors';
+    function isColors(r) { try { const o = r && r[IS_COLOR_KEY] ? JSON.parse(r[IS_COLOR_KEY]) : {}; return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+    const isCellColor = (r, k) => isColors(r)[k] === 'red' ? 'red' : 'black';
     const IS_NODATA = '데이터 없음';
     // 자동 칸이지만 코드를 찾지 못한('데이터 없음') 경우 직접 입력 가능한 칸
     const IS_NODATA_EDIT = { temperature: 'product', unit: 'product', stock_type: 'product' };
@@ -10053,7 +10088,7 @@
       cid: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
       ch: null, dbCh: null, peers: [], roster: new Map(), cursors: new Map(), users: [], cache: { store: new Map(), product: new Map() },
       msgs: [], logs: [], lastRead: null, chatMissing: false, logMissing: false, panels: null, mBox: null,
-      tab: 'home', tabs: [], filters: {}, autoVals: new Map(), sug: null
+      tab: 'home', tabs: [], filters: {}, colorFilters: {}, autoVals: new Map(), sug: null
     };
     const IS_MSG_TABLE = 'issue_sheet_messages', IS_LOG_TABLE = 'issue_sheet_logs', IS_READ_TABLE = 'issue_sheet_reads';
     const isMissingErr = (err) => !!err && (err.code === 'PGRST205' || err.code === '42P01' || /Could not find the table|does not exist/i.test(err.message || ''));
@@ -10087,7 +10122,8 @@
     function isRowsView() {
       const q = isState.q.toLowerCase();
       const fs = Object.entries(isState.filters);
-      return isRowsAll().filter(r => r._new || ((!q || IS_SAVE_KEYS.some(k => String(r[k] ?? '').toLowerCase().includes(q))) && fs.every(([k, set]) => set.has(String(r[k] ?? '')))))
+      const cf = Object.entries(isState.colorFilters);
+      return isRowsAll().filter(r => r._new || ((!q || IS_COLS.some(c => String(r[c.k] ?? '').toLowerCase().includes(q))) && fs.every(([k, set]) => set.has(String(r[k] ?? ''))) && cf.every(([k, c]) => isCellColor(r, k) === c)))
         .sort((a, b) => (a._new - b._new) || (a._new ? a._t - b._t : a.id - b.id));
     }
 
@@ -10119,7 +10155,7 @@
           ${IS_COLS.map(c => {
             const mine = r._mine.has(c.k), rem = !mine && r._rem && (r._rem.keys.has(c.k) || r._rem.isNew);
             const nodata = c.ro && IS_NODATA_EDIT[c.k] && isNoDataNow(r, IS_NODATA_EDIT[c.k]);
-            const cls = [c.ro && !nodata ? 'is-ro' : '', nodata && r[c.k] === IS_NODATA ? 'is-miss' : '', mine ? 'is-dirty' : '', rem ? 'is-rdirty' : '', isState.miss.has(r.id + '|' + c.k) ? 'is-miss' : '', isState.sel && isState.sel.id === r.id && isState.sel.col === c.k ? 'is-sel' : ''].filter(Boolean).join(' ');
+            const cls = [isCellColor(r, c.k) === 'red' ? 'is-red' : '', c.ro && !nodata ? 'is-ro' : '', nodata && r[c.k] === IS_NODATA ? 'is-miss' : '', mine ? 'is-dirty' : '', rem ? 'is-rdirty' : '', isState.miss.has(r.id + '|' + c.k) ? 'is-miss' : '', isState.sel && isState.sel.id === r.id && isState.sel.col === c.k ? 'is-sel' : ''].filter(Boolean).join(' ');
             const v = r[c.k] ?? '';
             const tip = rem ? remTitle : nodata ? `${v || '(빈칸)'} · 데이터가 없어 직접 입력할 수 있습니다` : String(v);
             return `<td data-col="${c.k}" class="${cls}" title="${svEsc(tip)}">${svEsc(v)}</td>`;
@@ -10130,8 +10166,8 @@
       const all = isEl('isCheckAll');
       if (all) { const n = rows.filter(r => isState.checked.has(r.id)).length; all.checked = rows.length > 0 && n === rows.length; all.indeterminate = n > 0 && n < rows.length; }
       isEl('isDelBtn').textContent = isState.checked.size ? `선택 삭제 (${isState.checked.size})` : '선택 삭제';
-      document.querySelectorAll('#isHead [data-is-filter]').forEach(b => b.classList.toggle('on', !!isState.filters[b.dataset.isFilter]));
-      const nf = Object.keys(isState.filters).length;
+      document.querySelectorAll('#isHead [data-is-filter]').forEach(b => b.classList.toggle('on', !!isState.filters[b.dataset.isFilter] || !!isState.colorFilters[b.dataset.isFilter]));
+      const nf = new Set([...Object.keys(isState.filters), ...Object.keys(isState.colorFilters)]).size;
       isEl('isFilterReset').classList.toggle('hidden', !nf);
       isEl('isFilterReset').querySelector('span').textContent = `필터 초기화 (${nf})`;
       const nd = isState.drafts.size;
@@ -10534,8 +10570,18 @@
             Object.assign(base, data);
             isState.drafts.delete(id); isState.checked.delete(id);
             isBroadcast('row', { row: data });
-            IS_SAVE_KEYS.filter(k => k in pick && String(before[k] ?? '') !== String(data[k] ?? '')).forEach(k =>
-              logs.push({ action: '수정', row_id: id, field_key: k, field: (IS_COLS.find(c => c.k === k) || {}).h || k, old_value: String(before[k] ?? ''), new_value: String(data[k] ?? ''), row_label: isRowLabel(data) }));
+            IS_SAVE_KEYS.filter(k => k in pick && String(before[k] ?? '') !== String(data[k] ?? '')).forEach(k => {
+              if (k === IS_COLOR_KEY) {
+                const a = isColors(before), b = isColors(data), ks = [...new Set([...Object.keys(a), ...Object.keys(b)])].filter(x => a[x] !== b[x]);
+                const nm = (x) => (IS_COLS.find(c => c.k === x) || {}).h || x, cl = (v) => v === 'red' ? '빨강' : '검정';
+                if (ks.length > 3) {                                      // 행 전체처럼 여러 칸이면 한 줄로
+                  const to = [...new Set(ks.map(x => cl(b[x])))].join('/');
+                  logs.push({ action: '수정', row_id: id, field_key: IS_COLOR_KEY, field: `글자색 (${ks.length}칸)`, old_value: '', new_value: to, row_label: isRowLabel(data) });
+                } else ks.forEach(x => logs.push({ action: '수정', row_id: id, field_key: x, field: `${nm(x)} 글자색`, old_value: cl(a[x]), new_value: cl(b[x]), row_label: isRowLabel(data) }));
+                return;
+              }
+              logs.push({ action: '수정', row_id: id, field_key: k, field: (IS_COLS.find(c => c.k === k) || {}).h || k, old_value: String(before[k] ?? ''), new_value: String(data[k] ?? ''), row_label: isRowLabel(data) });
+            });
             ok++;
           }
         }
@@ -10591,8 +10637,7 @@
     // 엑셀에서 복사한 여러 칸 붙여넣기 (선택한 칸부터 양식 순서대로 · 자동 칸은 건너뜀 · 모자라면 새 행)
     async function isPaste(text) {
       if (isNeedUser()) return;
-      const lines = String(text).replace(/\r/g, '').split('\n'); if (lines.length && lines[lines.length - 1] === '') lines.pop();
-      const grid = lines.map(l => l.split('\t')).slice(0, 500);
+      const grid = isParseTsv(text).slice(0, 500);                   // 칸 안 줄바꿈(Alt+Enter)도 한 칸으로
       if (!grid.length) return;
       const rows = isRowsView().filter(r => !(r._new && r._rem && !isState.drafts.has(r.id)));
       let ri = isState.sel ? rows.findIndex(r => r.id === isState.sel.id) : rows.length;
@@ -10639,6 +10684,8 @@
       isFp.k = k;
       isFp.vals = [...counts.entries()].sort((a, b) => a[0] === '' ? 1 : b[0] === '' ? -1 : a[0].localeCompare(b[0], 'ko'));
       isFp.sel = new Set(isState.filters[k] ? [...isState.filters[k]] : isFp.vals.map(v => v[0]));
+      isFp.color = isState.colorFilters[k] || '';
+      isFpColorRender();
       isEl('isFpTitle').textContent = `${col.h} 필터`;
       isEl('isFpSearch').value = '';
       isRenderFilterList();
@@ -10659,13 +10706,44 @@
       const k = isFp.k; if (!k) return;
       if (isFp.sel.size === isFp.vals.length) delete isState.filters[k];
       else isState.filters[k] = new Set(isFp.sel);
+      if (isFp.color) isState.colorFilters[k] = isFp.color; else delete isState.colorFilters[k];
       isCloseFilter(); isRender();
     }
     function isClearFilter(k) {
-      if (k) delete isState.filters[k]; else isState.filters = {};
+      if (k) { delete isState.filters[k]; delete isState.colorFilters[k]; } else { isState.filters = {}; isState.colorFilters = {}; }
       isCloseFilter(); isRender();
     }
     function isCloseFilter() { isEl('isFilterPop').classList.add('hidden'); }
+    function isFpColorRender() { isEl('isFpColor').querySelectorAll('[data-fpc]').forEach(b => { const on = b.dataset.fpc === (isFp.color || ''); b.classList.toggle('bg-white', on); b.classList.toggle('shadow-sm', on); }); }
+    isEl('isFpColor').addEventListener('click', (e) => { const b = e.target.closest('[data-fpc]'); if (!b) return; isFp.color = b.dataset.fpc; isFpColorRender(); });
+    // 글자색 바꾸기 : 선택한 칸 또는 체크한 행 전체 (검정 / 빨강)
+    function isToggleColorMenu(force) {
+      const m = isEl('isColorMenu'), on = force === undefined ? m.classList.contains('hidden') : force;
+      m.classList.toggle('hidden', !on);
+      if (on) {
+        const n = [...isState.checked].length;
+        isEl('isColorRowsHint').textContent = n ? `체크한 ${n}행` : '체크한 행 없음';
+        isEl('isColorMenu').querySelectorAll('[data-color-scope="rows"]').forEach(b => b.disabled = !n);
+        const c = isState.sel ? IS_COLS.find(x => x.k === isState.sel.col) : null;
+        isEl('isColorCellHint').textContent = c ? `${c.h} 칸` : '칸을 먼저 선택';
+        isEl('isColorMenu').querySelectorAll('[data-color-scope="cell"]').forEach(b => b.disabled = !c);
+      }
+    }
+    async function isSetColor(scope, color) {
+      isToggleColorMenu(false);
+      if (isNeedUser()) return;
+      const targets = [];                                         // [id, [keys]]
+      if (scope === 'cell') { if (!isState.sel) return; targets.push([isState.sel.id, [isState.sel.col]]); }
+      else [...isState.checked].forEach(id => targets.push([id, IS_COLS.map(c => c.k)]));
+      for (const [id, keys] of targets) {
+        const row = isFindRow(id); if (!row) continue;
+        const o = isColors(row);
+        keys.forEach(k => { if (color === 'red') o[k] = 'red'; else delete o[k]; });
+        await isDraftSet(id, { [IS_COLOR_KEY]: Object.keys(o).length ? JSON.stringify(o) : '' }, true);
+      }
+      if (targets.length) showToastNotification('글자색 변경', `${color === 'red' ? '빨간색' : '검정색'}으로 바꿨어요. 저장을 눌러야 반영됩니다.`, 'success');
+    }
+    document.addEventListener('mousedown', (e) => { const m = isEl('isColorMenu'); if (m && !m.classList.contains('hidden') && !m.contains(e.target) && !e.target.closest('#isColorBtn')) isToggleColorMenu(false); });
     isEl('isFpSearch').addEventListener('input', isRenderFilterList);
     isEl('isFpSearch').addEventListener('keydown', (e) => { if (e.isComposing || e.keyCode === 229) return; if (e.key === 'Enter') { e.preventDefault(); isApplyFilter(); } else if (e.key === 'Escape') isCloseFilter(); });
     isEl('isFpList').addEventListener('change', (e) => { const c = e.target.closest('[data-fp]'); if (!c) return; if (c.checked) isFp.sel.add(c.dataset.fp); else isFp.sel.delete(c.dataset.fp); isRenderFilterList(); });
@@ -12111,7 +12189,25 @@
 
     // ---------- 데이터 업로드 (설정 > 텍스트 붙여넣기) ----------
     //  배송일 ~ 자료등록 18칸을 엑셀에서 복사해 붙여넣으면 그대로(자동 칸 포함) 서버에 등록
-    const isBulk = { rows: [], dates: [] };
+    const isBulk = { rows: [], dates: [], fix: new Map(), probs: [] };
+    // 엑셀 복사 텍스트(TSV) 읽기 : 칸 안 줄바꿈(Alt+Enter)은 엑셀이 "..." 로 감싸서 복사함
+    function isParseTsv(txt) {
+      const out = []; let row = [], cell = '', i = 0, q = false;
+      txt = String(txt).replace(/\r\n?/g, '\n');
+      while (i < txt.length) {
+        const ch = txt[i];
+        if (q) {
+          if (ch === '"') { if (txt[i + 1] === '"') { cell += '"'; i += 2; continue; } q = false; i++; continue; }
+          cell += ch; i++; continue;
+        }
+        if (ch === '"' && cell === '') { q = true; i++; continue; }
+        if (ch === '\t') { row.push(cell); cell = ''; i++; continue; }
+        if (ch === '\n') { row.push(cell); out.push(row); row = []; cell = ''; i++; continue; }
+        cell += ch; i++;
+      }
+      if (cell !== '' || row.length) { row.push(cell); out.push(row); }
+      return out;
+    }
     function isBulkDate(v) {
       v = String(v || '').trim(); if (!v) return '';
       let d = isNormDate(v);
@@ -12125,7 +12221,7 @@
       if (isNeedUser()) return;
       ibCloseSettings();
       isEl('isBulkCols').innerHTML = IS_COLS.map((c, i) => `<span class="px-1.5 py-0.5 rounded-md bg-gray-100 text-[10.5px] font-semibold text-gray-600">${i + 1}. ${svEsc(c.h)}</span>`).join('');
-      isEl('isBulkText').value = '';
+      isEl('isBulkText').value = ''; isBulk.fix.clear();
       isEl('isBulkModal').querySelector('input[value="add"]').checked = true;
       isBulkParse();
       const m = isEl('isBulkModal'); m.classList.remove('opacity-0', 'pointer-events-none'); m.classList.add('opacity-100');
@@ -12134,37 +12230,85 @@
     function isCloseBulk() { const m = isEl('isBulkModal'); m.classList.remove('opacity-100'); m.classList.add('opacity-0', 'pointer-events-none'); }
     function isBulkParse() {
       const st = isEl('isBulkStatus'), pv = isEl('isBulkPreview'), go = isEl('isBulkGo');
-      const txt = isEl('isBulkText').value.replace(/\r/g, '');
-      let lines = txt.split('\n').filter(l => l.replace(/\t/g, '').trim() !== '');
-      isBulk.rows = []; isBulk.dates = [];
+      const txt = isEl('isBulkText').value;
+      let lines = isParseTsv(txt).map((cells, i) => ({ cells, line: i + 1 })).filter(l => l.cells.some(v => String(v).trim() !== ''));
+      isBulk.rows = []; isBulk.dates = []; isBulk.probs = [];
       if (!lines.length) { st.className = 'mt-3 text-[12px] text-gray-500 min-h-[18px]'; st.textContent = '붙여넣으면 여기에서 미리 확인할 수 있어요.'; pv.classList.add('hidden'); go.disabled = true; return; }
-      if (/배송일/.test(lines[0].split('\t')[0])) lines = lines.slice(1);              // 머리글 줄 건너뛰기
+      if (/배송일/.test(String(lines[0].cells[0]))) lines = lines.slice(1);              // 머리글 줄 건너뛰기
       const bad = [], wide = [];
-      lines.forEach((l, i) => {
-        const cells = l.split('\t');
-        if (cells.length > IS_COLS.length && cells.slice(IS_COLS.length).some(v => v.trim())) wide.push(i + 1);
+      lines.forEach((l) => {
+        const cells = l.cells, fx = isBulk.fix.get(l.line);
+        if (fx && fx.skip) return;                                   // 문제 확인 창에서 '제외'한 줄
+        if (cells.length > IS_COLS.length && cells.slice(IS_COLS.length).some(v => String(v).trim())) wide.push(l.line);
         const r = {};
-        IS_COLS.forEach((c, j) => { const v = (cells[j] ?? '').trim(); r[c.k] = v === '' ? null : v; });
-        if (r.delivery_date) { const d = isBulkDate(r.delivery_date); if (d === null) bad.push(i + 1); else r.delivery_date = d; }
+        IS_COLS.forEach((c, j) => { const v = String(cells[j] ?? '').trim(); r[c.k] = v === '' ? null : v; });
+        if (fx && fx.date != null) r.delivery_date = fx.date || null;
+        if (r.delivery_date) {
+          const d = isBulkDate(r.delivery_date);
+          if (d === null) { bad.push(l.line); isBulk.probs.push({ line: l.line, raw: r.delivery_date, r }); }
+          else r.delivery_date = d;
+        }
         if (Object.values(r).every(v => v == null)) return;
         isBulk.rows.push(r);
       });
       isBulk.dates = [...new Set(isBulk.rows.map(r => r.delivery_date).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d || '')))].sort();
       const replace = isEl('isBulkModal').querySelector('input[name="isBulkMode"]:checked').value === 'replace';
       const msgs = [];
-      if (bad.length) msgs.push(`배송일을 읽지 못한 줄: ${bad.slice(0, 8).join(', ')}${bad.length > 8 ? ' …' : ''}`);
+      if (bad.length) msgs.push(`__FIX__`);
       if (wide.length) msgs.push(`18칸보다 많은 줄이 있어요(${wide.slice(0, 5).join(', ')}${wide.length > 5 ? ' …' : ''}). 넘친 칸은 무시돼요.`);
       if (replace && isBulk.rows.some(r => !r.delivery_date)) msgs.push('덮어쓰기에서는 배송일이 빈 줄은 등록만 되고 지우는 기준에는 쓰이지 않아요.');
       const delCnt = replace ? isState.rows.filter(r => isBulk.dates.includes(String(r.delivery_date || '').slice(0, 10))).length : 0;
       const range = isBulk.dates.length ? ` · 배송일 ${isBulk.dates[0]}${isBulk.dates.length > 1 ? ' ~ ' + isBulk.dates[isBulk.dates.length - 1] : ''}` : '';
       st.className = 'mt-3 text-[12px] min-h-[18px] ' + (bad.length ? 'text-[#FF3B30]' : 'text-gray-600');
-      st.innerHTML = `<b>${isBulk.rows.length.toLocaleString()}행</b> 인식${range}${replace ? ` · 기존 <b class="text-[#FF3B30]">${delCnt.toLocaleString()}행</b> 삭제 예정` : ''}` + (msgs.length ? '<br>' + msgs.map(svEsc).join('<br>') : '');
+      const nl = isBulk.rows.filter(r => r.detail && /\n/.test(r.detail)).length;
+      st.innerHTML = `<b>${isBulk.rows.length.toLocaleString()}행</b> 인식${range}${replace ? ` · 기존 <b class="text-[#FF3B30]">${delCnt.toLocaleString()}행</b> 삭제 예정` : ''}${nl ? ` · 칸 안 줄바꿈 ${nl}행 포함` : ''}`
+        + (msgs.length ? '<br>' + msgs.map(m => m === '__FIX__'
+          ? `<span class="inline-flex items-center gap-1.5 mt-1">배송일을 읽지 못한 줄이 <b>${bad.length}개</b> 있어요. <button type="button" onclick="isOpenBulkFix()" class="ios-btn-tap px-2.5 py-1 rounded-full bg-[#FF3B30] text-white text-[11.5px] font-bold">어디인지 보고 고치기</button></span>`
+          : svEsc(m)).join('<br>') : '');
       const show = isBulk.rows.slice(0, 5);
-      pv.innerHTML = `<table class="text-[11px] whitespace-nowrap"><thead><tr>${IS_COLS.map(c => `<th class="px-2 py-1.5 bg-gray-50 text-gray-500 font-semibold text-left">${svEsc(c.h)}</th>`).join('')}</tr></thead><tbody>${show.map(r => `<tr class="border-t border-gray-100">${IS_COLS.map(c => `<td class="px-2 py-1 text-gray-800">${svEsc(r[c.k] ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>` + (isBulk.rows.length > 5 ? `<div class="px-2 py-1.5 text-[11px] text-gray-400 border-t border-gray-100">외 ${(isBulk.rows.length - 5).toLocaleString()}행</div>` : '');
+      pv.innerHTML = `<table class="text-[11px] whitespace-nowrap is-bulk-pv"><thead><tr>${IS_COLS.map(c => `<th class="px-2 py-1.5 bg-gray-50 text-gray-500 font-semibold text-left">${svEsc(c.h)}</th>`).join('')}</tr></thead><tbody>${show.map(r => `<tr class="border-t border-gray-100">${IS_COLS.map(c => `<td class="px-2 py-1 text-gray-800 align-top" style="white-space:pre-line">${svEsc(r[c.k] ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>` + (isBulk.rows.length > 5 ? `<div class="px-2 py-1.5 text-[11px] text-gray-400 border-t border-gray-100">외 ${(isBulk.rows.length - 5).toLocaleString()}행</div>` : '');
       pv.classList.toggle('hidden', !show.length);
       go.disabled = !isBulk.rows.length || bad.length > 0;
       go.textContent = replace ? '덮어쓰기 업로드' : '업로드';
       go.classList.toggle('bg-[#FF3B30]', replace); go.classList.toggle('bg-[#007AFF]', !replace);
+    }
+    // 문제 줄 확인 · 수정 팝업 : 몇 번째 줄인지, 어떤 값인지 보여 주고 그 자리에서 고치거나 제외
+    function isOpenBulkFix() {
+      const box = isEl('isBulkFixList');
+      box.innerHTML = isBulk.probs.map(p => {
+        const r = p.r;
+        const info = [r.store_name || r.store_code, r.product_name || r.product_code, r.content, r.detail].filter(Boolean).map(v => String(v).replace(/\n/g, ' ↵ ')).join(' · ');
+        return `<div class="p-3 rounded-2xl border border-red-200 bg-red-50/40" data-fix-line="${p.line}">
+          <div class="flex items-center justify-between gap-2"><b class="text-[13px] text-gray-900">붙여넣은 ${p.line}번째 줄</b><label class="flex items-center gap-1 text-[11.5px] font-semibold text-gray-500 cursor-pointer"><input type="checkbox" data-fix-skip class="w-3.5 h-3.5 accent-[#FF3B30]">이 줄 빼고 올리기</label></div>
+          <div class="mt-1 text-[11.5px] text-gray-500 truncate" title="${svEsc(info)}">${svEsc(info || '(다른 칸 비어 있음)')}</div>
+          <div class="mt-2 flex items-center gap-2 text-[12px]"><span class="text-gray-500 flex-none">배송일</span><span class="px-2 py-1 rounded-lg bg-white border border-red-200 text-[#FF3B30] font-mono line-through flex-none max-w-[40%] truncate">${svEsc(p.raw)}</span><i class="ph-bold ph-arrow-right text-gray-400 flex-none"></i>
+            <input type="text" data-fix-date placeholder="예: 2026-11-12" class="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 font-mono text-[12.5px] outline-none focus:ring-2 focus:ring-blue-200"></div>
+          <div class="mt-1 text-[11px] min-h-[15px]" data-fix-msg></div>
+        </div>`;
+      }).join('');
+      box.querySelectorAll('[data-fix-date]').forEach(inp => inp.addEventListener('input', () => {
+        const v = inp.value.trim(), msg = inp.closest('[data-fix-line]').querySelector('[data-fix-msg]');
+        const d = v ? isBulkDate(v) : '';
+        msg.className = 'mt-1 text-[11px] min-h-[15px] ' + (d ? 'text-[#34C759]' : 'text-[#FF3B30]');
+        msg.textContent = !v ? '' : d ? `${d} 로 올라가요` : '날짜로 읽을 수 없어요 (예: 2026-11-12, 11/12)';
+      }));
+      isEl('isBulkFixCount').textContent = `${isBulk.probs.length}개`;
+      const m = isEl('isBulkFixModal'); m.classList.remove('opacity-0', 'pointer-events-none'); m.classList.add('opacity-100');
+      setTimeout(() => { const f = box.querySelector('[data-fix-date]'); if (f) f.focus(); }, 120);
+    }
+    function isCloseBulkFix() { const m = isEl('isBulkFixModal'); m.classList.remove('opacity-100'); m.classList.add('opacity-0', 'pointer-events-none'); }
+    function isApplyBulkFix() {
+      let left = 0;
+      isEl('isBulkFixList').querySelectorAll('[data-fix-line]').forEach(el => {
+        const line = +el.dataset.fixLine, skip = el.querySelector('[data-fix-skip]').checked, v = el.querySelector('[data-fix-date]').value.trim();
+        if (skip) { isBulk.fix.set(line, { skip: true }); return; }
+        const d = v ? isBulkDate(v) : null;
+        if (d) isBulk.fix.set(line, { date: d }); else left++;
+      });
+      isCloseBulkFix();
+      isBulkParse();
+      if (isBulk.probs.length) showToastNotification('아직 남은 줄', `${isBulk.probs.length}줄은 아직 고치지 않았어요.`, 'warning');
+      else showToastNotification('수정 완료', '문제 줄을 모두 정리했어요. 업로드를 눌러 주세요.', 'success');
     }
     async function isBulkUpload() {
       if (isNeedUser() || !isBulk.rows.length) return;
