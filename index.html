@@ -2284,7 +2284,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.030</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.031</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -11651,6 +11651,7 @@
       isFp.k = k;
       isFp.vals = [...counts.entries()].sort((a, b) => a[0] === '' ? 1 : b[0] === '' ? -1 : a[0].localeCompare(b[0], 'ko'));
       isFp.sel = new Set(isState.filters[k] ? [...isState.filters[k]] : isFp.vals.map(v => v[0]));
+      isFp.sel0 = new Set(isFp.sel);
       isFp.color = isState.colorFilters[k] || '';
       isFpColorRender();
       isEl('isFpTitle').textContent = `${col.h} 필터${isState.loadingAll ? ' (전체 불러오는 중…)' : ''}`;
@@ -11671,7 +11672,13 @@
     }
     function isApplyFilter() {
       const k = isFp.k; if (!k) return;
-      if (isFp.sel.size === isFp.vals.length) delete isState.filters[k];
+      const q = isEl('isFpSearch').value.trim().toLowerCase();
+      if (q) {                                                         // 엑셀처럼 : 검색된 값(그중 체크된 것)만 보이게
+        const hit = isFp.vals.map(v => v[0]).filter(v => v.toLowerCase().includes(q) && isFp.sel.has(v));
+        if (!hit.length) { showToastNotification('필터', `'${isEl('isFpSearch').value.trim()}'에 맞는 값이 없어요.`, 'warning'); return; }
+        isState.filters[k] = new Set(hit);
+      }
+      else if (isFp.sel.size === isFp.vals.length) delete isState.filters[k];
       else isState.filters[k] = new Set(isFp.sel);
       if (isFp.color) isState.colorFilters[k] = isFp.color; else delete isState.colorFilters[k];
       isCloseFilter(); isRender();
@@ -11761,7 +11768,12 @@
       if (targets.length) showToastNotification('글자색 변경', `${color === 'red' ? '빨간색' : '검정색'}으로 바꿨어요. 저장을 눌러야 반영됩니다.`, 'success');
     }
     document.addEventListener('mousedown', (e) => { const m = isEl('isColorMenu'); if (m && !m.classList.contains('hidden') && !m.contains(e.target) && !e.target.closest('#isColorBtn')) isToggleColorMenu(false); });
-    isEl('isFpSearch').addEventListener('input', isRenderFilterList);
+    isEl('isFpSearch').addEventListener('input', () => {
+      // 엑셀처럼 : 검색하면 검색된 값이 모두 체크된 상태로 보이고, 지우면 원래 선택으로
+      const q = isEl('isFpSearch').value.trim().toLowerCase();
+      isFp.sel = q ? new Set(isFp.vals.map(v => v[0]).filter(v => v.toLowerCase().includes(q))) : new Set(isFp.sel0 || []);
+      isRenderFilterList();
+    });
     isEl('isFpSearch').addEventListener('keydown', (e) => { if (e.isComposing || e.keyCode === 229) return; if (e.key === 'Enter') { e.preventDefault(); isApplyFilter(); } else if (e.key === 'Escape') isCloseFilter(); });
     isEl('isFpList').addEventListener('change', (e) => { const c = e.target.closest('[data-fp]'); if (!c) return; if (c.checked) isFp.sel.add(c.dataset.fp); else isFp.sel.delete(c.dataset.fp); isRenderFilterList(); });
     isEl('isFpAll').addEventListener('change', (e) => {
@@ -11883,7 +11895,20 @@
     // 접속자 표시: Realtime presence 와 함께, 주기적인 '여기 있음' 신호(broadcast)도 사용
     //  → 연결이 잠시 끊겼다 붙거나 presence 동기화가 늦어도, 먼저 들어온 사람에게 나중에 들어온 사람이 새로고침 없이 보이도록
     let isTrackTimer = null, isBeatTimer = null, isRejoinTimer = null;
-    function isMyPresence() { return { cid: isState.cid, name: isState.me, sel: isState.sel, editing: !!isState.edit, at: Date.now() }; }
+    function isMyPresence() { return { cid: isState.cid, name: isState.me, sel: isIdle.on ? null : isState.sel, editing: isIdle.on ? false : !!isState.edit, idle: isIdle.on, at: Date.now() }; }
+    const IS_IDLE_MS = 30 * 60 * 1000;
+    const isIdle = { on: false, last: Date.now() };
+    function isActivity() {
+      isIdle.last = Date.now();
+      if (isIdle.on) { isIdle.on = false; isTrack(); }                // 다시 움직이면 바로 표시
+    }
+    ['mousemove', 'mousedown', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(ev => document.addEventListener(ev, isActivity, { passive: true, capture: true }));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) isActivity(); });
+    setInterval(() => {
+      if (isIdle.on || Date.now() - isIdle.last < IS_IDLE_MS) return;
+      isIdle.on = true;
+      if (isState.ch && isState.me) { isBroadcast('cursor', { cid: isState.cid, hide: true }); isTrack(); }
+    }, 30000);
     function isTrack() {
       clearTimeout(isTrackTimer);
       isTrackTimer = setTimeout(() => {
@@ -11986,7 +12011,7 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden && isVisible()) { if (!isState.ch) isJoin(); else isTrack(); } });
     let isCursorAt = 0;
     function isOnMouse(e) {
-      if (!isState.ch || !isState.me || Date.now() - isCursorAt < 45) return;
+      if (!isState.ch || !isState.me || isIdle.on || Date.now() - isCursorAt < 45) return;
       const td = e.target.closest && e.target.closest('#isBody td[data-col]');
       const tr = td && td.parentElement;
       if (!td || !tr || !tr.dataset.id) return;
