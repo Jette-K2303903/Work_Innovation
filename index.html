@@ -1473,6 +1473,24 @@
         </div>
       </div>
     </div>
+    <!-- [특이사항 관리 : 탭 출고 (출고일자 · 출고매장)] -->
+    <div id="isOutModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
+      <div class="bg-white rounded-[28px] w-full max-w-sm p-5 shadow-2xl border border-gray-100">
+        <div class="flex items-center gap-2.5"><div class="w-8 h-8 rounded-xl bg-orange-50 text-[#FF9500] flex items-center justify-center"><i class="ph-bold ph-truck text-lg"></i></div><div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">출고</h3><p id="isOutSub" class="text-[11.5px] text-gray-500"></p></div></div>
+        <div id="isOutList" class="mt-3 p-2.5 rounded-xl bg-gray-50 space-y-0.5"></div>
+        <label class="block mt-3 text-[12px] font-semibold text-gray-600">출고일자</label>
+        <input type="date" id="isOutDate" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[14px] border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
+        <label class="block mt-3 text-[12px] font-semibold text-gray-600">출고매장</label>
+        <div class="relative">
+          <input type="text" id="isOutStore" oninput="isOutStoreInput()" autocomplete="off" placeholder="매장명" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[14px] border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
+          <div id="isOutSug" class="hidden absolute left-0 right-0 top-full mt-1 z-10 max-h-[220px] overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-xl"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mt-4">
+          <button type="button" onclick="isCloseOut()" class="ios-btn-tap py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[14px]">취소</button>
+          <button type="button" onclick="isOutSave()" class="ios-btn-tap py-2.5 bg-[#FF9500] text-white font-semibold rounded-xl text-[14px]">출고 처리</button>
+        </div>
+      </div>
+    </div>
     <!-- [특이사항 관리 : 적용 (체크한 행 → 탭)] -->
     <div id="isApplyModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
       <div class="bg-white rounded-[28px] w-full max-w-xs p-5 shadow-2xl border border-gray-100">
@@ -2284,7 +2302,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.031</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.032</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -10380,16 +10398,17 @@
       if (isNeedUser()) return;
       const ids = [...isState.checked].filter(id => id > 0 && isFindRow(id));
       if (!ids.length) { showToastNotification('선택 필요', '탭에 보낼 행을 왼쪽 체크박스로 선택해 주세요.', 'warning'); return; }
-      const tabs = isAllTabs().filter(t => t.id !== 'home');
-      if (!tabs.length) { showToastNotification('탭 없음', '먼저 탭을 추가해 주세요.', 'warning'); return; }
-      isEl('isApplySub').textContent = `체크한 ${ids.length}행을 어느 탭에 추가할까요?`;
-      isEl('isApplyList').innerHTML = tabs.map(t => `<button type="button" data-apply-tab="${svEsc(t.id)}" class="ios-btn-tap w-full flex items-center gap-2.5 px-3.5 py-3 rounded-2xl bg-gray-50 border border-gray-200 text-left hover:bg-blue-50"><i class="ph-bold ${t.icon} text-[#007AFF] text-lg"></i><span class="flex-1 text-[14px] font-semibold text-gray-900">${svEsc(t.name)}</span><i class="ph-bold ph-caret-right text-gray-300"></i></button>`).join('');
+      const lists = isAllLists();
+      if (!lists.length) { showToastNotification('탭 없음', '먼저 탭을 추가해 주세요.', 'warning'); return; }
+      isEl('isApplySub').textContent = `체크한 ${ids.length}행을 어느 목록에 추가할까요?`;
+      isEl('isApplyList').innerHTML = lists.map(l => `<button type="button" data-apply-tab="${svEsc(l.key)}" class="ios-btn-tap w-full flex items-center gap-2.5 px-3.5 py-3 rounded-2xl bg-gray-50 border border-gray-200 text-left hover:bg-blue-50"><i class="ph-bold ${l.tab.icon} text-[#007AFF] text-lg"></i><span class="flex-1 text-[14px] font-semibold text-gray-900">${svEsc(l.name)}</span><i class="ph-bold ph-caret-right text-gray-300"></i></button>`).join('');
       isDlShow('isApplyModal', true);
     }
     function isCloseApply() { isDlShow('isApplyModal', false); }
     document.addEventListener('click', (e) => { const b = e.target.closest('[data-apply-tab]'); if (b) isApplyTo(b.dataset.applyTab); });
     async function isApplyTo(tabId) {
-      const tab = isAllTabs().find(t => t.id === tabId); if (!tab) return;
+      const lst = isAllLists().find(l => l.key === tabId); if (!lst) return;
+      const tab = { name: lst.name };
       const rows = [...isState.checked].filter(id => id > 0).map(id => isFindRow(id)).filter(Boolean);
       if (!rows.length) { isCloseApply(); return; }
       const items = rows.map(r => ({ tab: tabId, product_code: r.product_code || null, product_name: r.product_name || null, temperature: r.temperature || null, qty: r.qty || null, source_row_id: r._new ? null : r.id, created_by: isState.me }));
@@ -10407,87 +10426,172 @@
       finally { hideBusy(); }
     }
 
-    // ========== 탭 화면 (통일 양식 : 체크 · 제품코드 · 제품명 · 온도 · 수량 / 체크 후 출고 = 삭제) ==========
-    const IS_TAB_ITEMS = 'issue_tab_items';
-    const isTabSt = { tab: null, rows: [], checked: new Set(), loading: false, err: '' };
-    async function isLoadTabItems(tabId) {
-      isTabSt.loading = true; isTabSt.err = '';
+    // ========== 탭 화면 (통일 양식 : 체크 · 제품코드 · 제품명 · 온도 · 수량) ==========
+    //  한 탭에 목록이 여러 개일 수 있음 (유통물류 : 오산 → 밀양 / 이천 → 밀양, 서로 독립)
+    //  출고 : 출고일자 · 출고매장을 정해 기록(issue_tab_out)으로 옮기고 목록에서 뺌 → 다운로드로 기록 받기
+    const IS_TAB_ITEMS = 'issue_tab_items', IS_TAB_OUT = 'issue_tab_out';
+    const IS_SUB_LISTS = { distrib: [{ key: 'distrib', title: '오산 → 밀양 차감이고 리스트' }, { key: 'distrib_icheon', title: '이천 → 밀양 차감이고 리스트' }] };
+    function isListsOf(t) { return IS_SUB_LISTS[t.id] || [{ key: t.id, title: '' }]; }
+    function isAllLists() {                       // [{ key, tab, name }] 모든 탭의 모든 목록
+      const out = [];
+      isAllTabs().filter(t => t.id !== 'home').forEach(t => isListsOf(t).forEach(l => out.push({ key: l.key, tab: t, name: l.title ? `${t.name} · ${l.title.replace(' 차감이고 리스트', '')}` : t.name, title: l.title })));
+      return out;
+    }
+    const isListName = (key) => (isAllLists().find(l => l.key === key) || { name: key }).name;
+    const isTabSt = { tab: null, lists: {} };     // lists[key] = { rows, checked, loading, err }
+    const isLs = (key) => isTabSt.lists[key] || (isTabSt.lists[key] = { rows: [], checked: new Set(), loading: false, err: '' });
+    async function isLoadTabItems(key) {
+      const L = isLs(key); L.loading = true; L.err = '';
       const all = [];
       try {
         for (let from = 0; from < 20000; from += 1000) {
-          const { data, error } = await supabaseClient.from(IS_TAB_ITEMS).select('*').eq('tab', tabId).order('id').range(from, from + 999);
+          const { data, error } = await supabaseClient.from(IS_TAB_ITEMS).select('*').eq('tab', key).order('id').range(from, from + 999);
           if (error) throw error;
           all.push(...(data || []));
           if (!data || data.length < 1000) break;
         }
-      } catch (e) { isTabSt.err = dbErrorMessage(e); }
-      if (isTabSt.tab !== tabId) return;
-      isTabSt.rows = all; isTabSt.loading = false;
-      isTabSt.checked = new Set([...isTabSt.checked].filter(id => all.some(r => r.id === id)));
-      isRenderTabBody();
+      } catch (e) { L.err = dbErrorMessage(e); }
+      L.rows = all; L.loading = false;
+      L.checked = new Set([...L.checked].filter(id => all.some(r => r.id === id)));
+      isRenderTabBody(key);
     }
+    function isReloadTabLists() { const t = isAllTabs().find(x => x.id === isTabSt.tab); if (t && isState.tab !== 'home') isListsOf(t).forEach(l => isLoadTabItems(l.key)); }
     function isRenderTabPane(t) {
-      if (isTabSt.tab !== t.id) { isTabSt.tab = t.id; isTabSt.rows = []; isTabSt.checked = new Set(); }
-      isEl('isTabPane').innerHTML = `
-        <div class="bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4 sm:p-5 flex flex-col min-h-0">
+      isTabSt.tab = t.id;
+      const lists = isListsOf(t);
+      isEl('isTabPane').innerHTML = lists.map((l, i) => `
+        <div class="bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4 sm:p-5 flex flex-col min-h-0 ${i ? 'mt-3' : ''}" data-list-box="${svEsc(l.key)}">
           <div class="flex items-center gap-2.5 mb-3 flex-wrap">
             <div class="w-9 h-9 rounded-xl bg-blue-50 text-[#007AFF] flex items-center justify-center"><i class="ph-bold ${t.icon} text-lg"></i></div>
-            <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">${svEsc(t.name)}</h3><p id="isTabMeta" class="text-[11.5px] text-gray-500">불러오는 중…</p></div>
-            <div class="ml-auto flex gap-2">
-              <button type="button" onclick="isOpenManual()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-pencil-simple-line"></i>수기등록</button>
-              <button type="button" onclick="isLoadTabItems('${svEsc(t.id)}')" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-arrows-clockwise"></i>새로고침</button>
-              <button type="button" id="isTabOutBtn" onclick="isTabOut()" class="ios-btn-tap px-3.5 py-2 rounded-xl bg-[#FF9500] text-white text-[12.5px] font-bold flex items-center gap-1 disabled:opacity-40"><i class="ph-bold ph-truck"></i><span>출고</span></button>
+            <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">${svEsc(l.title || t.name)}</h3><p id="isTabMeta_${svEsc(l.key)}" class="text-[11.5px] text-gray-500">${l.title ? svEsc(t.name) + ' · ' : ''}불러오는 중…</p></div>
+            <div class="ml-auto flex gap-2 flex-wrap">
+              <button type="button" onclick="isOpenManual('${svEsc(l.key)}')" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-pencil-simple-line"></i>수기등록</button>
+              <button type="button" onclick="isLoadTabItems('${svEsc(l.key)}')" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-arrows-clockwise"></i>새로고침</button>
+              <button type="button" onclick="isOutDownload('${svEsc(l.key)}')" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1" title="출고 기록 받기"><i class="ph-bold ph-download-simple"></i>다운로드</button>
+              <button type="button" id="isTabOutBtn_${svEsc(l.key)}" onclick="isTabOut('${svEsc(l.key)}')" class="ios-btn-tap px-3.5 py-2 rounded-xl bg-[#FF9500] text-white text-[12.5px] font-bold flex items-center gap-1 disabled:opacity-40"><i class="ph-bold ph-truck"></i><span>출고</span></button>
             </div>
           </div>
           <div class="overflow-auto rounded-xl border border-gray-200/80">
-            <table id="isTabTable" class="text-[13px] border-collapse" style="table-layout:fixed">
-              <colgroup id="isTabCols"></colgroup>
+            <table class="text-[13px] border-collapse" data-tabtable style="table-layout:fixed">
+              <colgroup data-tabcols></colgroup>
               <thead class="bg-gray-50 sticky top-0"><tr class="text-[12px] text-gray-500">
-                <th class="px-2 py-2 text-center"><input type="checkbox" id="isTabAll" class="w-3.5 h-3.5 align-middle"></th>
+                <th class="px-2 py-2 text-center"><input type="checkbox" data-tab-all="${svEsc(l.key)}" class="w-3.5 h-3.5 align-middle"></th>
                 ${IS_TAB_COLS.map(c => `<th class="relative px-2 py-2 ${c.k === 'qty' ? 'text-right' : 'text-left'} truncate">${svEsc(c.h)}<span class="is-rsz" data-rsz="${c.k}" data-rsz-scope="tab" title="끌어서 너비 조절"></span></th>`).join('')}
               </tr></thead>
-              <tbody id="isTabBody"></tbody>
+              <tbody id="isTabBody_${svEsc(l.key)}" data-list-body="${svEsc(l.key)}"></tbody>
             </table>
           </div>
-          <p class="mt-2 text-[11px] text-gray-400">홈화면에서 행을 체크하고 <b>적용</b>을 누르거나 <b>수기등록</b>으로 추가해요. 출고할 행을 체크하고 <b>출고</b>를 누르면 목록에서 빠져요. 머리글 오른쪽 끝을 끌면 칸 너비가 바뀌어요.</p>
-        </div>
-        ${t.id === 'onenone' ? '<div id="onStockBox" class="mt-3 bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4 sm:p-5"></div>' : ''}`;
+          ${i === lists.length - 1 ? `<p class="mt-2 text-[11px] text-gray-400">홈화면에서 행을 체크하고 <b>적용</b>을 누르거나 <b>수기등록</b>으로 추가해요. 체크하고 <b>출고</b>를 누르면 출고일자 · 출고매장이 기록되고 목록에서 빠져요. 기록은 <b>다운로드</b>로 받을 수 있어요.</p>` : ''}
+        </div>`).join('') + (t.id === 'onenone' ? '<div id="onStockBox" class="mt-3 bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4 sm:p-5"></div>' : '');
       isApplyColW();
+      lists.forEach(l => { isRenderTabBody(l.key); isLoadTabItems(l.key); });
       if (t.id === 'onenone') { onRender(); onLoad(); }
-      isEl('isTabAll').addEventListener('change', (e) => { isTabSt.checked = e.target.checked ? new Set(isTabSt.rows.map(r => r.id)) : new Set(); isRenderTabBody(); });
-      isEl('isTabBody').addEventListener('change', (e) => { const c = e.target.closest('[data-tab-check]'); if (!c) return; const id = +c.dataset.tabCheck; if (c.checked) isTabSt.checked.add(id); else isTabSt.checked.delete(id); isRenderTabBody(); });
-      isRenderTabBody();
-      isLoadTabItems(t.id);
     }
-    function isRenderTabBody() {
-      const body = isEl('isTabBody'); if (!body) return;
-      const rows = isTabSt.rows;
+    function isRenderTabBody(key) {
+      const body = isEl('isTabBody_' + key); if (!body) return;
+      const L = isLs(key), rows = L.rows;
       const sum = rows.reduce((a, r) => a + (parseFloat(r.qty) || 0), 0);
-      const meta = isEl('isTabMeta');
-      if (meta) meta.textContent = isTabSt.err ? `불러오지 못했어요: ${isTabSt.err}` : isTabSt.loading && !rows.length ? '불러오는 중…' : `${rows.length.toLocaleString()}행 · 수량 합계 ${sum.toLocaleString()}`;
-      body.innerHTML = rows.length ? rows.map(r => `<tr class="border-t border-gray-100 ${isTabSt.checked.has(r.id) ? 'bg-blue-50/60' : ''}">
-          <td class="px-2 py-2 text-center"><input type="checkbox" data-tab-check="${r.id}" ${isTabSt.checked.has(r.id) ? 'checked' : ''} class="w-3.5 h-3.5 align-middle"></td>
-          <td class="px-2 py-2 font-mono text-[12px] text-gray-700">${svEsc(r.product_code || '')}</td>
-          <td class="px-2 py-2 text-gray-900 font-semibold">${svEsc(r.product_name || '')}</td>
-          <td class="px-2 py-2 text-gray-600">${svEsc(r.temperature || '')}</td>
+      const meta = isEl('isTabMeta_' + key);
+      const sub = (IS_SUB_LISTS[isTabSt.tab] ? (isAllTabs().find(t => t.id === isTabSt.tab) || {}).name + ' · ' : '');
+      if (meta) meta.textContent = sub + (L.err ? `불러오지 못했어요: ${L.err}` : L.loading && !rows.length ? '불러오는 중…' : `${rows.length.toLocaleString()}행 · 수량 합계 ${sum.toLocaleString()}`);
+      body.innerHTML = rows.length ? rows.map(r => `<tr class="border-t border-gray-100 ${L.checked.has(r.id) ? 'bg-blue-50/60' : ''}">
+          <td class="px-2 py-2 text-center"><input type="checkbox" data-tab-check="${r.id}" ${L.checked.has(r.id) ? 'checked' : ''} class="w-3.5 h-3.5 align-middle"></td>
+          <td class="px-2 py-2 font-mono text-[12px] text-gray-700 truncate">${svEsc(r.product_code || '')}</td>
+          <td class="px-2 py-2 text-gray-900 font-semibold truncate">${svEsc(r.product_name || '')}</td>
+          <td class="px-2 py-2 text-gray-600 truncate">${svEsc(r.temperature || '')}</td>
           <td class="px-2 py-2 text-right font-bold text-gray-900">${svEsc(r.qty || '')}</td></tr>`).join('')
-        : `<tr><td colspan="5" class="py-10 text-center text-[12.5px] text-gray-400">${isTabSt.loading ? '불러오는 중…' : '아직 추가된 행이 없어요.'}</td></tr>`;
-      const all = isEl('isTabAll'); if (all) { all.checked = rows.length > 0 && isTabSt.checked.size === rows.length; all.indeterminate = isTabSt.checked.size > 0 && isTabSt.checked.size < rows.length; }
-      const ob = isEl('isTabOutBtn'); if (ob) { ob.disabled = !isTabSt.checked.size; ob.querySelector('span').textContent = isTabSt.checked.size ? `출고 (${isTabSt.checked.size})` : '출고'; }
+        : `<tr><td colspan="5" class="py-10 text-center text-[12.5px] text-gray-400">${L.loading ? '불러오는 중…' : '아직 추가된 행이 없어요.'}</td></tr>`;
+      const all = document.querySelector(`[data-tab-all="${CSS.escape(key)}"]`); if (all) { all.checked = rows.length > 0 && L.checked.size === rows.length; all.indeterminate = L.checked.size > 0 && L.checked.size < rows.length; }
+      const ob = isEl('isTabOutBtn_' + key); if (ob) { ob.disabled = !L.checked.size; ob.querySelector('span').textContent = L.checked.size ? `출고 (${L.checked.size})` : '출고'; }
     }
-    function isTabOut() {
-      const ids = [...isTabSt.checked]; if (!ids.length) return;
+    isEl('isTabPane').addEventListener('change', (e) => {
+      const all = e.target.closest('[data-tab-all]');
+      if (all) { const k = all.dataset.tabAll, L = isLs(k); L.checked = all.checked ? new Set(L.rows.map(r => r.id)) : new Set(); isRenderTabBody(k); return; }
+      const c = e.target.closest('[data-tab-check]'); if (!c) return;
+      const k = c.closest('[data-list-body]').dataset.listBody, L = isLs(k), id = +c.dataset.tabCheck;
+      if (c.checked) L.checked.add(id); else L.checked.delete(id);
+      isRenderTabBody(k);
+    });
+
+    // ----- 출고 : 출고일자 · 출고매장 입력 → 기록 남기고 목록에서 빼기 -----
+    const isOut = { key: null, ids: [] };
+    function isTabOut(key) {
+      const L = isLs(key), ids = [...L.checked]; if (!ids.length) return;
       if (isNeedUser()) return;
-      const tab = isAllTabs().find(t => t.id === isTabSt.tab) || { name: '' };
-      showConfirmModal(async () => {
-        const { error } = await supabaseClient.from(IS_TAB_ITEMS).delete().in('id', ids);
-        if (error) { showToastNotification('출고 실패', dbErrorMessage(error), 'warning'); return; }
-        isTabSt.rows = isTabSt.rows.filter(r => !ids.includes(r.id)); isTabSt.checked = new Set();
-        isRenderTabBody();
-        isBroadcast('tabitems', { tab: isTabSt.tab });
-        isLog([{ action: '출고', row_id: null, field_key: '', field: '', old_value: '', new_value: `${tab.name} 탭 ${ids.length}행 출고`, row_label: '출고' }]);
-        showToastNotification('출고 완료', `${ids.length}행을 출고 처리했어요.`, 'success');
-      }, '출고', `${svEsc(tab.name)} 탭에서 체크한 <b>${ids.length}행</b>을 출고 처리할까요?<br>출고한 행은 목록에서 빠져요.`);
+      isOut.key = key; isOut.ids = ids;
+      const items = L.rows.filter(r => ids.includes(r.id));
+      isEl('isOutSub').textContent = `${isListName(key)} · ${ids.length}행 (수량 ${items.reduce((a, r) => a + (parseFloat(r.qty) || 0), 0).toLocaleString()})`;
+      isEl('isOutList').innerHTML = items.slice(0, 8).map(r => `<div class="flex justify-between gap-2 text-[12px]"><span class="truncate text-gray-800">${svEsc(r.product_name || r.product_code || '')}</span><b class="flex-none">${svEsc(r.qty || '')}</b></div>`).join('') + (items.length > 8 ? `<div class="text-[11px] text-gray-400">외 ${items.length - 8}행</div>` : '');
+      isEl('isOutDate').value = isToday(); isEl('isOutStore').value = '';
+      isEl('isOutSug').classList.add('hidden');
+      isDlShow('isOutModal', true);
+      setTimeout(() => isEl('isOutStore').focus(), 120);
+    }
+    function isCloseOut() { isDlShow('isOutModal', false); }
+    let isOutSugT = 0, isOutSugSeq = 0;
+    function isOutStoreInput() {
+      clearTimeout(isOutSugT);
+      const kw = isEl('isOutStore').value.trim(), box = isEl('isOutSug');
+      if (!kw) { box.classList.add('hidden'); return; }
+      isOutSugT = setTimeout(async () => {
+        const seq = ++isOutSugSeq, like = `%${homeLikeEsc(kw)}%`, names = new Map();
+        try { const { data } = await supabaseClient.from('store_master').select('store_code,store_name').ilike('store_name', like).limit(20); (data || []).forEach(x => names.set(x.store_name, x.store_code)); } catch (e) {}
+        if (names.size < 5) { try { const { data } = await supabaseClient.from('dispatch_data').select('business_code,business_name').ilike('business_name', like).limit(40); (data || []).forEach(x => { if (!names.has(x.business_name)) names.set(x.business_name, x.business_code); }); } catch (e) {} }
+        if (seq !== isOutSugSeq) return;
+        const list = [...names.entries()].slice(0, 12);
+        box.innerHTML = list.map(([n, c]) => `<button type="button" data-out-store="${svEsc(n)}" class="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-blue-50 border-b border-gray-100 last:border-0"><span class="flex-1 truncate text-[13px] font-semibold text-gray-900">${svEsc(n)}</span><span class="font-mono text-[11px] text-[#007AFF]">${svEsc(c || '')}</span></button>`).join('');
+        box.classList.toggle('hidden', !list.length);
+      }, 200);
+    }
+    document.addEventListener('click', (e) => { const b = e.target.closest('[data-out-store]'); if (b) { isEl('isOutStore').value = b.dataset.outStore; isEl('isOutSug').classList.add('hidden'); } });
+    async function isTabOutRun(key, ids, outDate, outStore) {     // 실제 출고 처리 (화면 · 때때 공용)
+      const L = isLs(key);
+      let items = L.rows.filter(r => ids.includes(r.id));
+      if (items.length < ids.length) { const { data } = await supabaseClient.from(IS_TAB_ITEMS).select('*').in('id', ids); items = data || []; }
+      if (!items.length) throw new Error('출고할 행을 찾지 못했어요.');
+      const recs = items.map(r => ({ tab: key, product_code: r.product_code, product_name: r.product_name, temperature: r.temperature, qty: r.qty, out_date: outDate, out_store: outStore, source_item_id: r.id, created_by: isState.me }));
+      const ins = await supabaseClient.from(IS_TAB_OUT).insert(recs);
+      if (ins.error) throw ins.error;
+      const del = await supabaseClient.from(IS_TAB_ITEMS).delete().in('id', items.map(r => r.id));
+      if (del.error) throw del.error;
+      L.rows = L.rows.filter(r => !ids.includes(r.id)); ids.forEach(id => L.checked.delete(id));
+      isRenderTabBody(key);
+      isBroadcast('tabitems', { tab: key });
+      isLog([{ action: '출고', row_id: null, field_key: '', field: '', old_value: '', new_value: `${isListName(key)} ${items.length}행 출고 · ${outDate} ${outStore}`, row_label: '출고' }]);
+      return items;
+    }
+    async function isOutSave() {
+      const d = isEl('isOutDate').value, st = isEl('isOutStore').value.trim();
+      if (!d) { isEl('isOutDate').focus(); return; }
+      if (!st) { showToastNotification('출고매장', '출고매장을 입력해 주세요.', 'warning'); isEl('isOutStore').focus(); return; }
+      showBusy('출고 처리 중...');
+      try {
+        const items = await isTabOutRun(isOut.key, isOut.ids, d, st);
+        isCloseOut();
+        showToastNotification('출고 완료', `${items.length}행을 ${st}(으)로 출고 처리했어요. (${d})`, 'success');
+      } catch (e) { showToastNotification('출고 실패', dbErrorMessage(e), 'warning'); }
+      finally { hideBusy(); }
+    }
+    // ----- 출고 기록 다운로드 (제품코드 · 제품명 · 온도 · 수량 · 출고일자 · 출고매장) -----
+    async function isOutDownload(key) {
+      if (typeof XLSX === 'undefined') { showToastNotification('다운로드 오류', '엑셀 기능을 불러오지 못했습니다.', 'warning'); return; }
+      showBusy('출고 기록 불러오는 중...');
+      try {
+        const all = [];
+        for (let from = 0; from < 50000; from += 1000) {
+          const { data, error } = await supabaseClient.from(IS_TAB_OUT).select('*').eq('tab', key).order('out_date').order('id').range(from, from + 999);
+          if (error) throw error;
+          all.push(...(data || []));
+          if (!data || data.length < 1000) break;
+        }
+        if (!all.length) { showToastNotification('다운로드', '아직 출고 기록이 없어요.', 'info'); return; }
+        const aoa = [['제품코드', '제품명', '온도', '수량', '출고일자', '출고매장']].concat(all.map(r => { const q = parseFloat(r.qty); return [r.product_code || '', r.product_name || '', r.temperature || '', isNaN(q) ? (r.qty || '') : q, r.out_date || '', r.out_store || '']; }));
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = [{ wch: 12 }, { wch: 36 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 22 }];
+        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '출고 기록');
+        XLSX.writeFile(wb, `${isListName(key).replace(/[\s\\/?*\[\]:→·]+/g, '_')}_출고기록_${isToday()}.xlsx`);
+      } catch (e) { showToastNotification('다운로드 실패', dbErrorMessage(e), 'warning'); }
+      finally { hideBusy(); }
     }
     // ========== 표 칸 너비 (홈화면 · 탭) : 머리글 오른쪽 끝을 끌어서 조절 → 모두에게 같이 적용 · 수정 기록 ==========
     const IS_COLW_KEY = 'issue_sheet_colw';
@@ -10511,8 +10615,8 @@
         isEl('isTable').style.minWidth = total + 'px';
         isPlaceEditor(); isDrawLayer();
       }
-      const tc = isEl('isTabCols');
-      if (tc) { tc.innerHTML = `<col style="width:40px">` + IS_TAB_COLS.map(c => `<col style="width:${c.w}px">`).join(''); const tt = isEl('isTabTable'); if (tt) tt.style.width = (40 + IS_TAB_COLS.reduce((a, c) => a + c.w, 0)) + 'px'; }
+      document.querySelectorAll('[data-tabcols]').forEach(tc => { tc.innerHTML = `<col style="width:40px">` + IS_TAB_COLS.map(c => `<col style="width:${c.w}px">`).join(''); });
+      document.querySelectorAll('[data-tabtable]').forEach(tt => { tt.style.width = (40 + IS_TAB_COLS.reduce((a, c) => a + c.w, 0)) + 'px'; });
     }
     function isStartResize(e, scope, key) {
       e.preventDefault(); e.stopPropagation();
@@ -10539,11 +10643,11 @@
 
     // ========== 탭 : 수기등록 (제품정보 업로드에서 제품명 추천 → 제품코드 · 온도 자동) ==========
     const isMan = { pick: null, timer: 0, seq: 0 };
-    function isOpenManual() {
+    function isOpenManual(key) {
       if (isNeedUser()) return;
-      const t = isAllTabs().find(x => x.id === isTabSt.tab); if (!t) return;
-      isMan.pick = null;
-      isEl('isManTitle').textContent = `${t.name} · 수기등록`;
+      key = key || isTabSt.tab; if (!key) return;
+      isMan.key = key; isMan.pick = null;
+      isEl('isManTitle').textContent = `${isListName(key)} · 수기등록`;
       ['isManName', 'isManQty'].forEach(id => { isEl(id).value = ''; });
       isEl('isManInfo').textContent = '제품명을 입력하면 제품정보 업로드에서 찾아 드려요.';
       isEl('isManSug').innerHTML = ''; isEl('isManSug').classList.add('hidden');
@@ -10587,13 +10691,12 @@
       if (!name) { isEl('isManName').focus(); return; }
       if (!qty) { showToastNotification('수량 입력', '수량을 입력해 주세요.', 'warning'); isEl('isManQty').focus(); return; }
       const p = isMan.pick && isMan.pick.product_name === name ? isMan.pick : null;
-      const tab = isTabSt.tab;
+      const tab = isMan.key;
       const { error } = await supabaseClient.from(IS_TAB_ITEMS).insert({ tab, product_code: p ? p.product_code : null, product_name: name, temperature: p ? p.temperature : null, qty, created_by: isState.me });
       if (error) { showToastNotification('등록 실패', dbErrorMessage(error), 'warning'); return; }
       isCloseManual();
       isBroadcast('tabitems', { tab });
-      const t = isAllTabs().find(x => x.id === tab) || { name: '' };
-      isLog([{ action: '추가', row_id: null, field_key: '', field: '', old_value: '', new_value: `${t.name} 수기등록 · ${name} ${qty}`, row_label: '수기등록' }]);
+      isLog([{ action: '추가', row_id: null, field_key: '', field: '', old_value: '', new_value: `${isListName(tab)} 수기등록 · ${name} ${qty}`, row_label: '수기등록' }]);
       showToastNotification('등록 완료', `${name} ${qty}을(를) 등록했어요.`, 'success');
       isLoadTabItems(tab);
     }
@@ -11972,7 +12075,7 @@
         .on('broadcast', { event: 'pend' }, () => { isLoadPending(); })
         .on('broadcast', { event: 'colw' }, () => { isLoadColW(); })
         .on('broadcast', { event: 'onstock' }, () => { if (isEl('onStockBox')) onLoad(); })
-        .on('broadcast', { event: 'tabitems' }, ({ payload }) => { if (payload && payload.tab === isTabSt.tab && isState.tab !== 'home') isLoadTabItems(isTabSt.tab); })
+        .on('broadcast', { event: 'tabitems' }, ({ payload }) => { if (payload && payload.tab && isState.tab !== 'home' && isEl('isTabBody_' + payload.tab)) isLoadTabItems(payload.tab); })
         .on('broadcast', { event: 'del' }, ({ payload }) => { if (payload && payload.ids) payload.ids.forEach(id => isQueueDb({ eventType: 'DELETE', old: { id } })); })
         .on('broadcast', { event: 'msg' }, ({ payload }) => { if (payload && payload.msg) isAddMsg(payload.msg, true); })
         .on('broadcast', { event: 'log' }, ({ payload }) => { if (payload && payload.logs) { payload.logs.forEach(isAddLog); isRenderLogs(); } })
@@ -11991,7 +12094,7 @@
           .on('postgres_changes', { event: '*', schema: 'public', table: IS_TABLE }, (pl) => isQueueDb(pl))
           .on('postgres_changes', { event: '*', schema: 'public', table: INCIDENT_TABLE }, () => { clearTimeout(isState.pendT); isState.pendT = setTimeout(isLoadPending, 400); })
           .on('postgres_changes', { event: '*', schema: 'public', table: ON_TABLE }, () => { if (isEl('onStockBox')) { clearTimeout(isState.onT); isState.onT = setTimeout(onLoad, 400); } })
-          .on('postgres_changes', { event: '*', schema: 'public', table: IS_TAB_ITEMS }, () => { if (isState.tab !== 'home' && isTabSt.tab) { clearTimeout(isState.tabT); isState.tabT = setTimeout(() => isLoadTabItems(isTabSt.tab), 400); } })
+          .on('postgres_changes', { event: '*', schema: 'public', table: IS_TAB_ITEMS }, () => { if (isState.tab !== 'home' && isTabSt.tab) { clearTimeout(isState.tabT); isState.tabT = setTimeout(isReloadTabLists, 400); } })
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: IS_MSG_TABLE }, (pl) => isAddMsg(pl.new, true))
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: IS_LOG_TABLE }, (pl) => { isAddLog(pl.new); isRenderLogs(); })
           .subscribe();
@@ -12552,6 +12655,7 @@
             <div>· 이번 주 파손 현황 / 부산광안 특이사항 몇 건</div>
             <div>· 상남점에 무슨 클레임 있었지? → 기간 · 매장 선택 → 설명</div>
             <div>· 상남점 배송 누가 갔어? → 날짜 선택 → 기사 이름</div>
+            <div>· 이천 김치 출고 처리해줘 → 품목 · 출고일자 · 출고매장 → 처리</div>
             <div>· 부산광안 주문 / 내일 부산광안 콜라 주문</div>
             <div>· 비용관리 열어줘 · 때때 버전 · 건의: …</div>
           </div></div>`);
@@ -12991,6 +13095,7 @@
     //  확실하면 바로 답하고, 비슷하기만 하면 "○○ 맞나요?"로 확인한 뒤 답함
     function ibIntent(t) {
       const issueWords = (issueSheetOptions.content || []).concat(IB_CONTENT_BASE);
+      if (/(차감|출고\s*(처리|해|할|하자|등록|시켜|하기)|출고해)/.test(t) || (/출고/.test(t) && /(웰스토리|유통물류|원앤원|오산|이천|목록|리스트|탭)/.test(t))) return 'tabout';
       if (/(누가\s*(갔|가|배송|배달)|배송\s*누가|기사님?\s*(누구|이름)|누가\s*기사)/.test(t) && !/^\s*기사\s/.test(t)) return 'whodrove';
       if (/(클레임|컴플레인|이슈|문제|불량)/.test(t) && !/등록|접수\s*해/.test(t) && !/\d+\s*(개|박스|ea|봉|팩)/i.test(t)) return 'claim';
       if (/(무슨|어떤|뭐)\s*(특이사항|일)/.test(t) || /특이사항.*(있었|뭐|무슨|알려|보고|요약)/.test(t)) return 'claim';
@@ -13151,6 +13256,7 @@
           ${ibBtn('data-ib-say="오늘 특이사항 현황"', '📊 특이사항 현황')}
           ${ibBtn('data-ib-say="매장 클레임 알려줘"', '🧾 매장 클레임')}
           ${ibBtn('data-ib-say="매장 배송 누가 갔어?"', '🚛 배송 간 기사')}
+          ${ibBtn('data-ib-say="출고 처리할래"', '📤 출고(차감)')}
           ${ibBtn('data-ib-say="주문 "', '📦 매장 주문')}
           ${ibBtn('data-ib-say="연락처 "', '📞 연락처')}
           ${ibBtn('data-ib-act="feedback"', '💬 건의하기')}
@@ -13441,6 +13547,82 @@
       ib.awaitKind = 'whodrove'; ib.await = (ans) => { const d = ibParseDate(ans); if (d) return ibSkillDispatch(`${d.v} ${ib.whoQ} 기사`); ibBot('날짜를 알아듣지 못했어요. "11/10", "어제"처럼 알려 주세요.'); };
     }
 
+    // ----- 출고(차감) : 목록 → 품목 → 출고일자 → 출고매장 → 확인 후 처리 -----
+    const ibOut = { key: null, ids: [], date: null, store: '', words: '' };
+    function ibOutListFrom(t) {
+      const lists = isAllLists();
+      if (/이천/.test(t)) return lists.filter(l => l.key === 'distrib_icheon');
+      if (/오산/.test(t)) return lists.filter(l => l.key === 'distrib');
+      const hit = lists.filter(l => t.includes(l.tab.name));
+      return hit;
+    }
+    async function ibSkillOut(t) {
+      if (!isState.me) { ibBot('출고하려면 먼저 사용자를 골라 주세요.'); isOpenUserPicker(); return; }
+      const lists = isAllLists();
+      if (!lists.length) { ibBot('출고할 목록(탭)이 없어요.'); return; }
+      const names = lists.map(l => l.tab.name).concat(['오산', '이천', '밀양']).map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+      ibOut.words = ibStrip(t, new RegExp(`(${names}|차감|출고|처리|해\\s*줘|할게|하자|하기|시켜\\s*줘|등록|이고|리스트|목록|탭|에서|은|는|이|가|을|를|좀|요|→)`, 'g'));
+      const hit = ibOutListFrom(t);
+      if (hit.length === 1) { await ibOutPickItems(hit[0].key); return; }
+      ibBot(`어느 목록에서 출고(차감)할까요?<div class="mt-2 flex flex-col items-start gap-1.5">${(hit.length ? hit : lists).map(l => ibBtn(`data-ib-ol="${svEsc(l.key)}"`, svEsc(l.name))).join('')}</div>`);
+    }
+    async function ibOutPickItems(key) {
+      ibOut.key = key; ibOut.ids = []; ibOut.date = null; ibOut.store = '';
+      const { data, error } = await supabaseClient.from(IS_TAB_ITEMS).select('*').eq('tab', key).order('id').limit(500);
+      if (error) { ibBot('목록을 불러오지 못했어요: ' + svEsc(dbErrorMessage(error))); return; }
+      const items = data || [];
+      if (!items.length) { ibBot(`<b>${svEsc(isListName(key))}</b> 목록이 비어 있어요.`); return; }
+      const w = (ibOut.words || '').split(' ').filter(x => x.length >= 1);
+      const pre = (r) => w.length && w.every(x => String(r.product_name || '').includes(x) || String(r.product_code || '') === x);
+      const anyPre = items.some(pre);
+      ibBot(`<b>${svEsc(isListName(key))}</b>에서 출고할 품목을 골라 주세요.
+        <div class="mt-2 max-h-[240px] overflow-y-auto space-y-1 pr-0.5">${items.map(r => `<label class="flex items-center gap-2 px-2.5 py-2 rounded-xl border border-gray-200 bg-gray-50 cursor-pointer"><input type="checkbox" data-ib-oi="${r.id}" ${anyPre && pre(r) ? 'checked' : ''} class="w-4 h-4 accent-[#007AFF]"><span class="flex-1 min-w-0 truncate text-[13px] font-semibold text-gray-900">${svEsc(r.product_name || r.product_code || '')}</span><span class="flex-none text-[12px] font-bold text-gray-700">${svEsc(r.qty || '')}</span></label>`).join('')}</div>
+        <div class="mt-2 flex gap-1.5">${ibBtn('data-ib-onext="all"', '전체 선택')}${ibBtn('data-ib-onext="1"', '다음', true)}</div>`);
+    }
+    function ibOutAskDate() {
+      ibBot(`출고일자는 언제인가요?<div class="mt-2 flex flex-wrap gap-1.5">${[0, -1].map(o => ibBtn(`data-ib-od="${ibToday(o)}"`, `${o ? '어제' : '오늘'} ${ibFmtDate(ibToday(o))}`)).join('')}</div><div class="mt-1.5 text-[11.5px] text-gray-500">"11/12"처럼 입력해도 돼요.</div>`);
+      const handler = (ans) => { const d = ibParseDate(ans); if (!d) { ibBot('날짜를 알아듣지 못했어요. "오늘", "11/12"처럼 알려 주세요.'); ib.awaitKind = 'tabout'; ib.await = handler; return; } ibOutSetDate(d.v); };
+      ib.awaitKind = 'tabout'; ib.await = handler;
+    }
+    function ibOutSetDate(v) {
+      ibOut.date = v;
+      ibBot('출고매장은 어디인가요? <span class="text-[12px] text-gray-500">(매장명을 입력해 주세요)</span>');
+      ib.awaitKind = 'tabout'; ib.await = (ans) => ibOutSetStore(ans);
+    }
+    async function ibOutSetStore(text) {
+      const q = String(text || '').trim();
+      if (!q) { ibOutSetDate(ibOut.date); return; }
+      let name = q;
+      try {                                                             // 매장정보 · 배차에서 비슷한 이름이 딱 하나면 그 이름으로
+        const like = `%${homeLikeEsc(q)}%`, set = new Set();
+        const a = await supabaseClient.from('store_master').select('store_name').ilike('store_name', like).limit(10); (a.data || []).forEach(x => x.store_name && set.add(x.store_name));
+        if (set.size !== 1) { const b = await supabaseClient.from('dispatch_data').select('business_name').ilike('business_name', like).limit(20); (b.data || []).forEach(x => x.business_name && set.add(x.business_name)); }
+        const exact = [...set].find(n => n === q);
+        if (exact) name = exact; else if (set.size === 1) name = [...set][0];
+        else if (set.size > 1 && set.size <= 6) { ibAskPick('choice', [...set].map(n => ({ name: n })), q, null, (it) => ibOutConfirm(it.name), '매장'); return; }
+      } catch (e) {}
+      ibOutConfirm(name);
+    }
+    function ibOutConfirm(store) {
+      ibOut.store = store;
+      const L = isLs(ibOut.key);
+      ibBot(`이대로 출고(차감)할까요?
+        <div class="mt-1.5 px-3 py-2 rounded-2xl bg-[#F2F2F7] text-[13px] leading-relaxed">
+          <div>목록 <b>${svEsc(isListName(ibOut.key))}</b></div>
+          <div>품목 <b>${ibOut.ids.length}개</b>${ibOut.names ? ` <span class="text-gray-500">(${svEsc(ibOut.names)})</span>` : ''}</div>
+          <div>출고일자 <b>${ibFmtDate(ibOut.date)}</b></div>
+          <div>출고매장 <b>${svEsc(store)}</b></div>
+        </div>
+        <div class="mt-2 flex gap-1.5">${ibBtn('data-ib-ogo="1"', '출고 처리', true)}${ibBtn('data-ib-ogo="0"', '취소')}</div>`);
+    }
+    async function ibOutGo() {
+      try {
+        const items = await isTabOutRun(ibOut.key, ibOut.ids, ibOut.date, ibOut.store);
+        ibBot(`<b>출고 처리했어요.</b> ${items.length}개 품목 · ${ibFmtDate(ibOut.date)} · ${svEsc(ibOut.store)}<div class="mt-1 text-[11.5px] text-gray-500">기록은 해당 탭의 <b>다운로드</b>로 받을 수 있어요.</div>`);
+        if (isState.tab !== 'home' && isTabSt.tab) isReloadTabLists();
+      } catch (e) { ibBot('출고하지 못했어요: ' + svEsc(dbErrorMessage(e))); }
+    }
+
     async function ibSend(textArg) {
       const el = ibEl('ibInput');
       const text = String(textArg ?? el.value).trim();
@@ -13504,6 +13686,7 @@
           if (await ibTryFaq(t)) return;
           const intent = ibIntent(t);
           if (intent === 'budget') { await ibSkillBudget(t); return; }
+          if (intent === 'tabout') { await ibSkillOut(t); return; }
           if (intent === 'claim') { await ibSkillClaim(t); return; }
           if (intent === 'whodrove') { await ibSkillWhoDrove(t); return; }
           if (intent === 'stats') { await ibSkillIssueStats(t); return; }
@@ -14044,6 +14227,20 @@
       const gm = e.target.closest('[data-ib-go]'); if (gm) { ibGo(gm.dataset.ibGo); return; }
       const bp = e.target.closest('[data-ib-bpick]');
       if (bp) { const x = (ib.budgetList || []).find(y => String(y.acc.id) === bp.dataset.ibBpick); if (x) { ib.await = null; ibPush('me', svEsc(x.acc.name)); ibBudgetAnswer(x.acc); } return; }
+      const ol = e.target.closest('[data-ib-ol]'); if (ol) { ibPush('me', svEsc(isListName(ol.dataset.ibOl))); ibOutPickItems(ol.dataset.ibOl); return; }
+      const on = e.target.closest('[data-ib-onext]');
+      if (on) {
+        const bub = on.closest('[data-ib-mi]') || ibEl('ibList');
+        const boxes = [...bub.querySelectorAll('[data-ib-oi]')];
+        if (on.dataset.ibOnext === 'all') { boxes.forEach(b => { b.checked = true; }); return; }
+        const sel = boxes.filter(b => b.checked);
+        if (!sel.length) { ibBot('출고할 품목을 하나 이상 체크해 주세요.'); return; }
+        ibOut.ids = sel.map(b => +b.dataset.ibOi);
+        ibOut.names = sel.slice(0, 3).map(b => b.closest('label').querySelector('span').textContent).join(', ') + (sel.length > 3 ? ` 외 ${sel.length - 3}개` : '');
+        ibPush('me', `${sel.length}개 선택`); ibOutAskDate(); return;
+      }
+      const od = e.target.closest('[data-ib-od]'); if (od) { ib.await = null; ib.awaitKind = null; ibPush('me', ibFmtDate(od.dataset.ibOd)); ibOutSetDate(od.dataset.ibOd); return; }
+      const og = e.target.closest('[data-ib-ogo]'); if (og) { if (og.dataset.ibOgo === '1') { ibPush('me', '출고 처리'); ibOutGo(); } else { ibPush('me', '취소'); ibBot('출고를 취소했어요.'); } return; }
       const cp = e.target.closest('[data-ib-cp]');
       if (cp) { const per = ibClaimPeriodKey(cp.dataset.ibCp); ib.await = null; ib.awaitKind = null; ibPush('me', svEsc(per.label)); ibClaimStore(per, ib.claimQ || ''); return; }
       const wd = e.target.closest('[data-ib-wd]');
