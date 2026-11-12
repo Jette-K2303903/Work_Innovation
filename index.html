@@ -11654,7 +11654,12 @@
         if (pick) { ib.pending = null; ib.msgs.pop(); await ibApplyPick(p.kind, pick); return; }
         ib.pending = null;                     // 다른 말을 했으면 그 말로 다시 찾기
       }
-      if (ib.step && ib.step !== 'confirm') {
+      // 단계 중간에 여러 정보를 한 번에 말한 경우(예: 배송일을 묻는데 "부산광안 김치 필라프 2개 파손") → 문장으로 해석
+      const pre = ib.step && ib.step !== 'confirm' && !t.startsWith('__') ? ibParse(t) : null;
+      const isSentence = pre && (
+        (ib.step === 'delivery_date' && !ibParseDate(t) && /\s/.test(t)) ||
+        ((ib.step === 'store' || ib.step === 'product') && ['delivery_date', 'qty', 'content', 'subject', 'fault', 'detail'].some(k => pre[k])));
+      if (ib.step && ib.step !== 'confirm' && !isSentence) {
         try { await ibAnswer(ib.step, text); } catch (e) { ibBot('자료를 찾는 중 오류가 났어요: ' + svEsc(e.message || String(e))); }
         return;
       }
