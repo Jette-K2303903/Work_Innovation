@@ -97,6 +97,7 @@
     .is-table td.is-red { color: #FF3B30 !important; }
     .is-table td.is-bold { font-weight: 800 !important; }
     .is-table td .is-fr { color: #FF3B30; }
+    .is-tab-full { position: fixed !important; inset: 12px; z-index: 45; margin: 0 !important; overflow: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
     .is-red-tg { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; vertical-align: middle; font-size: 10.5px; font-weight: 700; color: #9CA3AF; }
     .is-red-tg-sw { position: relative; width: 28px; height: 16px; border-radius: 9px; background: #D1D5DB; transition: background .2s; }
     .is-red-tg-sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: left .2s; }
@@ -2326,7 +2327,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.034</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.035</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -10556,6 +10557,7 @@
             <div class="ml-auto flex gap-2 flex-wrap">
               <button type="button" onclick="isOpenManual('${svEsc(l.key)}')" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-pencil-simple-line"></i>수기등록</button>
               <button type="button" onclick="isLoadTabItems('${svEsc(l.key)}')" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-arrows-clockwise"></i>새로고침</button>
+              <button type="button" data-tab-zoom="${svEsc(l.key)}" onclick="isTabExpand('${svEsc(l.key)}')" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-arrows-out"></i><span>확대</span></button>
               <button type="button" onclick="isOutDownload('${svEsc(l.key)}')" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1" title="출고 기록 받기"><i class="ph-bold ph-download-simple"></i>다운로드</button>
               <button type="button" id="isTabOutBtn_${svEsc(l.key)}" onclick="isTabOut('${svEsc(l.key)}')" class="ios-btn-tap px-3.5 py-2 rounded-xl bg-[#FF9500] text-white text-[12.5px] font-bold flex items-center gap-1 disabled:opacity-40"><i class="ph-bold ph-truck"></i><span>출고</span></button>
             </div>
@@ -10570,19 +10572,40 @@
               <tbody id="isTabBody_${svEsc(l.key)}" data-list-body="${svEsc(l.key)}"></tbody>
             </table>
           </div>
+          <div id="isTabPager_${svEsc(l.key)}" class="hidden mt-2 flex items-center justify-center gap-2"></div>
           ${i === lists.length - 1 ? `<p class="mt-2 text-[11px] text-gray-400">홈화면에서 행을 체크하고 <b>적용</b>을 누르거나 <b>수기등록</b>으로 추가해요. 체크하고 <b>출고</b>를 누르면 출고일자 · 출고매장이 기록되고 목록에서 빠져요. 기록은 <b>다운로드</b>로 받을 수 있어요.</p>` : ''}
         </div>`).join('') + (t.id === 'onenone' ? '<div id="onStockBox" class="mt-3 bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4 sm:p-5"></div>' : '');
       isApplyColW();
       lists.forEach(l => { isRenderTabBody(l.key); isLoadTabItems(l.key); });
       if (t.id === 'onenone') { onRender(); onLoad(); }
     }
+    const IS_TAB_PAGE = 7;
+    function isTabExpand(key, force) {                                 // 확대 : 그 목록만 화면 가득 · 모든 행 한 번에
+      const L = isLs(key), box = document.querySelector(`[data-list-box="${CSS.escape(key)}"]`); if (!box) return;
+      L.expanded = force === undefined ? !L.expanded : force;
+      box.classList.toggle('is-tab-full', L.expanded);
+      const b = box.querySelector('[data-tab-zoom]');
+      if (b) b.innerHTML = L.expanded ? '<i class="ph-bold ph-arrows-in"></i><span>축소</span>' : '<i class="ph-bold ph-arrows-out"></i><span>확대</span>';
+      isRenderTabBody(key);
+    }
+    function isTabPage(key, d) { const L = isLs(key); L.page = Math.max(0, (L.page || 0) + d); isRenderTabBody(key); }
+    document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; const f = document.querySelector('.is-tab-full'); if (f) { isTabExpand(f.dataset.listBox, false); } });
     function isRenderTabBody(key) {
       const body = isEl('isTabBody_' + key); if (!body) return;
-      const L = isLs(key), rows = L.rows;
-      const sum = rows.reduce((a, r) => a + (parseFloat(r.qty) || 0), 0);
+      const L = isLs(key), all = L.rows;
+      const pages = Math.max(1, Math.ceil(all.length / IS_TAB_PAGE));
+      L.page = Math.min(L.page || 0, pages - 1);
+      const paged = !L.expanded && all.length > IS_TAB_PAGE;
+      const rows = paged ? all.slice(L.page * IS_TAB_PAGE, (L.page + 1) * IS_TAB_PAGE) : all;
+      const pg = isEl('isTabPager_' + key);
+      if (pg) {
+        pg.classList.toggle('hidden', !paged);
+        if (paged) pg.innerHTML = `<button type="button" onclick="isTabPage('${svEsc(key)}',-1)" ${L.page ? '' : 'disabled'} class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 text-gray-600 disabled:opacity-30"><i class="ph-bold ph-caret-left"></i></button><span class="text-[12.5px] font-bold text-gray-700 min-w-[64px] text-center">${L.page + 1} / ${pages}</span><button type="button" onclick="isTabPage('${svEsc(key)}',1)" ${L.page < pages - 1 ? '' : 'disabled'} class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 text-gray-600 disabled:opacity-30"><i class="ph-bold ph-caret-right"></i></button>`;
+      }
+      const sum = all.reduce((a, r) => a + (parseFloat(r.qty) || 0), 0);
       const meta = isEl('isTabMeta_' + key);
       const sub = (IS_SUB_LISTS[isTabSt.tab] ? (isAllTabs().find(t => t.id === isTabSt.tab) || {}).name + ' · ' : '');
-      if (meta) meta.textContent = sub + (L.err ? `불러오지 못했어요: ${L.err}` : L.loading && !rows.length ? '불러오는 중…' : `${rows.length.toLocaleString()}행 · 수량 합계 ${sum.toLocaleString()}`);
+      if (meta) meta.textContent = sub + (L.err ? `불러오지 못했어요: ${L.err}` : L.loading && !all.length ? '불러오는 중…' : `${all.length.toLocaleString()}행 · 수량 합계 ${sum.toLocaleString()}`);
       body.innerHTML = rows.length ? rows.map(r => `<tr class="border-t border-gray-100 ${L.checked.has(r.id) ? 'bg-blue-50/60' : ''}">
           <td class="px-2 py-2 text-center"><input type="checkbox" data-tab-check="${r.id}" ${L.checked.has(r.id) ? 'checked' : ''} class="w-3.5 h-3.5 align-middle"></td>
           <td class="px-2 py-2 font-mono text-[12px] text-gray-700 truncate">${svEsc(r.product_code || '')}</td>
@@ -10591,7 +10614,7 @@
           <td class="px-2 py-2 text-right font-bold text-gray-900">${svEsc(r.qty || '')}</td>
           <td class="px-2 py-2 text-gray-700 truncate cursor-text hover:bg-blue-50/60" data-note-id="${r.id}" title="${svEsc(r.note || '눌러서 비고 입력')}">${r.note ? svEsc(r.note) : '<span class="text-gray-300">비고</span>'}</td></tr>`).join('')
         : `<tr><td colspan="6" class="py-10 text-center text-[12.5px] text-gray-400">${L.loading ? '불러오는 중…' : '아직 추가된 행이 없어요.'}</td></tr>`;
-      const all = document.querySelector(`[data-tab-all="${CSS.escape(key)}"]`); if (all) { all.checked = rows.length > 0 && L.checked.size === rows.length; all.indeterminate = L.checked.size > 0 && L.checked.size < rows.length; }
+      const ca = document.querySelector(`[data-tab-all="${CSS.escape(key)}"]`); if (ca) { ca.checked = all.length > 0 && L.checked.size === all.length; ca.indeterminate = L.checked.size > 0 && L.checked.size < all.length; }
       const ob = isEl('isTabOutBtn_' + key); if (ob) { ob.disabled = !L.checked.size; ob.querySelector('span').textContent = L.checked.size ? `출고 (${L.checked.size})` : '출고'; }
     }
     // 비고 칸 : 눌러서 바로 고치기 (Enter · 칸 밖 클릭 = 저장, Esc = 취소)
@@ -10655,21 +10678,39 @@
       }, 200);
     }
     document.addEventListener('click', (e) => { const b = e.target.closest('[data-out-store]'); if (b) { isEl('isOutStore').value = b.dataset.outStore; isEl('isOutSug').classList.add('hidden'); } });
-    async function isTabOutRun(key, ids, outDate, outStore) {     // 실제 출고 처리 (화면 · 때때 공용)
+    async function isTabOutRun(key, ids, outDate, outStore, opts = {}) {     // 실제 출고 처리 (화면 · 때때 공용) · opts.via = 'ttaettae'
       const L = isLs(key);
       let items = L.rows.filter(r => ids.includes(r.id));
       if (items.length < ids.length) { const { data } = await supabaseClient.from(IS_TAB_ITEMS).select('*').in('id', ids); items = data || []; }
       if (!items.length) throw new Error('출고할 행을 찾지 못했어요.');
-      const recs = items.map(r => ({ tab: key, product_code: r.product_code, product_name: r.product_name, temperature: r.temperature, qty: r.qty, note: r.note || null, out_date: outDate, out_store: outStore, source_item_id: r.id, source_row_id: r.source_row_id || null, created_by: isState.me }));
-      const ins = await supabaseClient.from(IS_TAB_OUT).insert(recs);
+      const recs = items.map(r => ({ tab: key, product_code: r.product_code, product_name: r.product_name, temperature: r.temperature, qty: r.qty, note: r.note || null, out_date: outDate, out_store: outStore, source_item_id: r.id, source_row_id: r.source_row_id || null, created_by: isState.me, via: opts.via || null }));
+      const ins = await supabaseClient.from(IS_TAB_OUT).insert(recs).select('id');
       if (ins.error) throw ins.error;
+      items.outIds = (ins.data || []).map(x => x.id);
       const del = await supabaseClient.from(IS_TAB_ITEMS).delete().in('id', items.map(r => r.id));
       if (del.error) throw del.error;
       L.rows = L.rows.filter(r => !ids.includes(r.id)); ids.forEach(id => L.checked.delete(id));
       isRenderTabBody(key);
       isBroadcast('tabitems', { tab: key });
-      isLog([{ action: '출고', row_id: null, field_key: '', field: '', old_value: '', new_value: `${isListName(key)} ${items.length}행 출고 · ${outDate} ${outStore}`, row_label: '출고' }]);
+      if (opts.via === 'ttaettae')                                     // 때때 처리 : 매장명, 제품명, 수량, 사유(비고) 한 줄씩
+        isLog(items.map(r => ({ action: '출고', row_id: null, field_key: 'via:ttaettae', field: '', old_value: '', new_value: `${outStore}, ${r.product_name || r.product_code || ''}, ${r.qty || ''}, ${r.note || ''}`, row_label: `${isListName(key)} 차감이고 (${outDate})` })));
+      else isLog([{ action: '출고', row_id: null, field_key: '', field: '', old_value: '', new_value: `${isListName(key)} ${items.length}행 출고 · ${outDate} ${outStore}`, row_label: '출고' }]);
       return items;
+    }
+    // 출고 원복 : 출고 기록을 목록으로 되돌리고 기록에서 뺌
+    async function isTabOutUndo(outIds, opts = {}) {
+      const { data, error } = await supabaseClient.from(IS_TAB_OUT).select('*').in('id', outIds);
+      if (error) throw error;
+      const recs = data || [];
+      if (!recs.length) throw new Error('되돌릴 출고 기록을 찾지 못했어요. (이미 원복했을 수 있어요)');
+      const back = recs.map(r => ({ tab: r.tab, product_code: r.product_code, product_name: r.product_name, temperature: r.temperature, qty: r.qty, note: r.note, source_row_id: r.source_row_id, created_by: isState.me }));
+      const ins = await supabaseClient.from(IS_TAB_ITEMS).insert(back);
+      if (ins.error) throw ins.error;
+      const del = await supabaseClient.from(IS_TAB_OUT).delete().in('id', recs.map(r => r.id));
+      if (del.error) throw del.error;
+      [...new Set(recs.map(r => r.tab))].forEach(k => { isBroadcast('tabitems', { tab: k }); if (isEl('isTabBody_' + k)) isLoadTabItems(k); });
+      isLog(recs.map(r => ({ action: '원복', row_id: null, field_key: opts.via === 'ttaettae' ? 'via:ttaettae' : '', field: '', old_value: '', new_value: `${r.out_store || ''}, ${r.product_name || r.product_code || ''}, ${r.qty || ''}, ${r.note || ''}`, row_label: `${isListName(r.tab)} 출고 원복 (${r.out_date || ''})` })));
+      return recs;
     }
     async function isOutSave() {
       const d = isEl('isOutDate').value, st = isEl('isOutStore').value.trim();
@@ -11054,6 +11095,55 @@
       isBroadcast('handover', {});
       return true;
     }
+    // 기사 이름 목록 (구간차량 관리 배차 자료 전체 기간 · 이름 중복 제외 · 가나다순 · 가장 최근 차량번호)
+    let hoDrivers = null;
+    async function hoLoadDrivers() {
+      if (hoDrivers) return hoDrivers;
+      const by = new Map();
+      try {
+        for (let from = 0; from < 60000; from += 1000) {
+          const { data, error } = await supabaseClient.from('dispatch_data').select('driver_name,vehicle_no,delivery_date').not('driver_name', 'is', null).order('delivery_date', { ascending: false }).range(from, from + 999);
+          if (error) break;
+          (data || []).forEach(r => { const n = String(r.driver_name || '').trim(); if (n && !by.has(n)) by.set(n, String(r.vehicle_no || '')); else if (n && !by.get(n) && r.vehicle_no) by.set(n, String(r.vehicle_no)); });
+          if (!data || data.length < 1000) break;
+        }
+      } catch (e) {}
+      hoDrivers = [...by.entries()].map(([name, car]) => ({ name, car4: (String(car).replace(/\D/g, '').slice(-4)) })).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+      return hoDrivers;
+    }
+    const hoMention = { list: [], idx: 0, token: null };
+    function hoMentionToken(ta) {                                      // 커서 앞 '@이름' 조각
+      const pos = ta.selectionStart; if (pos !== ta.selectionEnd) return null;
+      const m = ta.value.slice(0, pos).match(/@([^\s@()]{0,20})$/);
+      return m ? { start: pos - m[0].length, end: pos, q: m[1] } : null;
+    }
+    function hoMentionBox(ta) {
+      let box = isEl('hoMentionBox');
+      if (!box) { box = document.createElement('div'); box.id = 'hoMentionBox'; box.className = 'ho-noprint'; Object.assign(box.style, { position: 'absolute', left: '8px', bottom: '8px', zIndex: 20, maxHeight: '220px', overflowY: 'auto', minWidth: '220px', background: '#fff', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,.18)', fontSize: '13px' }); box.addEventListener('mousedown', (e) => { const it = e.target.closest('[data-ho-m]'); if (it) { e.preventDefault(); hoMentionPick(+it.dataset.hoM); } }); }
+      if (box.parentElement !== ta.parentElement) ta.parentElement.appendChild(box);
+      return box;
+    }
+    async function hoMentionUpdate(ta) {
+      const tk = hoMentionToken(ta);
+      const box = isEl('hoMentionBox');
+      if (!tk) { hoMention.token = null; if (box) box.remove(); return; }
+      const all = await hoLoadDrivers();
+      const q = tk.q;
+      hoMention.list = all.filter(d => !q || d.name.includes(q)).slice(0, 30);
+      hoMention.token = tk; hoMention.idx = 0; hoMention.ta = ta;
+      const b = hoMentionBox(ta);
+      b.innerHTML = hoMention.list.length ? `<div style="padding:6px 10px 4px;font-size:10.5px;font-weight:700;color:#9CA3AF">기사 (구간차량 관리)</div>` + hoMention.list.map((d, i) => `<div data-ho-m="${i}" style="padding:6px 10px;cursor:pointer;display:flex;gap:8px;${i === hoMention.idx ? 'background:#EEF5FF' : ''}"><b style="flex:1">${svEsc(d.name)}</b><span style="color:#007AFF;font-family:monospace">${svEsc(d.car4 || '----')}</span></div>`).join('')
+        : `<div style="padding:8px 10px;color:#9CA3AF;font-size:12px">'${svEsc(q)}' 기사를 찾지 못했어요.</div>`;
+    }
+    function hoMentionPick(i) {
+      const d = hoMention.list[i], tk = hoMention.token, ta = hoMention.ta; if (!d || !tk || !ta) return false;
+      const ins = `@${d.name}(${d.car4 || '0000'})`;
+      ta.value = ta.value.slice(0, tk.start) + ins + ta.value.slice(tk.end);
+      const p = tk.start + ins.length; ta.setSelectionRange(p, p);
+      hoMention.token = null; const box = isEl('hoMentionBox'); if (box) box.remove();
+      ta.focus();
+      return true;
+    }
     function hoOpenEditor(id, keep) {
       const r = hoSt.rows.find(x => x.id === id); if (!r) return;
       const cell = document.querySelector(`[data-ho-cell="${id}"]`); if (!cell) return;
@@ -11065,9 +11155,20 @@
       cell.parentElement.appendChild(ta);
       hoSt.edit = { id, el: ta, orig: r.content || '' };
       if (!old) {
+        ta.addEventListener('input', () => hoMentionUpdate(ta));
+        ta.addEventListener('keyup', (e) => { if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) hoMentionUpdate(ta); });
         ta.addEventListener('keydown', (e) => {
           e.stopPropagation();
           if (e.isComposing || e.keyCode === 229) return;
+          if (hoMention.token && hoMention.ta === ta) {                  // @기사 추천 목록 조작
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const n = hoMention.list.length; if (n) { hoMention.idx = (hoMention.idx + (e.key === 'ArrowDown' ? 1 : -1) + n) % n; isEl('hoMentionBox').querySelectorAll('[data-ho-m]').forEach((el, i) => { el.style.background = i === hoMention.idx ? '#EEF5FF' : ''; }); } return; }
+            if (e.key === 'Enter' || e.key === 'Tab') {
+              const q = hoMention.token.q, ex = hoMention.list.findIndex(d => d.name === q);
+              const pick = ex >= 0 ? ex : (hoMention.list.length ? hoMention.idx : -1);
+              if (pick >= 0) { e.preventDefault(); hoMentionPick(pick); return; }
+            }
+            if (e.key === 'Escape') { e.preventDefault(); hoMention.token = null; const bx = isEl('hoMentionBox'); if (bx) bx.remove(); return; }
+          }
           if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyB' || String(e.key).toLowerCase() === 'b')) { e.preventDefault(); hoFormat('bold'); }
           else if (e.key === 'Escape') { e.preventDefault(); hoSt.edit = null; ta.remove(); hoRenderSheet(); }
         });
@@ -12981,13 +13082,14 @@
         : logs.map(l => `<button type="button" data-log="${l.id}" class="w-full text-left px-2.5 py-2 rounded-xl border border-gray-100 hover:bg-gray-50 active:bg-gray-100">
             <div class="flex items-center gap-1.5 text-[11px]">
               <span class="w-2 h-2 rounded-full flex-none" style="background:${isColor(l.actor || '?')}"></span>
-              <b class="text-gray-800 truncate">${svEsc(l.actor || '-')}</b>
+              <b class="text-gray-800 truncate">${svEsc(l.actor || '-')}</b>${l.field_key === 'via:ttaettae' ? '<span class="flex-none px-1.5 rounded-md bg-blue-50 text-[#007AFF] text-[10px] font-bold">때때에서 처리함</span>' : ''}
               <span class="is-pill ${tag[l.action] || 'bg-gray-100 text-gray-600'}" style="padding:1px 6px;font-size:10px">${svEsc(l.action || '')}</span>
               <span class="ml-auto text-gray-400 flex-none">${isFmtChat(l.created_at)}</span>
             </div>
             <div class="mt-1 text-[12px] font-semibold text-gray-900 truncate">${svEsc(l.row_label || '')}</div>
             ${l.action === '수정' ? `<div class="mt-0.5 text-[11.5px] text-gray-600 leading-snug break-words"><b class="text-gray-700">${svEsc(l.field || '')}</b> : <span class="line-through text-gray-400">${svEsc(cut(l.old_value) || '(빈칸)')}</span> → <span class="text-gray-900 font-semibold">${svEsc(cut(l.new_value) || '(빈칸)')}</span></div>`
-              : l.action === '삭제' && l.old_value ? `<div class="mt-0.5 text-[11.5px] text-gray-500 truncate">${svEsc(cut(l.old_value))}</div>` : ''}
+              : l.action === '삭제' && l.old_value ? `<div class="mt-0.5 text-[11.5px] text-gray-500 truncate">${svEsc(cut(l.old_value))}</div>`
+              : l.new_value ? `<div class="mt-0.5 text-[11.5px] text-gray-600 break-words">${svEsc(cut(l.new_value))}</div>` : ''}
           </button>`).join('');
     }
     isEl('isLogList').addEventListener('click', (e) => {
@@ -13061,6 +13163,7 @@
             <div>· 상남점에 무슨 클레임 있었지? → 기간 · 매장 선택 → 설명</div>
             <div>· 상남점 배송 누가 갔어? → 날짜 선택 → 기사 이름</div>
             <div>· 이천 김치 출고 처리해줘 → 품목 · 출고일자 · 출고매장 → 처리</div>
+            <div>· 출고 원복해줘 → 최근 출고에서 골라 되돌리기</div>
             <div>· 부산광안 주문 / 내일 부산광안 콜라 주문</div>
             <div>· 비용관리 열어줘 · 때때 버전 · 건의: …</div>
           </div></div>`);
@@ -13500,6 +13603,7 @@
     //  확실하면 바로 답하고, 비슷하기만 하면 "○○ 맞나요?"로 확인한 뒤 답함
     function ibIntent(t) {
       const issueWords = (issueSheetOptions.content || []).concat(IB_CONTENT_BASE);
+      if (/(원복|복구|되돌|출고\s*취소|차감\s*취소|출고\s*한\s*거\s*취소)/.test(t)) return 'undoout';
       if (/(차감|출고\s*(처리|해|할|하자|등록|시켜|하기)|출고해)/.test(t) || (/출고/.test(t) && /(웰스토리|유통물류|원앤원|오산|이천|목록|리스트|탭)/.test(t))) return 'tabout';
       if (/(누가\s*(갔|가|배송|배달)|배송\s*누가|기사님?\s*(누구|이름)|누가\s*기사)/.test(t) && !/^\s*기사\s/.test(t)) return 'whodrove';
       if (/(클레임|컴플레인|이슈|문제|불량)/.test(t) && !/등록|접수\s*해/.test(t) && !/\d+\s*(개|박스|ea|봉|팩)/i.test(t)) return 'claim';
@@ -14020,10 +14124,27 @@
         </div>
         <div class="mt-2 flex gap-1.5">${ibBtn('data-ib-ogo="1"', '출고 처리', true)}${ibBtn('data-ib-ogo="0"', '취소')}</div>`);
     }
+    // 때때 : 출고 원복 ("출고 취소", "원복", "복구")
+    async function ibSkillUndoOut() {
+      const { data, error } = await supabaseClient.from(IS_TAB_OUT).select('*').order('id', { ascending: false }).limit(30);
+      if (error) { ibBot('출고 기록을 불러오지 못했어요: ' + svEsc(dbErrorMessage(error))); return; }
+      const list = (data || []);
+      if (!list.length) { ibBot('되돌릴 출고 기록이 없어요.'); return; }
+      ibBot(`어떤 출고를 원복할까요? <span class="text-[12px] text-gray-500">(최근 30건 · '때때' 표시는 때때에서 처리한 건)</span>
+        <div class="mt-2 max-h-[260px] overflow-y-auto space-y-1 pr-0.5">${list.map(r => `<label class="flex items-center gap-2 px-2.5 py-2 rounded-xl border border-gray-200 bg-gray-50 cursor-pointer"><input type="checkbox" data-ib-ui="${r.id}" class="w-4 h-4 accent-[#007AFF]"><span class="flex-1 min-w-0"><span class="block truncate text-[13px] font-semibold text-gray-900">${svEsc(r.product_name || r.product_code || '')} <b>${svEsc(r.qty || '')}</b></span><span class="block truncate text-[11px] text-gray-500">${svEsc(isListName(r.tab))} · ${ibFmtDate(r.out_date)} · ${svEsc(r.out_store || '')}${r.via === 'ttaettae' ? ' · 때때' : ''}</span></span></label>`).join('')}</div>
+        <div class="mt-2">${ibBtn('data-ib-undosel="1"', '선택한 출고 원복', true)}</div>`);
+    }
+    async function ibUndoOut(ids) {
+      try {
+        const recs = await isTabOutUndo(ids, { via: 'ttaettae' });
+        ibBot(`<b>원복했어요.</b> ${recs.length}개 품목을 원래 목록으로 되돌렸어요.<div class="mt-1 text-[12px] text-gray-600">${recs.slice(0, 5).map(r => `${svEsc(isListName(r.tab))} · ${svEsc(r.product_name || '')} ${svEsc(r.qty || '')}`).join('<br>')}</div>`);
+      } catch (e) { ibBot('원복하지 못했어요: ' + svEsc(dbErrorMessage(e))); }
+    }
     async function ibOutGo() {
       try {
-        const items = await isTabOutRun(ibOut.key, ibOut.ids, ibOut.date, ibOut.store);
-        ibBot(`<b>출고 처리했어요.</b> ${items.length}개 품목 · ${ibFmtDate(ibOut.date)} · ${svEsc(ibOut.store)}<div class="mt-1 text-[11.5px] text-gray-500">기록은 해당 탭의 <b>다운로드</b>로 받을 수 있어요.</div>`);
+        const items = await isTabOutRun(ibOut.key, ibOut.ids, ibOut.date, ibOut.store, { via: 'ttaettae' });
+        ib.lastOut = items.outIds || [];
+        ibBot(`<b>출고 처리했어요.</b> ${items.length}개 품목 · ${ibFmtDate(ibOut.date)} · ${svEsc(ibOut.store)}${ib.lastOut.length ? `<div class="mt-2">${ibBtn(`data-ib-undo="${ib.lastOut.join(',')}"`, '되돌리기 (원복)')}</div>` : ''}<div class="mt-1 text-[11.5px] text-gray-500">기록은 해당 탭의 <b>다운로드</b>로 받을 수 있어요.</div>`);
         if (isState.tab !== 'home' && isTabSt.tab) isReloadTabLists();
       } catch (e) { ibBot('출고하지 못했어요: ' + svEsc(dbErrorMessage(e))); }
     }
@@ -14091,6 +14212,7 @@
           if (await ibTryFaq(t)) return;
           const intent = ibIntent(t);
           if (intent === 'budget') { await ibSkillBudget(t); return; }
+          if (intent === 'undoout') { await ibSkillUndoOut(); return; }
           if (intent === 'tabout') { await ibSkillOut(t); return; }
           if (intent === 'claim') { await ibSkillClaim(t); return; }
           if (intent === 'whodrove') { await ibSkillWhoDrove(t); return; }
@@ -14633,6 +14755,9 @@
       const gm = e.target.closest('[data-ib-go]'); if (gm) { ibGo(gm.dataset.ibGo); return; }
       const bp = e.target.closest('[data-ib-bpick]');
       if (bp) { const x = (ib.budgetList || []).find(y => String(y.acc.id) === bp.dataset.ibBpick); if (x) { ib.await = null; ibPush('me', svEsc(x.acc.name)); ibBudgetAnswer(x.acc); } return; }
+      const un = e.target.closest('[data-ib-undo]'); if (un) { ibPush('me', '되돌리기'); ibUndoOut(un.dataset.ibUndo.split(',').map(Number)); un.disabled = true; return; }
+      const us = e.target.closest('[data-ib-undosel]');
+      if (us) { const bub = us.closest('[data-ib-mi]') || ibEl('ibList'); const ids = [...bub.querySelectorAll('[data-ib-ui]')].filter(b => b.checked).map(b => +b.dataset.ibUi); if (!ids.length) { ibBot('원복할 출고를 하나 이상 체크해 주세요.'); return; } ibPush('me', `${ids.length}건 원복`); ibUndoOut(ids); return; }
       const ol = e.target.closest('[data-ib-ol]'); if (ol) { ibPush('me', svEsc(isListName(ol.dataset.ibOl))); ibOutPickItems(ol.dataset.ibOl); return; }
       const on = e.target.closest('[data-ib-onext]');
       if (on) {
