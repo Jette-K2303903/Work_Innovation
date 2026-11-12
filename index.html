@@ -1184,7 +1184,7 @@
       <div class="flex-1 min-h-0 flex gap-3">
       <div class="flex-1 min-w-0 min-h-0 flex flex-col">
       <div class="flex flex-wrap items-center gap-2 mb-2">
-        <input type="search" id="isSearch" oninput="isState.q = this.value.trim(); isRender()" placeholder="거래처 · 제품 · 내용 검색" class="flex-1 min-w-[160px] px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-blue-200">
+        <input type="search" id="isSearch" oninput="clearTimeout(window.__isQ); const v = this.value.trim(); window.__isQ = setTimeout(() => { isState.q = v; isRender(); }, 150)" placeholder="거래처 · 제품 · 내용 검색" class="flex-1 min-w-[160px] px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-blue-200">
         <button type="button" onclick="isAddRow()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-plus"></i>행 추가</button>
         <button type="button" id="isSaveBtn" onclick="isSaveDrafts()" class="ios-btn-tap px-3.5 py-2 rounded-xl bg-[#007AFF] text-white text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-floppy-disk"></i><span>저장</span></button>
         <div class="relative">
@@ -2189,7 +2189,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.024</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.025</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -10111,7 +10111,8 @@
       cid: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
       ch: null, dbCh: null, peers: [], roster: new Map(), cursors: new Map(), users: [], cache: { store: new Map(), product: new Map() },
       msgs: [], logs: [], lastRead: null, chatMissing: false, logMissing: false, panels: null, mBox: null,
-      tab: 'home', tabs: [], filters: {}, colorFilters: {}, autoVals: new Map(), sug: null
+      tab: 'home', tabs: [], filters: {}, colorFilters: {}, autoVals: new Map(), sug: null,
+      view: [], viewIdx: new Map(), vr: { s: 0, e: 0 }, gone: new Set(), loadingAll: false, loadedN: 0, totalN: null
     };
     const IS_MSG_TABLE = 'issue_sheet_messages', IS_LOG_TABLE = 'issue_sheet_logs', IS_READ_TABLE = 'issue_sheet_reads';
     const isMissingErr = (err) => !!err && (err.code === 'PGRST205' || err.code === '42P01' || /Could not find the table|does not exist/i.test(err.message || ''));
@@ -10141,13 +10142,29 @@
       isState.drafts.forEach((d, id) => { if (d.isNew) out.push(mk(null, id, true, d.t)); });
       return out;
     }
-    function isFindRow(id) { return isRowsAll().find(r => r.id === id); }
+    function isFindRow(id) {
+      const base = isState.rows.find(r => r.id === id);
+      const od = isState.drafts.get(id);
+      let rd = null; isState.remote.forEach(v => (v.drafts || []).forEach(d => { if (d.id === id) rd = { name: v.name, ...d }; }));
+      if (!base && !od && !rd) return undefined;
+      const isNew = !base;
+      const r = { ...(base || {}), ...(rd ? rd.patch : {}), ...(od ? od.patch : {}) };
+      r.id = id; r._new = isNew; r._t = isNew ? ((od && od.t) || (rd && rd.t) || 0) : 0;
+      r._mine = new Set(od ? Object.keys(od.patch) : []);
+      r._rem = rd ? { name: rd.name, keys: new Set(Object.keys(rd.patch || {})), isNew: !!rd.isNew } : null;
+      return r;
+    }
     function isRowsView() {
       const q = isState.q.toLowerCase();
       const fs = Object.entries(isState.filters);
       const cf = Object.entries(isState.colorFilters);
       return isRowsAll().filter(r => r._new || ((!q || IS_COLS.some(c => String(r[c.k] ?? '').toLowerCase().includes(q))) && fs.every(([k, set]) => set.has(String(r[k] ?? ''))) && cf.every(([k, c]) => isCellColor(r, k) === c)))
-        .sort((a, b) => (a._new - b._new) || (a._new ? a._t - b._t : a.id - b.id));
+        .sort((a, b) => {
+          if (a._new !== b._new) return a._new - b._new;
+          if (a._new) return a._t - b._t;
+          const da = a.delivery_date || '', db = b.delivery_date || '';     // 배송일 오래된 것 위 → 최신 아래
+          return da < db ? -1 : da > db ? 1 : a.id - b.id;
+        });
     }
 
     // ---------- 그리기 ----------
@@ -10160,18 +10177,57 @@
       isEl('isHead').addEventListener('click', (e) => { const b = e.target.closest('[data-is-filter]'); if (b) { e.stopPropagation(); isOpenFilter(b.dataset.isFilter, b); } });
       isEl('isCheckAll').addEventListener('change', (e) => { isRowsView().forEach(r => { if (e.target.checked) isState.checked.add(r.id); else isState.checked.delete(r.id); }); isRender(); });
     }
+    // 많은 행 대응 : 화면에 보이는 행(+앞뒤 여유분)만 그리고 나머지는 빈 공간으로 높이만 채움
+    const IS_HEAD_H = 34, IS_VBUF = 25;
+    let isRH = 33, isRenderRaf = 0;
+    function isRenderSoon() { if (isRenderRaf) return; isRenderRaf = requestAnimationFrame(() => { isRenderRaf = 0; isRender(); }); }
+    function isVisRange(n) {
+      // 표 상자 스크롤 + 화면(페이지) 스크롤 모두 고려해 실제로 보이는 부분 계산
+      const wrap = isEl('isWrap'), r = wrap.getBoundingClientRect(), vh = window.innerHeight || 800;
+      const above = Math.max(0, -r.top);                                   // 페이지가 표 위쪽을 지나 스크롤된 만큼
+      const h = Math.max(200, Math.min(wrap.clientHeight || vh, vh) - Math.max(0, r.top > 0 ? 0 : 0));
+      const top = Math.max(0, wrap.scrollTop + above - IS_HEAD_H);
+      const s = Math.max(0, Math.floor(top / isRH) - IS_VBUF);
+      const e = Math.min(n, Math.ceil((top + h) / isRH) + IS_VBUF);
+      return { s, e };
+    }
+    function isAtBottom() { const w = isEl('isWrap'); return w.scrollTop + w.clientHeight >= w.scrollHeight - isRH * 2; }
+    function isScrollBottom() { const w = isEl('isWrap'); w.scrollTop = w.scrollHeight; isRenderBody(); }
+    // 위쪽에 행이 더해져도(옛 자료 불러오기) 보던 행이 그 자리에 있도록 유지하고 다시 그림
+    function isRenderKeep(stickBottom) {
+      const w = isEl('isWrap'), v = isState.view || [];
+      let anchor = null;
+      if (!stickBottom && v.length) {
+        const i = Math.min(v.length - 1, Math.max(0, Math.floor(Math.max(0, w.scrollTop - IS_HEAD_H) / isRH)));
+        anchor = { id: v[i].id, off: w.scrollTop - (IS_HEAD_H + i * isRH) };
+      }
+      isRender();
+      if (stickBottom) { isScrollBottom(); return; }
+      if (anchor && isState.viewIdx.has(anchor.id)) { w.scrollTop = IS_HEAD_H + isState.viewIdx.get(anchor.id) * isRH + anchor.off; isRenderBody(); }
+    }
     function isRender() {
       if (!isEl('isHead').children.length) isRenderStatic();
       const rows = isRowsView();
+      isState.view = rows;
+      isState.viewIdx = new Map(rows.map((r, i) => [r.id, i]));
       isRenderMeta();
+      isRenderBody();
+      isRenderAfter(rows);
+    }
+    function isRenderBody() {
+      const rows = isState.view || [];
       const body = isEl('isBody');
-      let no = 0;
       if (!rows.length) {
         body.innerHTML = `<tr><td colspan="${IS_COLS.length + 1}" class="is-ro" style="height:120px;text-align:center;white-space:normal;cursor:default">${isState.missing ? '서버에 특이사항 표가 아직 없습니다.' : !isState.loaded ? '불러오는 중…' : isState.rows.length ? '조건에 맞는 기록이 없습니다.' : "아직 기록이 없습니다. '행 추가'를 눌러 시작하세요."}</td></tr>`;
+        isState.vr = { s: 0, e: 0 };
       } else {
-        body.innerHTML = rows.map((r) => {
+        const { s, e } = isVisRange(rows.length);
+        isState.vr = { s, e };
+        const spacer = (h) => h > 0 ? `<tr class="is-spacer" aria-hidden="true"><td colspan="${IS_COLS.length + 1}" style="height:${h}px;padding:0;border:0;background:transparent"></td></tr>` : '';
+        body.innerHTML = spacer(s * isRH) + rows.slice(s, e).map((r, k) => {
+          const no = s + k + 1;
           const mineNew = r._new && isState.drafts.has(r.id);
-          const label = mineNew ? `<button type="button" data-is-cancel="${r.id}" class="px-1 rounded text-[10.5px] font-extrabold text-[#FF3B30] hover:bg-red-50" title="추가한 행 취소">취소</button>` : r._new ? '<span class="text-[10px] text-[#AF52DE]" title="다른 사람이 작성 중">작성중</span>' : ++no;
+          const label = mineNew ? `<button type="button" data-is-cancel="${r.id}" class="px-1 rounded text-[10.5px] font-extrabold text-[#FF3B30] hover:bg-red-50" title="추가한 행 취소">취소</button>` : r._new ? '<span class="text-[10px] text-[#AF52DE]" title="다른 사람이 작성 중">작성중</span>' : no;
           const remTitle = r._rem ? `${r._rem.name} 님이 수정 중 (저장 전)` : '';
           return `<tr data-id="${r.id}" class="${isState.checked.has(r.id) ? 'is-checked' : ''} ${r._new ? 'is-newrow' : ''}">
           <td class="is-gut"><label class="${r._new ? 'inline-flex mr-1' : 'flex'} items-center justify-center gap-1.5 cursor-pointer"><input type="checkbox" data-is-check="${r.id}" ${isState.checked.has(r.id) ? 'checked' : ''} class="w-3.5 h-3.5">${mineNew || r._new ? '' : `<span class="w-5 text-left">${label}</span>`}</label>${mineNew || r._new ? label : ''}</td>
@@ -10184,8 +10240,13 @@
             return `<td data-col="${c.k}" class="${cls}" title="${svEsc(tip)}">${svEsc(v)}</td>`;
           }).join('')}
         </tr>`;
-        }).join('');
+        }).join('') + spacer((rows.length - e) * isRH);
+        const tr = body.querySelector('tr[data-id]'); if (tr && tr.offsetHeight > 10) isRH = tr.offsetHeight;
       }
+      isPlaceEditor();
+      isDrawLayer();
+    }
+    function isRenderAfter(rows) {
       const all = isEl('isCheckAll');
       if (all) { const n = rows.filter(r => isState.checked.has(r.id)).length; all.checked = rows.length > 0 && n === rows.length; all.indeterminate = n > 0 && n < rows.length; }
       isEl('isDelBtn').textContent = isState.checked.size ? `선택 삭제 (${isState.checked.size})` : '선택 삭제';
@@ -10198,8 +10259,6 @@
       sb.querySelector('span').textContent = nd ? `저장 (${nd})` : '저장';
       sb.className = 'ios-btn-tap px-3.5 py-2 rounded-xl text-[12.5px] font-bold flex items-center gap-1 ' + (nd ? 'bg-[#007AFF] text-white shadow-md shadow-blue-500/30' : 'bg-blue-100 text-[#007AFF]');
       isRenderAvatars();
-      isPlaceEditor();
-      isDrawLayer();
     }
     function isTd(id, col) { return document.querySelector(`#isBody tr[data-id="${id}"] td[data-col="${col}"]`); }
     function isRectIn(td) {
@@ -10244,7 +10303,14 @@
     function isSelect(id, col, opts = {}) {
       isState.sel = { id, col };
       document.querySelectorAll('#isBody td.is-sel').forEach(t => t.classList.remove('is-sel'));
-      const td = isTd(id, col);
+      let td = isTd(id, col);
+      if (!td && !opts.noScroll && isState.viewIdx && isState.viewIdx.has(id)) {
+        const w = isEl('isWrap'), y = IS_HEAD_H + isState.viewIdx.get(id) * isRH;
+        if (y < w.scrollTop + IS_HEAD_H) w.scrollTop = y - IS_HEAD_H;
+        else if (y + isRH > w.scrollTop + w.clientHeight) w.scrollTop = y + isRH - w.clientHeight;
+        isRenderBody();
+        td = isTd(id, col);
+      }
       if (td) { td.classList.add('is-sel'); if (!opts.noScroll) isEnsureVisible(td); }
       isTrack();
     }
@@ -10321,7 +10387,8 @@
     function isPlaceEditor() {
       const ed = isState.edit; if (!ed) return;
       const td = isTd(ed.id, ed.col);
-      if (!td) { isCloseEditor(false); return; }
+      if (!td) { if (isState.viewIdx && isState.viewIdx.has(ed.id)) { ed.el.style.display = 'none'; return; } isCloseEditor(false); return; }
+      ed.el.style.display = '';
       const r = isRectIn(td);
       const wide = ed.col === 'detail' || ed.col === 'content' ? 280 : ed.col === 'delivery_date' ? 130 : 0;
       Object.assign(ed.el.style, { left: r.x + 'px', top: r.y + 'px', width: Math.max(r.w, wide) + 'px', height: r.h + 'px' });
@@ -10646,6 +10713,7 @@
       if (ids.length) {
         const delRows = isState.rows.filter(r => ids.includes(r.id));
         const { error } = await supabaseClient.from(IS_TABLE).delete().in('id', ids);
+        if (!error) ids.forEach(id => isState.gone.add(id));
         if (error) { showToastNotification('삭제 실패', dbErrorMessage(error), 'warning'); isRender(); isSendDrafts(); return; }
         isLog(delRows.map(r => ({ action: '삭제', row_id: r.id, field_key: '', field: '', old_value: [r.content, r.detail].filter(Boolean).join(' · '), new_value: '', row_label: isRowLabel(r) })));
         isState.rows = isState.rows.filter(r => !ids.includes(r.id));
@@ -10709,7 +10777,7 @@
       isFp.sel = new Set(isState.filters[k] ? [...isState.filters[k]] : isFp.vals.map(v => v[0]));
       isFp.color = isState.colorFilters[k] || '';
       isFpColorRender();
-      isEl('isFpTitle').textContent = `${col.h} 필터`;
+      isEl('isFpTitle').textContent = `${col.h} 필터${isState.loadingAll ? ' (전체 불러오는 중…)' : ''}`;
       isEl('isFpSearch').value = '';
       isRenderFilterList();
       const pop = isEl('isFilterPop'), r = btn.getBoundingClientRect();
@@ -10896,6 +10964,26 @@
     });
 
     // ---------- 실시간 ----------
+    let isDbQ = [], isDbRaf = 0;
+    function isQueueDb(pl) {
+      isDbQ.push(pl);
+      if (isDbRaf) return;
+      isDbRaf = requestAnimationFrame(() => { isDbRaf = 0; const q = isDbQ; isDbQ = []; isApplyDb(q); });
+    }
+    function isApplyDb(q) {
+      const idx = new Map(isState.rows.map((r, i) => [r.id, i]));
+      const del = new Set();
+      q.forEach(pl => {
+        if (pl.eventType === 'DELETE') { const id = pl.old && pl.old.id; if (id != null) { del.add(id); isState.gone.add(id); } return; }
+        const row = pl.new; if (!row || row.id == null) return;
+        del.delete(row.id);
+        const i = idx.get(row.id);
+        if (i == null) { idx.set(row.id, isState.rows.length); isState.rows.push(row); }
+        else { const cur = isState.rows[i]; if (!cur.updated_at || !row.updated_at || row.updated_at >= cur.updated_at) isState.rows[i] = { ...cur, ...row }; }
+      });
+      if (del.size) isState.rows = isState.rows.filter(r => !del.has(r.id));
+      isRenderKeep(isAtBottom());
+    }
     function isMerge(row) {
       if (!row || row.id == null) return;
       const i = isState.rows.findIndex(r => r.id === row.id);
@@ -10935,7 +11023,8 @@
     }
     function isRenderMeta() {
       const people = new Set(isState.peers.map(p => p.name)); if (isState.me) people.add(isState.me);
-      isEl('isMeta').textContent = isState.missing ? '서버 준비 필요' : `총 ${isState.rows.length}건 · 접속 ${people.size}명${isState.me ? ` · 나 : ${isState.me}` : ' · 사용자 선택 전 (보기만 가능)'}`;
+      const loadTxt = isState.loadingAll ? ` (불러오는 중 ${isState.loadedN.toLocaleString()}${isState.totalN ? ' / ' + Number(isState.totalN).toLocaleString() : ''})` : '';
+      isEl('isMeta').textContent = isState.missing ? '서버 준비 필요' : `총 ${isState.rows.length.toLocaleString()}건${loadTxt} · 접속 ${people.size}명${isState.me ? ` · 나 : ${isState.me}` : ' · 사용자 선택 전 (보기만 가능)'}`;
     }
     function isJoin() {
       if (!supabaseClient || isState.ch || typeof supabaseClient.channel !== 'function') return;
@@ -10964,9 +11053,9 @@
           if (payload.name && !payload.hide) { const r = isState.roster.get(payload.cid); if (r) r.seen = Date.now(); }
           isDrawLayer();
         })
-        .on('broadcast', { event: 'row' }, ({ payload }) => { if (payload && payload.row) { isMerge(payload.row); isRender(); } })
+        .on('broadcast', { event: 'row' }, ({ payload }) => { if (payload && payload.row) isQueueDb({ eventType: 'UPDATE', new: payload.row }); })
         .on('broadcast', { event: 'reload' }, () => { isLoad(); })
-        .on('broadcast', { event: 'del' }, ({ payload }) => { if (payload && payload.ids) { isState.rows = isState.rows.filter(r => !payload.ids.includes(r.id)); isRender(); } })
+        .on('broadcast', { event: 'del' }, ({ payload }) => { if (payload && payload.ids) payload.ids.forEach(id => isQueueDb({ eventType: 'DELETE', old: { id } })); })
         .on('broadcast', { event: 'msg' }, ({ payload }) => { if (payload && payload.msg) isAddMsg(payload.msg, true); })
         .on('broadcast', { event: 'log' }, ({ payload }) => { if (payload && payload.logs) { payload.logs.forEach(isAddLog); isRenderLogs(); } })
         .subscribe((status) => {
@@ -10981,11 +11070,7 @@
       // DB 변경 구독은 별도 채널 (표가 없거나 실시간 등록 전이어도 접속자 표시는 동작하도록)
       if (!isState.dbCh) {
         isState.dbCh = supabaseClient.channel('issue-sheet-db')
-          .on('postgres_changes', { event: '*', schema: 'public', table: IS_TABLE }, (pl) => {
-            if (pl.eventType === 'DELETE') { const id = pl.old && pl.old.id; if (id != null) isState.rows = isState.rows.filter(r => r.id !== id); }
-            else isMerge(pl.new);
-            isRender();
-          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: IS_TABLE }, (pl) => isQueueDb(pl))
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: IS_MSG_TABLE }, (pl) => isAddMsg(pl.new, true))
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: IS_LOG_TABLE }, (pl) => { isAddLog(pl.new); isRenderLogs(); })
           .subscribe();
@@ -11015,22 +11100,62 @@
     }
 
     // ---------- 불러오기 ----------
+    let isLoadSeq = 0;
     async function isLoad() {
       if (!supabaseClient) { isState.loaded = true; isRender(); return; }
-      const all = [];
-      let err = null;
-      for (let from = 0; from < 20000; from += 1000) {
-        const { data, error } = await supabaseClient.from(IS_TABLE).select('*').order('id').range(from, from + 999);
-        if (error) { err = error; break; }
-        all.push(...(data || []));
-        if (!data || data.length < 1000) break;
+      const seq = ++isLoadSeq, PAGE = 1000, MAX = 300000, startIso = new Date(Date.now() - 5000).toISOString();
+      const page = (from) => supabaseClient.from(IS_TABLE).select('*').order('delivery_date', { ascending: false, nullsFirst: false }).order('id', { ascending: false }).range(from, from + PAGE - 1);
+      const fresh = !isState.loaded || !isState.rows.length;
+      const stick = fresh || isAtBottom();
+      isState.gone = new Set();
+      supabaseClient.from(IS_TABLE).select('id', { count: 'exact', head: true }).then(r => { if (seq === isLoadSeq && !r.error) { isState.totalN = r.count; isRenderMeta(); } }, () => {});
+      const got = new Map();
+      const mergeIn = (data) => {                         // 받은 행을 지금 목록에 합치기 (실시간으로 바뀐 더 새 값은 유지)
+        const idx = new Map(isState.rows.map((r, i) => [r.id, i]));
+        (data || []).forEach(r => {
+          got.set(r.id, r);
+          if (isState.gone.has(r.id)) return;
+          const i = idx.get(r.id);
+          if (i == null) { idx.set(r.id, isState.rows.length); isState.rows.push(r); }
+          else { const c = isState.rows[i]; if (!c.updated_at || !r.updated_at || r.updated_at >= c.updated_at) isState.rows[i] = r; }
+        });
+      };
+      const first = await page(0);
+      const err = first.error || null;
+      if (!err) {
+        if (seq !== isLoadSeq) return;
+        if (fresh) isState.rows = [];
+        mergeIn(first.data);
+        isState.loaded = true;
+        isState.loadingAll = (first.data || []).length === PAGE;
+        isState.loadedN = got.size;
+        isState.missing = false; isEl('isNotice').classList.add('hidden');
+        isRenderKeep(stick);
+        if (isState.loadingAll) {
+          for (let from = PAGE; from < MAX; from += PAGE) {
+            await new Promise(r => setTimeout(r, 30));          // 화면이 멈추지 않도록 잠깐씩 쉬면서
+            if (seq !== isLoadSeq) return;
+            const { data, error } = await page(from);
+            if (error || seq !== isLoadSeq) break;
+            mergeIn(data);
+            isState.loadedN = got.size;
+            isRenderKeep(isAtBottom());
+            if (!data || data.length < PAGE) break;
+          }
+        }
+        if (seq !== isLoadSeq) return;
+        // 다 받은 뒤 : 서버에서 지워진 행 정리 (불러오는 동안 새로 생긴 행은 유지)
+        isState.rows = isState.rows.filter(r => !isState.gone.has(r.id) && (got.has(r.id) || (r.created_at && r.created_at >= startIso)));
+        isState.loadingAll = false;
+        isRenderKeep(isAtBottom());
+        return;
       }
+      const all = [];
       isState.missing = !!err && (err.code === 'PGRST205' || err.code === '42P01' || /Could not find the table|does not exist/i.test(err.message || ''));
       const notice = isEl('isNotice');
       notice.classList.toggle('hidden', !isState.missing);
       if (isState.missing) notice.textContent = "특이사항을 저장할 표가 서버에 아직 없습니다. Supabase SQL Editor 에서 '특이사항관리_DB.sql' 을 실행해 주세요. (그 전에는 접속자 표시만 동작합니다)";
       else if (err) showToastNotification('특이사항 불러오기 실패', dbErrorMessage(err), 'warning');
-      if (!err) isState.rows = all;
       isState.loaded = true;
       isRender();
     }
@@ -11107,6 +11232,18 @@
       isRender();
     });
     isEl('isWrap').setAttribute('tabindex', '0');
+    let isScrollRaf = 0;
+    document.addEventListener('scroll', () => {
+      if (isScrollRaf || isEl('issueSheetViewArea').classList.contains('hidden')) return;
+      isScrollRaf = requestAnimationFrame(() => {
+        isScrollRaf = 0;
+        const n = (isState.view || []).length, vr = isState.vr || { s: 0, e: 0 };
+        if (!n) return;
+        const { s, e } = isVisRange(n);
+        if (s < vr.s || e > vr.e || (s - vr.s) > IS_VBUF * 2 || (vr.e - e) > IS_VBUF * 2) isRenderBody();
+      });
+    }, { passive: true, capture: true });
+    window.addEventListener('resize', () => { if (!isEl('issueSheetViewArea').classList.contains('hidden')) isRenderSoon(); });
     isEl('isWrap').addEventListener('mousemove', isOnMouse);
     isEl('isWrap').addEventListener('mouseleave', () => { if (isState.ch && isState.me) isBroadcast('cursor', { cid: isState.cid, hide: true }); });
     const isModalOpen = () => isEl('isUserModal').classList.contains('opacity-100') || isEl('isTabModal').classList.contains('opacity-100') || isEl('ibSetModal').classList.contains('opacity-100') || !isEl('isFilterPop').classList.contains('hidden');
