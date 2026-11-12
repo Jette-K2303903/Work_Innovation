@@ -100,6 +100,8 @@
     .is-rsz { position: absolute; top: 0; right: -4px; width: 8px; height: 100%; cursor: col-resize; z-index: 5; }
     .is-rsz:hover, .is-rsz:active { background: linear-gradient(to right, transparent 3px, #007AFF 3px, #007AFF 5px, transparent 5px); }
     .is-table tr.is-pend td { background: #E8F8EC !important; cursor: pointer; }
+    .is-table tr.is-dellock td, .is-table tr.is-pend.is-dellock td { background: #FFF2CC !important; }
+    .is-table tr.is-dellock td.is-gut { box-shadow: inset 3px 0 0 #FFC000; }
     .is-table tr.is-pend:hover td { background: #D6F3DE !important; }
     .is-table tr.is-pend td.is-gut { box-shadow: inset 3px 0 0 #34C759; }
     .is-table td .is-fb { font-weight: 800; }
@@ -1326,6 +1328,8 @@
           <span class="min-w-0 flex-1"><span class="block text-[14px] font-semibold text-gray-900">때때 개선함 <span id="ibImpBadge" class="hidden ml-1 px-1.5 py-0.5 rounded-full bg-[#FF3B30] text-white text-[10px] font-bold align-middle"></span></span><span class="block text-[11px] text-gray-500">사용자 건의 · 때때가 모른 질문 확인, 답 가르치기</span></span>
           <i class="ph-bold ph-caret-right text-gray-300"></i>
         </button>
+        <div class="mt-3 pt-3 border-t border-gray-100 text-[11px] font-semibold text-gray-400">탭 관리</div>
+        <div id="isSetTabs" class="mt-1.5 space-y-1.5"></div>
         <div class="mt-3 pt-3 border-t border-gray-100 text-[11px] font-semibold text-gray-400">때때 사진 판단 연결</div>
         <label class="block mt-2 text-[12px] font-semibold text-gray-600">때때 두뇌 주소</label>
         <input type="url" id="ibSetUrl" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[13px] font-mono border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
@@ -1447,11 +1451,13 @@
           <div class="min-w-0 flex-1"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">현장 접수 확인</h3><p class="text-[11px] text-gray-500">특이사항에 등록할까요?</p></div>
           <button type="button" onclick="isClosePend()" class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"><i class="ph-bold ph-x text-sm"></i></button>
         </div>
-        <div id="isPendBody" class="mt-3"></div>
-        <div class="grid grid-cols-3 gap-2 mt-4">
-          <button type="button" onclick="isPendAction('reject')" class="ios-btn-tap py-2.5 bg-white border border-gray-200 text-[#FF3B30] font-semibold rounded-xl text-[14px]">취소</button>
-          <button type="button" onclick="isPendAction('wait')" class="ios-btn-tap py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[14px]">대기</button>
-          <button type="button" onclick="isPendAction('confirm')" class="ios-btn-tap py-2.5 bg-[#34C759] text-white font-semibold rounded-xl text-[14px]">확정</button>
+        <div class="mt-2 text-right text-[11px] font-semibold text-gray-400" id="isPendCount"></div>
+        <div id="isPendLock" class="hidden mt-1 px-3 py-2 rounded-xl bg-[#FFF2CC] border border-[#FFC000]/50 text-[12px] font-semibold text-[#7A5B00]">업로드 내역에서 삭제 요청된 접수예요. 업로드 내역에서 삭제 또는 복원해 주세요.</div>
+        <div id="isPendBody" class="mt-2"></div>
+        <div class="flex gap-2 mt-4">
+          <button type="button" id="isPendNo" onclick="isPendAction('reject')" class="ios-btn-tap flex-1 py-2.5 bg-white border border-gray-200 text-[#FF3B30] font-semibold rounded-xl text-[14px]">취소</button>
+          <button type="button" onclick="isPendAction('wait')" class="ios-btn-tap flex-1 py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[14px]">대기</button>
+          <button type="button" id="isPendOk" onclick="isPendAction('confirm')" class="ios-btn-tap flex-1 py-2.5 bg-[#34C759] text-white font-semibold rounded-xl text-[14px]">확정</button>
         </div>
       </div>
     </div>
@@ -1467,6 +1473,8 @@
         <p id="isManInfo" class="mt-1.5 text-[11.5px] text-gray-500 min-h-[17px]"></p>
         <label class="block mt-2 text-[12px] font-semibold text-gray-600">수량</label>
         <input type="text" id="isManQty" inputmode="decimal" placeholder="예: 3" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[14px] border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
+        <label class="block mt-2 text-[12px] font-semibold text-gray-600">비고</label>
+        <input type="text" id="isManNote" placeholder="선택 입력" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[14px] border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
         <div class="grid grid-cols-2 gap-2 mt-4">
           <button type="button" onclick="isCloseManual()" class="ios-btn-tap py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[14px]">취소</button>
           <button type="button" onclick="isManSave()" class="ios-btn-tap py-2.5 bg-[#007AFF] text-white font-semibold rounded-xl text-[14px]">저장</button>
@@ -1493,11 +1501,15 @@
     </div>
     <!-- [특이사항 관리 : 적용 (체크한 행 → 탭)] -->
     <div id="isApplyModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
-      <div class="bg-white rounded-[28px] w-full max-w-xs p-5 shadow-2xl border border-gray-100">
-        <h3 class="text-[16px] font-bold text-gray-900 tracking-tight">어느 탭에 추가할까요?</h3>
+      <div class="bg-white rounded-[28px] w-full max-w-xl p-5 shadow-2xl border border-gray-100 flex flex-col max-h-[90vh]">
+        <h3 class="text-[16px] font-bold text-gray-900 tracking-tight">어느 목록에 추가할까요?</h3>
         <p id="isApplySub" class="text-[11.5px] text-gray-500 mt-0.5"></p>
-        <div id="isApplyList" class="mt-3 space-y-2 max-h-[50vh] overflow-y-auto"></div>
-        <button type="button" onclick="isCloseApply()" class="ios-btn-tap mt-3 w-full py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[14px]">취소</button>
+        <div class="mt-3 flex items-center gap-2 flex-shrink-0"><span class="text-[12px] font-semibold text-gray-600 flex-none">한 번에 고르기</span><select id="isApplyAll" onchange="isApplySetAll(this.value)" class="flex-1 px-2 py-1.5 rounded-lg bg-gray-100 border border-gray-200 text-[12.5px]"></select></div>
+        <div id="isApplyList" class="mt-2 space-y-2 overflow-y-auto min-h-0 flex-1"></div>
+        <div class="grid grid-cols-2 gap-2 mt-3 flex-shrink-0">
+          <button type="button" onclick="isCloseApply()" class="ios-btn-tap py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[14px]">취소</button>
+          <button type="button" onclick="isApplyConfirm()" class="ios-btn-tap py-2.5 bg-[#007AFF] text-white font-semibold rounded-xl text-[14px]">확정</button>
+        </div>
       </div>
     </div>
 
@@ -2302,7 +2314,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.032</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.033</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -3972,8 +3984,11 @@
     }
     async function incidentPersistDelete(rec) {
       return incidentRun('삭제', async () => {
+        let linked = null;
+        try { const r = await supabaseClient.from(INCIDENT_TABLE).select('issue_row_id').eq('id', rec.id).maybeSingle(); linked = r.data && r.data.issue_row_id; } catch (e) {}
         const { error } = await supabaseClient.from(INCIDENT_TABLE).delete().eq('id', rec.id);
         if (error) throw error;
+        if (linked) { try { await supabaseClient.from('issue_sheet_rows').delete().eq('id', linked); } catch (e) {} }     // 특이사항에 확정된 행도 같이 삭제
         await incidentRemoveFiles((rec.photos || []).flatMap(p => [p.path, p.thumbPath]));
       });
     }
@@ -10195,8 +10210,8 @@
       { k: 'detail', h: '상세내용', w: 240, ml: true },
       { k: 'subject', h: '주체', w: 56, opt: true },
       { k: 'fault', h: '귀책', w: 56, opt: true },
-      { k: 'inbound', h: '입고', w: 56 },
-      { k: 'data_reg', h: '자료등록', w: 64 }
+      { k: 'inbound', h: '입고', w: 56, opt: true, fixed: ['-', '입고'] },
+      { k: 'data_reg', h: '자료등록', w: 64, opt: true, fixed: ['-', '입고'] }
     ];
     IS_COLS.forEach(c => { if (c.auto) c.ro = true; });
     const IS_EDIT = IS_COLS.filter(c => !c.ro).map(c => c.k);
@@ -10266,7 +10281,7 @@
       ch: null, dbCh: null, peers: [], roster: new Map(), cursors: new Map(), users: [], cache: { store: new Map(), product: new Map() },
       msgs: [], logs: [], lastRead: null, chatMissing: false, logMissing: false, panels: null, mBox: null,
       tab: 'home', tabs: [], filters: {}, colorFilters: {}, autoVals: new Map(), sug: null,
-      view: [], viewIdx: new Map(), vr: { s: 0, e: 0 }, gone: new Set(), loadingAll: false, loadedN: 0, totalN: null, pend: [], pendSel: null
+      view: [], viewIdx: new Map(), vr: { s: 0, e: 0 }, gone: new Set(), loadingAll: false, loadedN: 0, totalN: null, pend: [], pendSel: null, lockRows: new Set(), pendQ: []
     };
     const IS_MSG_TABLE = 'issue_sheet_messages', IS_LOG_TABLE = 'issue_sheet_logs', IS_READ_TABLE = 'issue_sheet_reads';
     const isMissingErr = (err) => !!err && (err.code === 'PGRST205' || err.code === '42P01' || /Could not find the table|does not exist/i.test(err.message || ''));
@@ -10334,6 +10349,9 @@
           .is('issue_status', null).order('created_at', { ascending: true }).limit(500);
         if (error) { isState.pend = []; return; }
         isState.pend = (data || []).filter(x => x.submit_role !== 'office').map((x, i) => isPendRow(x, i));
+        // 특이사항에 확정된 접수 중 업로드 내역에서 삭제 요청(삭제 대기)된 것 → 그 행 잠금
+        const lk = await supabaseClient.from(INCIDENT_TABLE).select('id,issue_row_id,status').eq('status', 'delete_requested').limit(1000);
+        isState.lockRows = new Set((lk.data || []).filter(x => x.issue_row_id && x.status === 'delete_requested').map(x => x.issue_row_id));
       } catch (e) { isState.pend = []; }
       isRenderKeep(isAtBottom());
     }
@@ -10341,7 +10359,7 @@
     const isPendId = (id) => typeof id === 'number' && id <= IS_PEND_BASE;
     function isPendRow(x, i) {
       return {
-        id: IS_PEND_BASE - i, _pend: true, _inc: x, _new: false, _mine: new Set(), _rem: null,
+        id: IS_PEND_BASE - i, _pend: true, _inc: x, _new: false, _mine: new Set(), _rem: null, _del: x.status === 'delete_requested',
         delivery_date: String(x.delivery_date || x.doc_date || '').slice(0, 10), main_center: x.main_center || '', client_code: x.client_code || '', client_name: x.client_name || '',
         store_code: x.store_code || '', store_name: x.store_name || '', product_code: x.product_code || '', product_name: x.product_name || '',
         temperature: x.temperature || '', unit: x.unit_display || '', item_designation: x.item_designation || '', stock_type: x.stock_type || '',
@@ -10349,9 +10367,15 @@
       };
     }
     const isPendFind = (id) => (isState.pend || []).find(p => p.id === id);
-    function isOpenPend(id) {
+    const isLocked = (id) => isState.lockRows && isState.lockRows.has(id);
+    function isLockToast() { showToastNotification('삭제 대기 중', '업로드 내역에서 삭제 요청된 항목이라 수정 · 삭제할 수 없어요. 업로드 내역에서 삭제 또는 복원해 주세요.', 'warning'); }
+    function isOpenPend(id, cont) {
       const p = isPendFind(id); if (!p) return;
+      if (!cont) { const i = isState.pend.indexOf(p); isState.pendQ = isState.pend.slice(i).map(x => x._inc.id); }    // 누른 것부터 마지막까지 차례로
       isState.pendSel = id;
+      isEl('isPendLock').classList.toggle('hidden', !p._del);
+      ['isPendOk', 'isPendNo'].forEach(b => isEl(b).classList.toggle('hidden', !!p._del));
+      const left = isState.pendQ.length; isEl('isPendCount').textContent = left > 1 ? `남은 접수 ${left}건` : '마지막 접수';
       const x = p._inc, ts = new Date(x.created_at);
       const who = { field: '현장', guest: '비로그인' }[x.submit_role] || '현장/비로그인';
       const line = (h, v) => v ? `<div class="flex gap-2 text-[13px]"><span class="w-[64px] flex-none text-gray-400">${h}</span><span class="flex-1 min-w-0 text-gray-900 font-semibold whitespace-pre-line break-words">${svEsc(v)}</span></div>` : '';
@@ -10359,18 +10383,29 @@
         <div class="space-y-1.5 p-3 rounded-2xl bg-[#F2F2F7]">${line('배송일', p.delivery_date)}${line('매장', [p.store_name, p.store_code && `(${p.store_code})`].filter(Boolean).join(' '))}${line('제품', [p.product_name, p.product_code && `(${p.product_code})`].filter(Boolean).join(' '))}${line('수량', p.qty && p.qty !== '0' ? `${p.qty}${p.unit ? ' ' + p.unit : ''}` : '')}${line('내용', p.content)}${line('상세내용', p.detail)}${line('기사', x.driver)}</div>`;
       isDlShow('isPendModal', true);
     }
-    function isClosePend() { isDlShow('isPendModal', false); isState.pendSel = null; }
+    function isClosePend() { isDlShow('isPendModal', false); isState.pendSel = null; isState.pendQ = []; }
+    function isPendNext(curIncId) {                                   // 다음 연두색 열기 · 마지막이면 닫기
+      isState.pendQ = (isState.pendQ || []).filter(x => x !== curIncId);
+      while (isState.pendQ.length) {
+        const p = (isState.pend || []).find(x => x._inc.id === isState.pendQ[0]);
+        if (p) { isOpenPend(p.id, true); return; }
+        isState.pendQ.shift();
+      }
+      isClosePend();
+    }
     async function isPendAction(act) {
       const p = isPendFind(isState.pendSel); if (!p) { isClosePend(); return; }
-      if (act === 'wait') { isClosePend(); return; }
-      if (isNeedUser()) return;
       const x = p._inc;
+      if (act === 'wait') { isPendNext(x.id); return; }             // 대기 : 그대로 두고 다음으로
+      if (p._del) { isLockToast(); return; }
+      if (isNeedUser()) return;
       if (act === 'reject') {
         showConfirmModal(async () => {
           const { error } = await supabaseClient.from(INCIDENT_TABLE).update({ issue_status: 'rejected' }).eq('id', x.id);
           if (error) { showToastNotification('처리 실패', dbErrorMessage(error), 'warning'); return; }
-          isClosePend(); isBroadcast('pend', {}); await isLoadPending();
+          isBroadcast('pend', {}); await isLoadPending();
           showToastNotification('등록 취소', '특이사항에 등록하지 않았어요. (업로드 내역에는 그대로 남아 있어요)', 'success');
+          isPendNext(x.id);
         }, '등록 취소', `<b>${svEsc(p.store_name || '')} · ${svEsc(p.product_name || '')}</b><br>이 접수를 특이사항에 등록하지 않고 목록에서 뺄까요?`);
         return;
       }
@@ -10386,42 +10421,74 @@
         isQueueDb({ eventType: 'INSERT', new: data });
         isBroadcast('row', { row: data }); isBroadcast('pend', {});
         isLog([{ action: '추가', row_id: data.id, field_key: '', field: '', old_value: '', new_value: `현장 접수 확정 (${x.author || '작성자 없음'})`, row_label: isRowLabel(data) }]);
-        isClosePend();
         await isLoadPending();
         showToastNotification('등록 완료', '특이사항에 등록했어요.', 'success');
+        isPendNext(x.id);
       } catch (e) { showToastNotification('등록 실패', dbErrorMessage(e), 'warning'); }
       finally { hideBusy(); }
     }
 
     // ========== 적용 : 체크한 행을 웰스토리 · 유통물류 · 원앤원 등 탭에 추가 ==========
-    function isOpenApply() {
+    function isOpenApply() { isOpenApplyAsync(); }
+    async function isOpenApplyAsync() {
       if (isNeedUser()) return;
-      const ids = [...isState.checked].filter(id => id > 0 && isFindRow(id));
-      if (!ids.length) { showToastNotification('선택 필요', '탭에 보낼 행을 왼쪽 체크박스로 선택해 주세요.', 'warning'); return; }
       const lists = isAllLists();
       if (!lists.length) { showToastNotification('탭 없음', '먼저 탭을 추가해 주세요.', 'warning'); return; }
-      isEl('isApplySub').textContent = `체크한 ${ids.length}행을 어느 목록에 추가할까요?`;
-      isEl('isApplyList').innerHTML = lists.map(l => `<button type="button" data-apply-tab="${svEsc(l.key)}" class="ios-btn-tap w-full flex items-center gap-2.5 px-3.5 py-3 rounded-2xl bg-gray-50 border border-gray-200 text-left hover:bg-blue-50"><i class="ph-bold ${l.tab.icon} text-[#007AFF] text-lg"></i><span class="flex-1 text-[14px] font-semibold text-gray-900">${svEsc(l.name)}</span><i class="ph-bold ph-caret-right text-gray-300"></i></button>`).join('');
+      const checked = [...isState.checked].filter(id => id > 0).map(id => isFindRow(id)).filter(Boolean);
+      let rows;
+      if (checked.length) {
+        rows = checked.filter(r => String(r.inbound || '').trim() === '입고');
+        if (!rows.length) { showToastNotification('입고 확인', "입고 칸이 '입고'인 행만 적용할 수 있어요.", 'warning'); return; }
+      } else {
+        // 체크가 없으면 : 입고 = '입고' 인데 아직 어느 목록에도 안 들어간 행
+        const cand = isState.rows.filter(r => String(r.inbound || '').trim() === '입고');
+        if (!cand.length) { showToastNotification('적용할 행 없음', "입고 칸을 '입고'로 바꾸거나 행을 체크한 뒤 적용을 눌러 주세요.", 'warning'); return; }
+        const done = new Set();
+        try {
+          const ids = cand.map(r => r.id);
+          for (let i = 0; i < ids.length; i += 200) {
+            const part = ids.slice(i, i + 200);
+            const [a, b] = await Promise.all([supabaseClient.from(IS_TAB_ITEMS).select('source_row_id').in('source_row_id', part), supabaseClient.from(IS_TAB_OUT).select('source_row_id').in('source_row_id', part)]);
+            (a.data || []).concat(b.data || []).forEach(x => x.source_row_id && done.add(x.source_row_id));
+          }
+        } catch (e) {}
+        rows = cand.filter(r => !done.has(r.id));
+        if (!rows.length) { showToastNotification('적용할 행 없음', "입고 행이 모두 이미 목록에 들어가 있어요.", 'info'); return; }
+      }
+      isState.applyRows = rows;
+      const guess = (r) => { const n = `${r.client_name || ''} ${r.store_name || ''}`; const l = lists.find(x => n.includes(x.tab.name)); return l ? l.key : ''; };
+      const opt = (sel) => `<option value="">목록 선택</option>` + lists.map(l => `<option value="${svEsc(l.key)}" ${sel === l.key ? 'selected' : ''}>${svEsc(l.name)}</option>`).join('');
+      isEl('isApplySub').textContent = `입고 ${rows.length}건 · 제품마다 들어갈 목록을 고르고 비고를 확인한 뒤 확정해 주세요.`;
+      isEl('isApplyAll').innerHTML = opt('');
+      isEl('isApplyList').innerHTML = rows.map((r, i) => `<div class="p-2.5 rounded-2xl border border-gray-200 bg-gray-50" data-apply-i="${i}">
+          <div class="flex items-center gap-2"><span class="flex-1 min-w-0 truncate text-[13px] font-bold text-gray-900">${svEsc(r.product_name || '(제품명 없음)')}</span><span class="flex-none font-mono text-[11px] text-[#007AFF]">${svEsc(r.product_code || '')}</span><span class="flex-none text-[12px] font-bold text-gray-700">${svEsc(r.qty || '')}</span></div>
+          <div class="text-[11px] text-gray-500 truncate">${svEsc(String(r.delivery_date || '').slice(0, 10))} · ${svEsc(r.store_name || '')}${r.temperature ? ' · ' + svEsc(r.temperature) : ''}</div>
+          <div class="mt-1.5 grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-1.5">
+            <select data-apply-list class="px-2 py-1.5 rounded-lg bg-white border border-gray-200 text-[12.5px]">${opt(guess(r))}</select>
+            <input type="text" data-apply-note value="${svEsc(String(r.detail || '').replace(/\n/g, ' '))}" placeholder="비고" class="px-2 py-1.5 rounded-lg bg-white border border-gray-200 text-[12.5px]">
+          </div></div>`).join('');
       isDlShow('isApplyModal', true);
     }
     function isCloseApply() { isDlShow('isApplyModal', false); }
-    document.addEventListener('click', (e) => { const b = e.target.closest('[data-apply-tab]'); if (b) isApplyTo(b.dataset.applyTab); });
-    async function isApplyTo(tabId) {
-      const lst = isAllLists().find(l => l.key === tabId); if (!lst) return;
-      const tab = { name: lst.name };
-      const rows = [...isState.checked].filter(id => id > 0).map(id => isFindRow(id)).filter(Boolean);
-      if (!rows.length) { isCloseApply(); return; }
-      const items = rows.map(r => ({ tab: tabId, product_code: r.product_code || null, product_name: r.product_name || null, temperature: r.temperature || null, qty: r.qty || null, source_row_id: r._new ? null : r.id, created_by: isState.me }));
+    function isApplySetAll(v) { if (!v) return; isEl('isApplyList').querySelectorAll('[data-apply-list]').forEach(s => { s.value = v; }); }
+    async function isApplyConfirm() {
+      const rows = isState.applyRows || [];
+      const picks = [...isEl('isApplyList').querySelectorAll('[data-apply-i]')].map(el => ({ r: rows[+el.dataset.applyI], key: el.querySelector('[data-apply-list]').value, note: el.querySelector('[data-apply-note]').value.trim() }));
+      const miss = picks.filter(p => !p.key);
+      if (miss.length) { showToastNotification('목록 선택', `${miss.length}건의 목록을 골라 주세요.`, 'warning'); return; }
+      const items = picks.map(p => ({ tab: p.key, product_code: p.r.product_code || null, product_name: p.r.product_name || null, temperature: p.r.temperature || null, qty: p.r.qty || null, note: p.note || null, source_row_id: p.r._new ? null : p.r.id, created_by: isState.me }));
       showBusy('추가 중...');
       try {
         const { error } = await supabaseClient.from(IS_TAB_ITEMS).insert(items);
         if (error) throw error;
         isCloseApply();
-        rows.forEach(r => { if (!isState.drafts.has(r.id)) isState.checked.delete(r.id); });
+        picks.forEach(p => { if (!isState.drafts.has(p.r.id)) isState.checked.delete(p.r.id); });
         isRender();
-        isBroadcast('tabitems', { tab: tabId });
-        isLog([{ action: '적용', row_id: null, field_key: '', field: '', old_value: '', new_value: `${tab.name} 탭에 ${items.length}행 추가`, row_label: '적용' }]);
-        showToastNotification('적용 완료', `${tab.name} 탭에 ${items.length}행을 추가했어요.`, 'success');
+        const by = new Map(); picks.forEach(p => by.set(p.key, (by.get(p.key) || 0) + 1));
+        by.forEach((n, k) => isBroadcast('tabitems', { tab: k }));
+        const sum = [...by.entries()].map(([k, n]) => `${isListName(k)} ${n}건`).join(', ');
+        isLog([{ action: '적용', row_id: null, field_key: '', field: '', old_value: '', new_value: sum, row_label: '적용' }]);
+        showToastNotification('적용 완료', sum, 'success');
       } catch (e) { showToastNotification('적용 실패', dbErrorMessage(e), 'warning'); }
       finally { hideBusy(); }
     }
@@ -10499,11 +10566,33 @@
           <td class="px-2 py-2 font-mono text-[12px] text-gray-700 truncate">${svEsc(r.product_code || '')}</td>
           <td class="px-2 py-2 text-gray-900 font-semibold truncate">${svEsc(r.product_name || '')}</td>
           <td class="px-2 py-2 text-gray-600 truncate">${svEsc(r.temperature || '')}</td>
-          <td class="px-2 py-2 text-right font-bold text-gray-900">${svEsc(r.qty || '')}</td></tr>`).join('')
-        : `<tr><td colspan="5" class="py-10 text-center text-[12.5px] text-gray-400">${L.loading ? '불러오는 중…' : '아직 추가된 행이 없어요.'}</td></tr>`;
+          <td class="px-2 py-2 text-right font-bold text-gray-900">${svEsc(r.qty || '')}</td>
+          <td class="px-2 py-2 text-gray-700 truncate cursor-text hover:bg-blue-50/60" data-note-id="${r.id}" title="${svEsc(r.note || '눌러서 비고 입력')}">${r.note ? svEsc(r.note) : '<span class="text-gray-300">비고</span>'}</td></tr>`).join('')
+        : `<tr><td colspan="6" class="py-10 text-center text-[12.5px] text-gray-400">${L.loading ? '불러오는 중…' : '아직 추가된 행이 없어요.'}</td></tr>`;
       const all = document.querySelector(`[data-tab-all="${CSS.escape(key)}"]`); if (all) { all.checked = rows.length > 0 && L.checked.size === rows.length; all.indeterminate = L.checked.size > 0 && L.checked.size < rows.length; }
       const ob = isEl('isTabOutBtn_' + key); if (ob) { ob.disabled = !L.checked.size; ob.querySelector('span').textContent = L.checked.size ? `출고 (${L.checked.size})` : '출고'; }
     }
+    // 비고 칸 : 눌러서 바로 고치기 (Enter · 칸 밖 클릭 = 저장, Esc = 취소)
+    isEl('isTabPane').addEventListener('click', (e) => {
+      const td = e.target.closest('[data-note-id]'); if (!td || td.querySelector('input')) return;
+      if (isNeedUser()) return;
+      const id = +td.dataset.noteId, key = td.closest('[data-list-body]').dataset.listBody, L = isLs(key), r = L.rows.find(x => x.id === id); if (!r) return;
+      td.innerHTML = `<input type="text" class="w-full px-1.5 py-1 rounded-md border border-[#007AFF] text-[12.5px] outline-none" value="${svEsc(r.note || '')}">`;
+      const inp = td.querySelector('input'); inp.focus(); inp.select();
+      let done = false;
+      const finish = async (save) => {
+        if (done) return; done = true;
+        const v = inp.value.trim();
+        if (save && v !== (r.note || '')) {
+          const { error } = await supabaseClient.from(IS_TAB_ITEMS).update({ note: v || null }).eq('id', id);
+          if (error) showToastNotification('비고 저장 실패', dbErrorMessage(error), 'warning');
+          else { r.note = v || null; isBroadcast('tabitems', { tab: key }); }
+        }
+        isRenderTabBody(key);
+      };
+      inp.addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.isComposing || ev.keyCode === 229) return; if (ev.key === 'Enter') finish(true); else if (ev.key === 'Escape') finish(false); });
+      inp.addEventListener('blur', () => finish(true));
+    });
     isEl('isTabPane').addEventListener('change', (e) => {
       const all = e.target.closest('[data-tab-all]');
       if (all) { const k = all.dataset.tabAll, L = isLs(k); L.checked = all.checked ? new Set(L.rows.map(r => r.id)) : new Set(); isRenderTabBody(k); return; }
@@ -10549,7 +10638,7 @@
       let items = L.rows.filter(r => ids.includes(r.id));
       if (items.length < ids.length) { const { data } = await supabaseClient.from(IS_TAB_ITEMS).select('*').in('id', ids); items = data || []; }
       if (!items.length) throw new Error('출고할 행을 찾지 못했어요.');
-      const recs = items.map(r => ({ tab: key, product_code: r.product_code, product_name: r.product_name, temperature: r.temperature, qty: r.qty, out_date: outDate, out_store: outStore, source_item_id: r.id, created_by: isState.me }));
+      const recs = items.map(r => ({ tab: key, product_code: r.product_code, product_name: r.product_name, temperature: r.temperature, qty: r.qty, note: r.note || null, out_date: outDate, out_store: outStore, source_item_id: r.id, source_row_id: r.source_row_id || null, created_by: isState.me }));
       const ins = await supabaseClient.from(IS_TAB_OUT).insert(recs);
       if (ins.error) throw ins.error;
       const del = await supabaseClient.from(IS_TAB_ITEMS).delete().in('id', items.map(r => r.id));
@@ -10585,9 +10674,9 @@
           if (!data || data.length < 1000) break;
         }
         if (!all.length) { showToastNotification('다운로드', '아직 출고 기록이 없어요.', 'info'); return; }
-        const aoa = [['제품코드', '제품명', '온도', '수량', '출고일자', '출고매장']].concat(all.map(r => { const q = parseFloat(r.qty); return [r.product_code || '', r.product_name || '', r.temperature || '', isNaN(q) ? (r.qty || '') : q, r.out_date || '', r.out_store || '']; }));
+        const aoa = [['제품코드', '제품명', '온도', '수량', '비고', '출고일자', '출고매장']].concat(all.map(r => { const q = parseFloat(r.qty); return [r.product_code || '', r.product_name || '', r.temperature || '', isNaN(q) ? (r.qty || '') : q, r.note || '', r.out_date || '', r.out_store || '']; }));
         const ws = XLSX.utils.aoa_to_sheet(aoa);
-        ws['!cols'] = [{ wch: 12 }, { wch: 36 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 22 }];
+        ws['!cols'] = [{ wch: 12 }, { wch: 36 }, { wch: 8 }, { wch: 8 }, { wch: 30 }, { wch: 12 }, { wch: 22 }];
         const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '출고 기록');
         XLSX.writeFile(wb, `${isListName(key).replace(/[\s\\/?*\[\]:→·]+/g, '_')}_출고기록_${isToday()}.xlsx`);
       } catch (e) { showToastNotification('다운로드 실패', dbErrorMessage(e), 'warning'); }
@@ -10595,7 +10684,7 @@
     }
     // ========== 표 칸 너비 (홈화면 · 탭) : 머리글 오른쪽 끝을 끌어서 조절 → 모두에게 같이 적용 · 수정 기록 ==========
     const IS_COLW_KEY = 'issue_sheet_colw';
-    const IS_TAB_COLS = [{ k: 'product_code', h: '제품코드', w: 110 }, { k: 'product_name', h: '제품명', w: 280 }, { k: 'temperature', h: '온도', w: 70 }, { k: 'qty', h: '수량', w: 80 }];
+    const IS_TAB_COLS = [{ k: 'product_code', h: '제품코드', w: 110 }, { k: 'product_name', h: '제품명', w: 280 }, { k: 'temperature', h: '온도', w: 70 }, { k: 'qty', h: '수량', w: 80 }, { k: 'note', h: '비고', w: 220 }];
     const IS_HOME_W0 = Object.fromEntries(IS_COLS.map(c => [c.k, c.w]));
     let isColW = { home: {}, tab: {} };
     async function isLoadColW() {
@@ -10648,7 +10737,7 @@
       key = key || isTabSt.tab; if (!key) return;
       isMan.key = key; isMan.pick = null;
       isEl('isManTitle').textContent = `${isListName(key)} · 수기등록`;
-      ['isManName', 'isManQty'].forEach(id => { isEl(id).value = ''; });
+      ['isManName', 'isManQty', 'isManNote'].forEach(id => { isEl(id).value = ''; });
       isEl('isManInfo').textContent = '제품명을 입력하면 제품정보 업로드에서 찾아 드려요.';
       isEl('isManSug').innerHTML = ''; isEl('isManSug').classList.add('hidden');
       isDlShow('isManModal', true);
@@ -10692,7 +10781,7 @@
       if (!qty) { showToastNotification('수량 입력', '수량을 입력해 주세요.', 'warning'); isEl('isManQty').focus(); return; }
       const p = isMan.pick && isMan.pick.product_name === name ? isMan.pick : null;
       const tab = isMan.key;
-      const { error } = await supabaseClient.from(IS_TAB_ITEMS).insert({ tab, product_code: p ? p.product_code : null, product_name: name, temperature: p ? p.temperature : null, qty, created_by: isState.me });
+      const { error } = await supabaseClient.from(IS_TAB_ITEMS).insert({ tab, product_code: p ? p.product_code : null, product_name: name, temperature: p ? p.temperature : null, qty, note: isEl('isManNote').value.trim() || null, created_by: isState.me });
       if (error) { showToastNotification('등록 실패', dbErrorMessage(error), 'warning'); return; }
       isCloseManual();
       isBroadcast('tabitems', { tab });
@@ -10907,10 +10996,10 @@
           const mineNew = r._new && isState.drafts.has(r.id);
           const label = mineNew ? `<button type="button" data-is-cancel="${r.id}" class="px-1 rounded text-[10.5px] font-extrabold text-[#FF3B30] hover:bg-red-50" title="추가한 행 취소">취소</button>` : r._new ? '<span class="text-[10px] text-[#AF52DE]" title="다른 사람이 작성 중">작성중</span>' : no;
           const remTitle = r._rem ? `${r._rem.name} 님이 수정 중 (저장 전)` : '';
-          if (r._pend) return `<tr data-id="${r.id}" class="is-pend ${ln > 1 ? 'is-mlrow' : ''}"${ln > 1 ? ` style="height:${isRowH(r)}px"` : ''} title="현장 접수 · 눌러서 확정/취소/대기">
+          if (r._pend) return `<tr data-id="${r.id}" class="is-pend ${r._del ? 'is-dellock' : ''} ${ln > 1 ? 'is-mlrow' : ''}"${ln > 1 ? ` style="height:${isRowH(r)}px"` : ''} title="현장 접수 · 눌러서 확정/취소/대기">
             <td class="is-gut"><span class="px-1 py-0.5 rounded-md bg-[#34C759] text-white text-[9.5px] font-extrabold">현장</span></td>
             ${IS_COLS.map(c => `<td data-col="${c.k}" class="${c.ml && ln > 1 ? 'is-ml' : ''}">${svEsc(r[c.k] ?? '')}</td>`).join('')}</tr>`;
-          return `<tr data-id="${r.id}" class="${isState.checked.has(r.id) ? 'is-checked' : ''} ${r._new ? 'is-newrow' : ''} ${ln > 1 ? 'is-mlrow' : ''}"${ln > 1 ? ` style="height:${isRowH(r)}px"` : ''}>
+          return `<tr data-id="${r.id}" class="${isState.checked.has(r.id) ? 'is-checked' : ''} ${r._new ? 'is-newrow' : ''} ${isLocked(r.id) ? 'is-dellock' : ''} ${ln > 1 ? 'is-mlrow' : ''}"${ln > 1 ? ` style="height:${isRowH(r)}px"` : ''}>
           <td class="is-gut"><label class="${r._new ? 'inline-flex mr-1' : 'flex'} items-center justify-center gap-1.5 cursor-pointer"><input type="checkbox" data-is-check="${r.id}" ${isState.checked.has(r.id) ? 'checked' : ''} class="w-3.5 h-3.5">${mineNew || r._new ? '' : `<span class="w-5 text-left">${label}</span>`}</label>${mineNew || r._new ? label : ''}</td>
           ${IS_COLS.map(c => {
             const mine = r._mine.has(c.k), rem = !mine && r._rem && (r._rem.keys.has(c.k) || r._rem.isNew);
@@ -11024,6 +11113,7 @@
     }
     async function isCanEdit(row, col) {
       if (!col) return false;
+      if (row && isLocked(row.id)) { isLockToast(); return false; }
       if (col.ro && !(await isNoDataEditable(row, col))) { showToastNotification('자동 입력 칸', `'${col.h}' 은(는) 거래처코드·제품코드를 넣으면 자동으로 채워집니다. ('데이터 없음'일 때만 직접 입력할 수 있어요)`, 'info'); return false; }
       if (row && row._new && row._rem && !isState.drafts.has(row.id)) { showToastNotification('작성 중인 행', `${row._rem.name} 님이 아직 저장하지 않은 행입니다.`, 'warning'); return false; }
       return true;
@@ -11104,6 +11194,8 @@
       const ed = isState.edit; if (!ed) return;
       isCloseEditor(true);
       const v = String(value ?? '').trim();
+      const fc = IS_COLS.find(c => c.k === ed.col);
+      if (fc && fc.fixed && v && !fc.fixed.includes(v)) { showToastNotification('선택 확인', `${fc.h} 칸은 ${fc.fixed.map(x => `'${x}'`).join(' 또는 ')}만 넣을 수 있어요.`, 'warning'); return; }
       if (v !== String(ed.orig ?? '').trim()) {
         const row = isFindRow(ed.id), f = row ? isFmtGet(row, ed.col) : null;
         if (f && f.r.length) {
@@ -11254,7 +11346,8 @@
       Object.assign(box.style, { left: r.x + 'px', top: (r.y + r.h + 2) + 'px' });
       if (sg.kind === 'opt') {
         const h = (IS_COLS.find(c => c.k === sg.col) || {}).h || '';
-        box.innerHTML = `<div class="px-2 pt-1 pb-1.5 text-[10.5px] font-bold text-gray-400">${svEsc(h)} 목록 — 직접 입력도 돼요</div>`
+        const fx = (IS_COLS.find(c => c.k === sg.col) || {}).fixed;
+        box.innerHTML = `<div class="px-2 pt-1 pb-1.5 text-[10.5px] font-bold text-gray-400">${svEsc(h)} 목록 — ${fx ? '이 중에서 골라 주세요' : '직접 입력도 돼요'}</div>`
           + (sg.items.length ? sg.items.map((it, i) => `<div class="it ${i === sg.idx ? 'on' : ''}" data-sug="${i}"><span class="flex-1 min-w-0 truncate font-bold text-gray-900">${svEsc(it.name)}</span></div>`).join('')
             : `<div class="px-2 pb-1.5 text-[11px] text-gray-400">목록이 비어 있어요. 데이터 관리 &gt; 사유 목록 &gt; 특이사항 관리에서 추가할 수 있어요.</div>`);
         return;
@@ -11267,7 +11360,7 @@
       const col = IS_COLS.find(c => c.k === ed.col); if (!col) return;
       if (col.opt) {                                                   // 고정 목록 : 처음엔 전체, 입력하면 걸러서
         const kw = all === true ? '' : ed.el.value.trim().toLowerCase();
-        const list = (issueSheetOptions[col.k] || []);
+        const list = col.fixed || (issueSheetOptions[col.k] || []);
         const items = list.filter(v => !kw || String(v).toLowerCase().includes(kw)).map(v => ({ name: v, code: '' }));
         isState.sug = { kind: 'opt', col: col.k, items, idx: -1, empty: !list.length };
         isSugRender();
@@ -11300,6 +11393,7 @@
     // ---------- 저장 전 내용(draft) : 고치면 자동 체크 · 저장을 눌러야 반영 ----------
     async function isSetCell(id, col, value, quiet) { await isDraftSet(id, { [col]: value }, quiet); }
     async function isDraftSet(id, patch, quiet) {
+      if (isLocked(id)) { isLockToast(); return; }
       const cur = isFindRow(id); if (!cur) return;
       let d = isState.drafts.get(id);
       if (!d) { d = { patch: {}, isNew: false, t: Date.now() }; isState.drafts.set(id, d); }
@@ -11412,7 +11506,8 @@
       if (isNeedUser()) return;
       const checked = [...isState.checked];
       const newIds = checked.filter(id => isState.drafts.has(id) && isState.drafts.get(id).isNew);
-      const ids = checked.filter(id => isState.rows.some(r => r.id === id));
+      let ids = checked.filter(id => isState.rows.some(r => r.id === id));
+      if (ids.some(isLocked)) { isLockToast(); ids = ids.filter(id => !isLocked(id)); if (!ids.length && !newIds.length) return; }
       if (!newIds.length && !ids.length) { showToastNotification('선택 필요', '삭제할 행을 왼쪽 체크박스로 선택해 주세요.', 'warning'); return; }
       if (ids.length && !isDeleteChecked._ok) { showConfirmModal(() => { isDeleteChecked._ok = true; isDeleteChecked().finally(() => { isDeleteChecked._ok = false; }); }, '특이사항 삭제', `선택한 저장된 기록 <b>${ids.length}건</b>을 삭제합니다.<br>삭제한 기록은 되돌릴 수 없어요.`); return; }
       newIds.forEach(id => { isState.drafts.delete(id); isState.checked.delete(id); });
@@ -11576,16 +11671,17 @@
     }
     // 특이사항 행의 사진 찾기 : 현장 접수(업로드 내역) 사진 → 때때로 붙인 사진
     async function xlRowPhotos(rows) {
-      const ids = rows.map(r => r.id).filter(id => id > 0), out = new Map();
+      const ids = rows.map(r => r.id).filter(id => id > 0), out = new Map();      // id → [사진1, 사진2]
+      const add = (id, src) => { const a = out.get(id) || []; if (a.length < 2) { a.push(src); out.set(id, a); } };
       for (let i = 0; i < ids.length; i += 200) {
         const part = ids.slice(i, i + 200);
         try {
           const { data } = await supabaseClient.from(INCIDENT_TABLE).select('issue_row_id,photos').in('issue_row_id', part);
-          (data || []).forEach(x => { const ph = (x.photos || [])[0]; if (ph && !out.has(x.issue_row_id)) out.set(x.issue_row_id, { url: ph.url || (ph.path ? supabaseClient.storage.from(INCIDENT_BUCKET).getPublicUrl(ph.path).data.publicUrl : '') }); });
+          (data || []).forEach(x => (x.photos || []).slice(0, 2).forEach(ph => { if (ph) add(x.issue_row_id, { url: ph.url || (ph.path ? supabaseClient.storage.from(INCIDENT_BUCKET).getPublicUrl(ph.path).data.publicUrl : '') }); }));
         } catch (e) {}
         try {
           const { data } = await supabaseClient.from('issue_sheet_photos').select('row_id,storage_path').in('row_id', part).order('id');
-          (data || []).forEach(x => { if (!out.has(x.row_id)) out.set(x.row_id, { path: x.storage_path }); });
+          (data || []).forEach(x => add(x.row_id, { path: x.storage_path }));
         } catch (e) {}
       }
       return out;
@@ -11601,7 +11697,11 @@
       const src = await xlRowPhotos(rows), imgs = new Map();
       const jobs = [...src.entries()];
       for (let i = 0; i < jobs.length; i += 6) {
-        await Promise.all(jobs.slice(i, i + 6).map(async ([id, s]) => { const b = await xlFetchPhoto(s); if (b) { try { imgs.set(id, await xlCompress(b, boxW, boxH, cover)); } catch (e) {} } }));
+        await Promise.all(jobs.slice(i, i + 6).map(async ([id, list]) => {
+          const got = [];
+          for (const s of list) { const b = await xlFetchPhoto(s); if (b) { try { got.push(await xlCompress(b, boxW, boxH, cover)); } catch (e) {} } }
+          if (got.length) imgs.set(id, got);
+        }));
       }
       return imgs;
     }
@@ -11631,12 +11731,15 @@
     async function xlWellstory(rows, name) {
       const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('웰스토리', XL_NOGRID);
       [0.85, 0.38, 22.63, 67.13, 7, 7, 7].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+      const wsPre = await xlRowPhotos(rows); const two = [...wsPre.values()].some(a => a.length > 1);   // 사진 2장 있는 건이 있으면 H~J 에 두 번째 사진
+      if (two) [8, 9, 10].forEach(c => { ws.getColumn(c).width = 7; });
       const c2 = ws.getCell('C2'); c2.value = { formula: 'TODAY()' }; c2.numFmt = 'mm"월" dd"일"(aaa)'; c2.font = { bold: true, size: 14 };
       c2.alignment = { horizontal: 'left', vertical: 'middle' }; ws.getRow(2).height = 24;
       const e2 = ws.getCell('E2'); e2.value = '김해'; e2.font = { bold: true }; e2.fill = xlFill(XL_GREEN); e2.alignment = xlCenter;
       const f2 = ws.getCell('F2'); f2.value = '왜관'; f2.font = { bold: true }; f2.fill = xlFill(XL_GOLD); f2.alignment = xlCenter;
       ws.getCell('C4').value = '배송일자 / 거래처명'; ws.getCell('D4').value = '제품명 및 비고';
       ws.mergeCells('E4:G4'); ws.getCell('E4').value = '사진';
+      if (two) { ws.mergeCells('H4:J4'); ws.getCell('H4').value = '사진 2'; ws.getCell('H4').font = { bold: true }; ['H4', 'I4', 'J4'].forEach(a => { ws.getCell(a).fill = xlFill(XL_BLUE1); }); }
       ['C4', 'D4', 'E4'].forEach(a => { ws.getCell(a).font = { bold: true }; });
       ['C4', 'D4', 'E4', 'F4', 'G4'].forEach(a => { ws.getCell(a).fill = xlFill(XL_BLUE1); });
       const H = [30, 22, 26, 26];                                       // 1건 4줄 높이(pt)
@@ -11653,12 +11756,15 @@
         ws.mergeCells(`D${s + 1}:D${s + 3}`); ws.getCell(`D${s + 1}`).value = xlRich(r.detail || '');
         [`C${s}`, `C${s + 1}`, `C${s + 2}`, `D${s}`].forEach(a => { ws.getCell(a).font = B; });     // C5 · C6 · C7 · D5 굵게
         ws.mergeCells(`E${s}:G${s + 3}`);
+        if (two) ws.mergeCells(`H${s}:J${s + 3}`);
         const reg = regs.get(r.store_code);
         if (reg) [s, s + 1, s + 2].forEach(rr => { ws.getCell(`C${rr}`).fill = xlFill(reg === 'gimhae' ? XL_GREEN : XL_GOLD); });
-        const img = imgs.get(r.id);
-        if (img) { const id = wb.addImage({ buffer: img.buf, extension: 'jpeg' }); ws.addImage(id, { tl: { col: 4, row: s - 1 }, br: { col: 7, row: s + 3 }, editAs: 'twoCell' }); }   // E~G 병합 칸에 꽉 맞춤
+        (imgs.get(r.id) || []).slice(0, two ? 2 : 1).forEach((img, k) => {             // 1장 : E~G / 2장 : 바로 옆 H~J (같은 크기 · 겹치지 않게)
+          const id = wb.addImage({ buffer: img.buf, extension: 'jpeg' });
+          ws.addImage(id, { tl: { col: 4 + k * 3, row: s - 1 }, br: { col: 7 + k * 3, row: s + 3 }, editAs: 'twoCell' });
+        });
       });
-      xlBox(ws, 4, 3, 4 + rows.length * 4, 7);
+      xlBox(ws, 4, 3, 4 + rows.length * 4, two ? 10 : 7);
       xlSaveBlob(await wb.xlsx.writeBuffer(), name);
     }
     function xlIssueSheet(wb, rows, imgs, title, sheetName) {
@@ -11668,7 +11774,9 @@
       ws.mergeCells('A1:E1');
       const a1 = ws.getCell('A1'); a1.value = { formula: 'TODAY()' }; a1.numFmt = `yyyy-mm-dd"${title}"`; a1.font = { bold: true, size: 14 };
       a1.alignment = { horizontal: 'left', vertical: 'middle' }; ws.getRow(1).height = 30;
-      const heads = ['메인센터', '일자', '브랜드', '거래처코드', '거래처명', '제품코드', '제품명', '온도', '단위', '품목지정', '재고타입', '수량', '구분', '상세내용', '사진'];
+      const two = imgs && [...imgs.values()].some(a => a.length > 1);              // 사진 2장 → P열에 같은 크기로
+      const heads = ['메인센터', '일자', '브랜드', '거래처코드', '거래처명', '제품코드', '제품명', '온도', '단위', '품목지정', '재고타입', '수량', '구분', '상세내용', '사진'].concat(two ? ['사진 2'] : []);
+      if (two) ws.getColumn(16).width = 8;
       heads.forEach((h, i) => { const c = ws.getRow(2).getCell(i + 1); c.value = h; c.font = { bold: true, size: 9 }; c.fill = xlFill(XL_GREEN); });
       ws.getRow(2).height = 12.75;
       const PH = 60, boxW = xlColPx(8) - 6, boxH = Math.round(PH * 4 / 3) - 6;
@@ -11678,11 +11786,11 @@
         [r.main_center, String(r.delivery_date || '').slice(0, 10), r.client_name, r.store_code, r.store_name, r.product_code, r.product_name, r.temperature, r.unit, r.item_designation, r.stock_type, isNaN(q) ? (r.qty || '') : q, r.content, r.detail, '']
           .forEach((v, k) => { const c = row.getCell(k + 1); c.value = v ?? ''; c.font = { size: 8 }; });
         row.height = PH;
-        const img = imgs && imgs.get(r.id);
-        if (img) xlPlaceImage(wb, ws, img, 14, n - 1, boxW + 6, boxH + 6);
+        ((imgs && imgs.get(r.id)) || []).slice(0, two ? 2 : 1).forEach((img, k) => xlPlaceImage(wb, ws, img, 14 + k, n - 1, boxW + 6, boxH + 6));
       });
-      xlBox(ws, 2, 1, 2, 15);
-      if (rows.length) xlBox(ws, 3, 1, 2 + rows.length, 15, { shrink: true });
+      const lastC = two ? 16 : 15;
+      xlBox(ws, 2, 1, 2, lastC);
+      if (rows.length) xlBox(ws, 3, 1, 2 + rows.length, lastC, { shrink: true });
       return { ws, boxW, boxH };
     }
     async function xlDistrib(rows, name, scope) {
@@ -11903,6 +12011,20 @@
     const IS_TAB_HOME = { id: 'home', name: '홈화면', icon: 'ph-house' };
     const IS_TAB_ICONS = { wellstory: 'ph-buildings', distrib: 'ph-truck', onenone: 'ph-storefront' };
     const IS_TAB_DEFAULT_REST = [{ id: 'wellstory', name: '웰스토리' }, { id: 'distrib', name: '유통물류' }, { id: 'onenone', name: '원앤원' }];
+    // 설정 > 탭 관리 : 탭 삭제 (탭 줄에는 삭제 버튼 없음)
+    function isRenderSetTabs() {
+      const box = isEl('isSetTabs'); if (!box) return;
+      box.innerHTML = isState.tabs.length ? isState.tabs.map(t => `<div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200"><i class="ph-bold ${IS_TAB_ICONS[t.id] || 'ph-folder-simple'} text-[#007AFF]"></i><span class="flex-1 min-w-0 truncate text-[13px] font-semibold text-gray-900">${svEsc(t.name)}</span><button type="button" onclick="isSetTabDel('${svEsc(t.id)}')" class="ios-btn-tap px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-[#FF3B30] text-[11.5px] font-bold">삭제</button></div>`).join('')
+        : '<div class="text-[12px] text-gray-400 px-1">탭이 없어요.</div>';
+    }
+    function isSetTabDel(id) {
+      const t = isState.tabs.find(x => x.id === id); if (!t) return;
+      showConfirmModal(async () => {
+        if (isState.tab === t.id) isSwitchTab('home');
+        await isSaveTabs(isState.tabs.filter(x => x.id !== t.id));
+        isRenderSetTabs();
+      }, '탭 삭제', `'${svEsc(t.name)}' 탭을 삭제할까요?<br><span style="color:#8E8E93">탭에 들어 있던 목록은 화면에서만 사라지고 기록은 남아요.</span>`);
+    }
     async function isLoadTabs() {
       try {
         const { data } = await supabaseClient.from(SETTINGS_TABLE).select('key,value').in('key', ['issue_sheet_tabs', 'issue_sheet_tabs_v2', 'issue_sheet_options']);
@@ -11921,7 +12043,7 @@
       const box = isEl('isTabs');
       if (!isAllTabs().some(t => t.id === isState.tab)) isState.tab = 'home';
       box.innerHTML = isAllTabs().map(t => `<button type="button" data-tab="${svEsc(t.id)}" class="segment-tab ${isState.tab === t.id ? 'active' : ''} flex-1 min-w-[84px] py-2 px-2 text-[12px] sm:text-[13px] font-semibold text-gray-600 rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap">
-          <i class="ph-bold ${t.icon} text-sm"></i><span>${svEsc(t.name)}</span>${t.custom ? `<i data-tab-del="${svEsc(t.id)}" role="button" class="ph-bold ph-x text-[9px] w-4 h-4 rounded-full bg-gray-300/70 text-white hover:bg-[#FF3B30] inline-flex items-center justify-center ml-1" title="탭 삭제"></i>` : ''}
+          <i class="ph-bold ${t.icon} text-sm"></i><span>${svEsc(t.name)}</span>${false ? `<i data-tab-del="${svEsc(t.id)}" role="button" class="ph-bold ph-x text-[9px] w-4 h-4 rounded-full bg-gray-300/70 text-white hover:bg-[#FF3B30] inline-flex items-center justify-center ml-1" title="탭 삭제"></i>` : ''}
         </button>`).join('');
     }
     function isSwitchTab(id) {
@@ -14162,6 +14284,7 @@
       st.textContent = ibConn.key ? '저장된 키가 있어요.' : '아직 키가 없어요. 키가 없으면 사진 유형을 직접 고르게 됩니다.';
       const m = ibEl('ibSetModal'); m.classList.remove('opacity-0', 'pointer-events-none'); m.classList.add('opacity-100');
       ibImpBadge();
+      isRenderSetTabs();
     }
     function ibCloseSettings() { const m = ibEl('ibSetModal'); m.classList.remove('opacity-100'); m.classList.add('opacity-0', 'pointer-events-none'); }
     async function ibTestConn() {
