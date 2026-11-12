@@ -2327,7 +2327,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.035</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.036</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -6873,14 +6873,18 @@
     // ----- 특이사항 관리 : 내용 · 주체 · 귀책 선택 목록 (app_settings: issue_sheet_options) -----
     const ISO_FIELDS = [{ k: 'main_center', h: '메인센터', ph: '예: 밀양, 양산, 김해' }, { k: 'content', h: '내용', ph: '예: 파손, 누락, 오배송' }, { k: 'subject', h: '주체', ph: '예: 센터, 기사, 매장' }, { k: 'fault', h: '귀책', ph: '예: 센터, 기사, 협력사' }];
     let isoDraft = null, isoEditing = null;          // isoEditing = { k, i } : 수정 중인 항목
-    function isoNorm(v) { const o = {}; ISO_FIELDS.forEach(f => { o[f.k] = Array.isArray(v && v[f.k]) ? v[f.k].map(String).filter(Boolean) : []; }); return o; }
+    function isoNorm(v) {
+      const o = {}; ISO_FIELDS.forEach(f => { o[f.k] = Array.isArray(v && v[f.k]) ? v[f.k].map(String).filter(Boolean) : []; });
+      o.phrases = v && Array.isArray(v.phrases) ? v.phrases.filter(p => p && p.t && p.c).map(p => ({ t: String(p.t), c: String(p.c) })) : [{ t: '전달', c: '전달부탁드립니다.' }];
+      return o;
+    }
     async function isoOpen() {
       try {
         const { data } = await supabaseClient.from(SETTINGS_TABLE).select('value').eq('key', 'issue_sheet_options').limit(1);
         issueSheetOptions = isoNorm(data && data[0] && data[0].value);
       } catch (e) {}
-      isoDraft = JSON.parse(JSON.stringify(issueSheetOptions));
-      isoEditing = null;
+      isoDraft = JSON.parse(JSON.stringify(isoNorm(issueSheetOptions)));
+      isoEditing = null; isoPhEdit = null;
       isoRender();
       const m = document.getElementById('isoModal');
       m.classList.remove('opacity-0', 'pointer-events-none'); m.classList.add('opacity-100');
@@ -6897,7 +6901,32 @@
               : `<button type="button" onclick="isoAdd('${f.k}')" class="ios-btn-tap px-3 py-2 bg-[#007AFF] text-white font-semibold rounded-xl text-xs flex items-center gap-1 flex-none"><i class="ph-bold ph-plus"></i>${f.h} 추가</button>`}
           </div>
           <div class="flex flex-wrap gap-1.5 mt-2.5">${isoDraft[f.k].map((v, i) => `<span class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full ${isoEditing && isoEditing.k === f.k && isoEditing.i === i ? 'bg-green-50 border-[#34C759]' : 'bg-white border-gray-200'} border text-[12px] font-semibold text-gray-800"><button type="button" onclick="isoStartEdit('${f.k}', ${i})" class="hover:text-[#007AFF]" title="눌러서 수정">${svEsc(v)}</button><button type="button" onclick="isoRemove('${f.k}', ${i})" class="w-4 h-4 rounded-full bg-gray-300 hover:bg-gray-400 text-white flex items-center justify-center text-[9px]"><i class="ph-bold ph-x"></i></button></span>`).join('') || '<span class="text-[11.5px] text-gray-400">아직 없습니다.</span>'}</div>
-        </section>`).join('');
+        </section>`).join('') + isoPhraseHtml();
+    }
+    // 자동 완성 문구 (입력어 → 완성 문구)
+    let isoPhEdit = null;
+    function isoPhraseHtml() {
+      const list = isoDraft.phrases || [];
+      return `<section class="bg-gray-50 rounded-2xl border border-gray-200/80 p-3.5">
+          <div class="flex items-center justify-between mb-1"><h4 class="text-[13.5px] font-bold text-gray-900">자동 완성 문구</h4><span class="text-[11px] font-semibold text-gray-400">${list.length}개</span></div>
+          <p class="text-[11px] text-gray-500 mb-2">입력어를 적으면 연한 회색으로 나머지가 보이고, <b>Tab</b>을 누르면 완성 문구로 바뀌어요. (홈화면 칸 · 인수인계)</p>
+          <div class="grid grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)_auto] gap-2">
+            <input type="text" id="isoPhT" placeholder="입력어 (예: 전달)" class="min-w-0 px-3 py-2 bg-white rounded-xl text-[13px] border border-gray-200 outline-none focus:ring-2 focus:ring-blue-200">
+            <input type="text" id="isoPhC" placeholder="완성 문구 (예: 전달부탁드립니다.)" class="min-w-0 px-3 py-2 bg-white rounded-xl text-[13px] border border-gray-200 outline-none focus:ring-2 focus:ring-blue-200">
+            <button type="button" onclick="isoPhSave()" class="ios-btn-tap px-3 py-2 ${isoPhEdit != null ? 'bg-[#34C759]' : 'bg-[#007AFF]'} text-white font-semibold rounded-xl text-xs flex items-center gap-1 flex-none"><i class="ph-bold ${isoPhEdit != null ? 'ph-check' : 'ph-plus'}"></i>${isoPhEdit != null ? '수정' : '추가'}</button>
+          </div>
+          <div class="mt-2.5 space-y-1.5">${list.map((p, i) => `<div class="flex items-center gap-2 px-3 py-1.5 rounded-xl ${isoPhEdit === i ? 'bg-green-50 border-[#34C759]' : 'bg-white border-gray-200'} border text-[12.5px]"><b class="text-gray-900">${svEsc(p.t)}</b><i class="ph-bold ph-arrow-right text-gray-300 text-[11px]"></i><span class="flex-1 min-w-0 truncate text-gray-700">${svEsc(p.c)}</span><button type="button" onclick="isoPhStart(${i})" class="text-[11.5px] font-bold text-[#007AFF]">수정</button><button type="button" onclick="isoPhDel(${i})" class="text-[11.5px] font-bold text-[#FF3B30]">삭제</button></div>`).join('') || '<span class="text-[11.5px] text-gray-400">아직 없습니다.</span>'}</div>
+        </section>`;
+    }
+    function isoPhStart(i) { isoPhEdit = i; isoRender(); const p = isoDraft.phrases[i]; isEl('isoPhT').value = p.t; isEl('isoPhC').value = p.c; isEl('isoPhC').focus(); }
+    function isoPhDel(i) { isoDraft.phrases.splice(i, 1); isoPhEdit = null; isoRender(); }
+    function isoPhSave() {
+      const t = isEl('isoPhT').value.trim(), c = isEl('isoPhC').value.trim();
+      if (!t || !c) { showToastNotification('입력 확인', '입력어와 완성 문구를 모두 적어 주세요.', 'warning'); return; }
+      isoDraft.phrases = isoDraft.phrases || [];
+      if (isoDraft.phrases.some((p, j) => p.t === t && j !== isoPhEdit)) { showToastNotification('중복', '같은 입력어가 이미 있어요.', 'warning'); return; }
+      if (isoPhEdit != null) isoDraft.phrases[isoPhEdit] = { t, c }; else isoDraft.phrases.push({ t, c });
+      isoPhEdit = null; isoRender();
     }
     function isoStartEdit(k, i) {
       isoEditing = { k, i }; isoRender();
@@ -6923,7 +6952,7 @@
       issueSheetOptions = isoNorm(isoDraft);
       try { isRenderOptionLists(); } catch (e) {}
       isoClose();
-      showToastNotification('저장 완료', '특이사항 관리의 메인센터 · 내용 · 주체 · 귀책 목록이 저장되었습니다.', 'success');
+      showToastNotification('저장 완료', '특이사항 관리의 메인센터 · 내용 · 주체 · 귀책 목록과 자동 완성 문구가 저장되었습니다.', 'success');
     }
     document.getElementById('isoBody').addEventListener('keydown', (e) => {
       const k = e.target.dataset && e.target.dataset.isoIn; if (!k) return;
@@ -6931,6 +6960,64 @@
       if (e.key === 'Enter') { e.preventDefault(); isoAdd(k); }
       else if (e.key === 'Escape' && isoEditing) { e.preventDefault(); isoCancelEdit(); }
     });
+
+    // ========== 자동 완성 문구 : '전달' 뒤에 연한 회색 '부탁드립니다.' → Tab 으로 '전달부탁드립니다.' ==========
+    //  설정 > 데이터 관리 > 사유 목록 > 특이사항 관리 목록 > 자동 완성 문구 에서 추가 · 수정 · 삭제 (issue_sheet_options.phrases)
+    const IS_PHRASE_DEFAULT = [{ t: '전달', c: '전달부탁드립니다.' }];
+    const isPhrases = () => Array.isArray(issueSheetOptions.phrases) ? issueSheetOptions.phrases : IS_PHRASE_DEFAULT;
+    function phraseMatch(el) {                                           // 커서 바로 앞이 입력어로 끝나면 { start, end, c, rest }
+      if (!el || el.selectionStart == null || el.selectionStart !== el.selectionEnd) return null;
+      const pos = el.selectionStart, before = el.value.slice(0, pos), after = el.value.slice(pos);
+      if (after && !/^\s/.test(after)) return null;
+      let best = null;
+      isPhrases().forEach(p => {
+        const t = String(p.t || ''), c = String(p.c || '');
+        if (!t || !c || !before.endsWith(t) || before.endsWith(c)) return;
+        const prev = before.charAt(before.length - t.length - 1);
+        if (prev && !/[\s.,!?·:;()\[\]"'~\-]/.test(prev) && !(c.startsWith(t) === false)) { /* 단어 중간이어도 허용 (입력어로 끝나면) */ }
+        if (!best || t.length > best.t.length) best = { t, c };
+      });
+      if (!best) return null;
+      const rest = best.c.startsWith(best.t) ? best.c.slice(best.t.length) : ' → ' + best.c;
+      return { start: pos - best.t.length, end: pos, c: best.c, rest };
+    }
+    function phraseGhost(el) {                                           // 입력칸 위에 같은 글꼴로 겹쳐서 회색 나머지 글자 표시
+      let g = el._phraseGhost;
+      const m = phraseMatch(el);
+      if (!m) { if (g) g.style.display = 'none'; return null; }
+      if (!g || g.parentElement !== el.parentElement) {
+        g = document.createElement('div'); g.className = 'phrase-ghost ho-noprint';
+        el.parentElement.appendChild(g); el._phraseGhost = g;
+      }
+      const cs = getComputedStyle(el), ta = el.tagName === 'TEXTAREA';
+      Object.assign(g.style, {
+        display: 'block', position: 'absolute', pointerEvents: 'none', overflow: 'hidden', zIndex: (parseInt(cs.zIndex, 10) || 5) + 1,
+        left: el.offsetLeft + 'px', top: el.offsetTop + 'px', width: el.offsetWidth + 'px', height: el.offsetHeight + 'px', boxSizing: 'border-box',
+        font: cs.font, fontWeight: cs.fontWeight, letterSpacing: cs.letterSpacing, lineHeight: cs.lineHeight, color: 'transparent',
+        padding: cs.padding, border: cs.borderWidth + ' solid transparent', textAlign: cs.textAlign,
+        whiteSpace: ta ? (cs.whiteSpace === 'pre' ? 'pre' : 'pre-wrap') : 'pre', wordBreak: cs.wordBreak, overflowWrap: cs.overflowWrap
+      });
+      g.innerHTML = `<div style="transform:translate(${-el.scrollLeft}px,${-el.scrollTop}px)">${svEsc(el.value.slice(0, m.end))}<span style="color:#B0B3BA">${svEsc(m.rest)}</span><span style="color:#B0B3BA;font-size:10px;font-weight:600;margin-left:6px;opacity:.8">Tab</span></div>`;
+      return m;
+    }
+    function phraseComplete(el) {                                        // Tab : 입력어 → 완성 문구로 바꾸기
+      const m = phraseMatch(el); if (!m) return false;
+      el.value = el.value.slice(0, m.start) + m.c + el.value.slice(m.end);
+      const p = m.start + m.c.length; el.setSelectionRange(p, p);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      phraseGhost(el);
+      return true;
+    }
+    function phraseAttach(el) {
+      const up = () => phraseGhost(el);
+      ['input', 'keyup', 'click', 'scroll', 'focus'].forEach(ev => el.addEventListener(ev, up));
+      el.addEventListener('blur', () => { if (el._phraseGhost) el._phraseGhost.style.display = 'none'; });
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab' && !e.shiftKey && !(e.isComposing || e.keyCode === 229) && phraseMatch(el)) { e.preventDefault(); e.stopImmediatePropagation(); phraseComplete(el); }
+      }, true);
+      const orig = el.remove.bind(el);
+      el.remove = () => { if (el._phraseGhost) el._phraseGhost.remove(); orig(); };
+    }
 
     function removeReasonTag(idx) {
       managedReasons.splice(idx, 1);
@@ -10990,9 +11077,22 @@
       f.r = isFlagsToRuns(flags);
       return f;
     }
+    // 그 출고일에 아무 행이 없으면 기본 6칸을 만듦 (두 사람이 동시에 열어도 한 번만 : is_default + 고유 색인)
+    const HO_DEFAULTS = ['●용차정보\n\n', '●차감이고\n\n', '', '', '', ''];
+    async function hoEnsureDefaults(d) {
+      try {
+        const { count } = await supabaseClient.from(HO_TABLE).select('id', { count: 'exact', head: true }).eq('out_date', d);
+        if (count) return false;
+        const rows = HO_DEFAULTS.map((c, i) => ({ out_date: d, content: c, fmt: { b: 1 }, height_pt: 200, sort_order: i + 1, is_default: true, created_by: isState.me || null }));
+        const { error } = await supabaseClient.from(HO_TABLE).insert(rows);
+        if (!error) isBroadcast('handover', {});
+        return !error;
+      } catch (e) { return false; }
+    }
     async function hoLoad() {
       if (!hoSt.date) hoSt.date = hoTomorrow();
       hoSt.loading = true;
+      await hoEnsureDefaults(hoSt.date);
       try {
         const { data, error } = await supabaseClient.from(HO_TABLE).select('*').eq('out_date', hoSt.date).order('sort_order', { ascending: true }).order('id', { ascending: true }).limit(500);
         if (error) throw error;
@@ -11079,6 +11179,7 @@
     async function hoAdd(content, fmt, sourceRowId, date) {
       if (isNeedUser()) return null;
       const d = date || hoSt.date || hoTomorrow();
+      await hoEnsureDefaults(d);                                       // 자료등록으로 먼저 들어와도 기본 6칸 다음에 붙도록
       const { data: last } = await supabaseClient.from(HO_TABLE).select('sort_order').eq('out_date', d).order('sort_order', { ascending: false }).limit(1);
       const so = ((last && last[0] && +last[0].sort_order) || 0) + 1;
       const row = { out_date: d, content: content || '', fmt: fmt === undefined ? { b: 1 } : fmt, height_pt: 200, sort_order: so, source_row_id: sourceRowId || null, created_by: isState.me };
@@ -11155,6 +11256,7 @@
       cell.parentElement.appendChild(ta);
       hoSt.edit = { id, el: ta, orig: r.content || '' };
       if (!old) {
+        phraseAttach(ta);
         ta.addEventListener('input', () => hoMentionUpdate(ta));
         ta.addEventListener('keyup', (e) => { if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) hoMentionUpdate(ta); });
         ta.addEventListener('keydown', (e) => {
@@ -11535,6 +11637,7 @@
       el.addEventListener('blur', () => { if (isState.edit && isState.edit.el === el) isCommit(el.value, null); });
       if (col.suggest || col.opt) { el.addEventListener('input', isSugInput); el.addEventListener('compositionend', isSugInput); }
       isEl('isInner').appendChild(el);
+      if (col.type !== 'date' && !col.fixed) phraseAttach(el);
       isState.edit = { id: row.id, col: col.k, el, orig: row[col.k] ?? '', row };
       if (col.suggest && el.value && el.value !== IS_NODATA) isSugInput();
       if (col.opt) isSugInput(true);
