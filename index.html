@@ -2359,7 +2359,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.050</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.051</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -10742,7 +10742,7 @@
     }
     function isTabPage(key, d) { const L = isLs(key); L.page = Math.max(0, (L.page || 0) + d); isRenderTabBody(key); }
     document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; const f = document.querySelector('.is-tab-full'); if (f) { isTabExpand(f.dataset.listBox, false); } });
-    function isTabEditing(key) { const b = isEl('isTabBody_' + key), a = document.activeElement; return !!(b && a && a.tagName === 'INPUT' && b.contains(a)); }
+    function isTabEditing(key) { const b = isEl('isTabBody_' + key), a = document.activeElement; return !!(b && a && a.tagName === 'INPUT' && a.type !== 'checkbox' && b.contains(a)); }   // 비고 입력 중만 (체크박스 제외)
     function isTabPeerSel(key) { const m = new Map(); (isState.peers || []).forEach(p => { const ids = p.tsel && p.tsel[key]; if (p.name && p.name !== isState.me && Array.isArray(ids)) ids.forEach(id => { if (!m.has(id)) m.set(id, p.name); }); }); return m; }
     function isRenderTabBody(key) {
       const body = isEl('isTabBody_' + key); if (!body) return;
@@ -11397,7 +11397,7 @@
         const f = hoFmtOf(r), hpx = hoPt(+r.height_pt || 200);
         const editing = !print && hoSt.edit && hoSt.edit.id === r.id;
         h += `<tr data-ho-row="${r.id}" style="height:${hpx}px;break-inside:avoid;page-break-inside:avoid">
-          <td style="${bd}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle;position:relative">${i + 1}${print ? '' : `<button type="button" data-ho-del="${r.id}" class="ho-noprint rounded-full bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-[#FF3B30]" style="position:absolute;left:4px;top:4px;width:24px;height:24px;font-size:11px" title="이 행 삭제"><i class="ph-bold ph-x"></i></button><button type="button" data-ho-imp="${r.id}" class="ho-noprint rounded-full bg-blue-50 text-[#007AFF] hover:bg-blue-100" style="position:absolute;left:4px;bottom:4px;width:24px;height:24px;font-size:11px" title="다른 날짜에서 이 칸 내용만 불러오기"><i class="ph-bold ph-download-simple"></i></button>`}</td>
+          <td style="${bd}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle;position:relative">${i + 1}${print ? '' : `<button type="button" data-ho-del="${r.id}" class="ho-noprint rounded-full bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-[#FF3B30]" style="position:absolute;left:4px;top:4px;width:24px;height:24px;font-size:11px" title="이 행 삭제"><i class="ph-bold ph-x"></i></button><button type="button" data-ho-imp="${r.id}" class="ho-noprint bg-blue-50 text-[#007AFF] hover:bg-blue-100 font-bold" style="position:absolute;left:4px;right:4px;bottom:6px;padding:4px 2px;border-radius:8px;font-size:10.5px;line-height:1.25;white-space:normal;word-break:keep-all" title="다른 날짜에서 이 칸 내용만 불러오기">개별 불러오기</button>`}</td>
           <td colspan="3" style="${bd}position:relative;vertical-align:middle;padding:6px 10px;${!print && hoSt.msel.has(r.id) ? 'background:#E8F1FF;box-shadow:inset 0 0 0 2px #007AFF;' : ''}">
             <div ${print ? '' : `data-ho-cell="${r.id}"`} style="min-height:${hpx - 14}px;font-size:18pt;line-height:1.35;white-space:pre-wrap;word-break:break-all;${f.c ? 'color:#FF0000;' : ''}${f.b ? 'font-weight:800;' : 'font-weight:400;'}${print ? '' : 'cursor:text;'}display:flex;align-items:center"><div style="width:100%;text-align:${f.a === 'l' ? 'left' : 'center'}">${editing ? '' : print ? hoCellHtml(r) : hoCellInner(r)}</div></div>
             ${print ? '' : `<div data-ho-rsz="${r.id}" class="ho-noprint" style="position:absolute;left:0;right:0;bottom:-4px;height:8px;cursor:row-resize;z-index:10" title="끌어서 높이 조절"></div>`}
