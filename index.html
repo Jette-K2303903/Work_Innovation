@@ -2353,7 +2353,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.040</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.041</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -12246,32 +12246,38 @@
     function isDlPick(scope) {
       if (scope === 'date' && !isDl.sel) return;
       isDl.scope = scope;
-      const nChk = [...isState.checked].filter(id => id > 0 && isState.rows.some(r => r.id === id && (scope === 'all' || String(r.delivery_date || '').slice(0, 10) !== isDl.sel))).length;
+      const nChk = [...isState.checked].map(Number).filter(id => id > 0 && isState.rows.some(r => Number(r.id) === id && (scope === 'all' || String(r.delivery_date || '').slice(0, 10) !== isDl.sel))).length;
       isEl('isDlFmtSub').textContent = (scope === 'all' ? `전체 데이터 · ${isState.rows.length.toLocaleString()}건` : `배송일 ${isDl.sel}`) + (scope !== 'all' && nChk ? ` + 체크한 행 ${nChk}건` : '');
       const COLORS = ['#007AFF', '#FF9500', '#34C759', '#AF52DE', '#FF2D55', '#5856D6'];
       const opts = [{ id: 'all', name: '전체 고객사', icon: 'ph-buildings' }].concat(isAllTabs().filter(t => t.id !== 'home' && t.id !== 'onenone' && t.id !== 'handover'));
-      isEl('isDlFmtList').innerHTML = opts.map((t, i) => `<button type="button" onclick="isDlRun('${svEsc(t.id)}')" class="ios-btn-tap w-full flex items-center gap-2.5 px-3.5 py-3 rounded-2xl bg-gray-50 border border-gray-200 text-left hover:bg-blue-50"><i class="ph-bold ${t.icon || 'ph-folder-simple'} text-lg" style="color:${COLORS[i % COLORS.length]}"></i><span class="flex-1 text-[14px] font-semibold text-gray-900">${svEsc(t.name)}</span><i class="ph-bold ph-download-simple text-gray-300"></i></button>`).join('');
+      isEl('isDlFmtList').innerHTML = opts.map((t, i) => { const c = isDlRowsFor(t.id); return `<button type="button" onclick="isDlRun('${svEsc(t.id)}')" class="ios-btn-tap w-full flex items-center gap-2.5 px-3.5 py-3 rounded-2xl bg-gray-50 border border-gray-200 text-left hover:bg-blue-50"><i class="ph-bold ${t.icon || 'ph-folder-simple'} text-lg" style="color:${COLORS[i % COLORS.length]}"></i><span class="flex-1 min-w-0"><span class="block text-[14px] font-semibold text-gray-900">${svEsc(t.name)}</span><span class="block text-[11.5px] text-gray-500" data-dl-count>${scope === 'all' ? '전체' : '날짜'} ${c.nDate}건${c.nChk ? ` <b class="text-[#007AFF]">+ 체크 ${c.nChk}건</b>` : ''}</span></span><i class="ph-bold ph-download-simple text-gray-300"></i></button>`; }).join('');
       isDlShow('isDlFmtModal', true);
     }
     function isCloseDlFmt() { isDlShow('isDlFmtModal', false); }
-    async function isDlRun(fmt) {
-      const scoped = isDl.scope === 'all' ? isState.rows.slice() : isState.rows.filter(r => String(r.delivery_date || '').slice(0, 10) === isDl.sel);
-      const ids = new Set(scoped.map(r => r.id));
-      [...isState.checked].filter(id => id > 0 && !ids.has(id)).forEach(id => { const r = isState.rows.find(x => x.id === id); if (r) { scoped.push(r); ids.add(id); } });   // 체크한 행은 날짜와 상관없이 포함
+    function isDlRowsFor(fmt) {                                        // { rows, nDate, nChk } : 고른 날짜(또는 전체) + 체크한 행(날짜 상관없이), 고객사 기준으로 거름
       const dk = (r) => String(r.delivery_date || '').slice(0, 10).replace(/[./]/g, '-');
-      const base = scoped.sort((a, b) => { const da = dk(a), db = dk(b); return da < db ? -1 : da > db ? 1 : a.id - b.id; });   // 배송일 오름차순
-      const rows = xlRowsFor(fmt, base);
+      const sel = String(isDl.sel || '');
+      const byId = new Map(isState.rows.map(r => [Number(r.id), r]));
+      const scoped = isDl.scope === 'all' ? isState.rows.slice() : isState.rows.filter(r => dk(r) === sel);
+      const ids = new Set(scoped.map(r => Number(r.id)));
+      const extra = [];
+      [...isState.checked].map(Number).forEach(id => { if (id > 0 && !ids.has(id) && byId.has(id)) { extra.push(byId.get(id)); ids.add(id); } });   // 체크한 행은 날짜와 상관없이 포함
+      const pick = xlRowsFor(fmt, scoped), pickX = xlRowsFor(fmt, extra);
+      const rows = pick.concat(pickX).sort((a, b) => { const da = dk(a), db = dk(b); return da < db ? -1 : da > db ? 1 : a.id - b.id; });   // 배송일 오름차순
+      return { rows, nDate: pick.length, nChk: pickX.length };
+    }
+    async function isDlRun(fmt) {
+      const { rows, nDate, nChk } = isDlRowsFor(fmt);
       const tab = isAllTabs().find(t => t.id === fmt);
       const label = fmt === 'all' ? '전체고객사' : (tab ? tab.name : fmt).replace(/\s/g, '');
       const tag = isDl.scope === 'all' ? '전체' : isDl.sel;
       if (!rows.length && fmt !== 'distrib') { showToastNotification('다운로드', `${fmt === 'all' ? '' : label + ' '}받을 자료가 없습니다.`, 'warning'); return; }
       const done = () => {                                             // 받은 파일에 들어간 체크 행은 체크 해제 (고치는 중인 행은 그대로)
-        const got = new Set(rows.map(r => r.id));
-        const un = [...isState.checked].filter(id => got.has(id) && !isState.drafts.has(id));
-        if (!un.length) return;
+        const got = new Set(rows.map(r => Number(r.id)));
+        const un = [...isState.checked].filter(id => got.has(Number(id)) && !isState.drafts.has(id));
         un.forEach(id => isState.checked.delete(id));
-        isRenderKeep(isAtBottom());
-        showToastNotification('체크 해제', `다운로드에 넣은 체크 행 ${un.length}건의 체크를 풀었어요.`, 'info');
+        if (un.length) isRenderKeep(isAtBottom());
+        showToastNotification('다운로드', `${isDl.scope === 'all' ? '전체' : isDl.sel} ${nDate}건${nChk ? ` + 체크한 행 ${nChk}건` : ''}을 받았어요.${un.length ? ` (체크 ${un.length}건 해제)` : ''}`, 'success');
       };
       if (fmt === 'all') { isDownloadRows(rows, `${label}_특이사항_${tag}`); isCloseDlFmt(); isCloseDl(); done(); return; }
       showBusy('엑셀 만드는 중... (사진 포함)');
@@ -12591,7 +12597,7 @@
       const has = (r, w) => String(r.client_name || '').includes(w) || String(r.store_name || '').includes(w);
       if (fmt === 'all') return rows;
       if (fmt === 'wellstory') return rows.filter(r => has(r, '웰스토리'));
-      if (fmt === 'distrib') return rows.filter(r => !has(r, '웰스토리') && !has(r, '원앤원'));
+      if (fmt === 'distrib') return rows.filter(r => !has(r, '웰스토리'));
       const t = isAllTabs().find(x => x.id === fmt);
       return t ? rows.filter(r => has(r, t.name)) : rows;
     }
