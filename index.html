@@ -96,6 +96,7 @@
     .is-table td.is-sel { box-shadow: inset 0 0 0 2px #007AFF; }
     .is-table td.is-red { color: #FF3B30 !important; }
     .is-table td.is-bold { font-weight: 800 !important; }
+    .is-table td.is-center { text-align: center; }
     .is-table td .is-fr { color: #FF3B30; }
     .is-tab-full { position: fixed !important; inset: 12px; z-index: 45; margin: 0 !important; overflow: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
     .is-red-tg { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; vertical-align: middle; font-size: 10.5px; font-weight: 700; color: #9CA3AF; }
@@ -1228,6 +1229,10 @@
             <p class="text-[10.5px] text-gray-400 leading-snug px-0.5">칸을 두 번 눌러 글자를 드래그하면 그 글자만 바꿀 수 있어요. 굵게는 <b>Ctrl+B</b>. 바꾼 뒤 저장을 눌러야 모두에게 반영돼요.</p>
           </div>
         </div>
+        <div class="flex items-center gap-0.5 bg-white border border-gray-200 rounded-xl p-0.5" title="정렬 : 선택한 칸 (칸을 고르지 않으면 체크한 행의 상세내용)">
+          <button type="button" onmousedown="event.preventDefault()" onclick="isSetAlign('')" class="ios-btn-tap w-8 h-[30px] rounded-lg text-gray-700 hover:bg-gray-100 flex items-center justify-center" title="왼쪽 맞춤"><i class="ph-bold ph-text-align-left text-[15px]"></i></button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="isSetAlign('c')" class="ios-btn-tap w-8 h-[30px] rounded-lg text-gray-700 hover:bg-gray-100 flex items-center justify-center" title="가운데 맞춤"><i class="ph-bold ph-text-align-center text-[15px]"></i></button>
+        </div>
         <button type="button" id="isFilterReset" onclick="isClearFilter()" class="hidden ios-btn-tap px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-funnel-x"></i><span>필터 초기화</span></button>
         <button type="button" id="isDelBtn" onclick="isDeleteChecked()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-red-600 text-[12.5px] font-bold">선택 삭제</button>
         <button type="button" onclick="isOpenDl()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-download-simple"></i>다운로드</button>
@@ -2342,7 +2347,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.037</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.038</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -9782,7 +9787,8 @@
     // ===== 영수증별 시트에 사진이 들어간 엑셀 (ExcelJS) =====
     function costLoadScript(src) {
       return new Promise((res, rej) => {
-        if (window.ExcelJS) return res();
+        const g = /jszip/i.test(src) ? 'JSZip' : 'ExcelJS';         // 라이브러리마다 따로 확인
+        if (window[g]) return res();
         const el = document.createElement('script');
         el.src = src; el.onload = () => res(); el.onerror = () => rej(new Error('엑셀 라이브러리를 불러오지 못했습니다.'));
         document.head.appendChild(el);
@@ -10338,13 +10344,13 @@
       const v = isColors(row)[k];
       if (!v) return { c: '', b: false, r: [] };
       if (v === 'red') return { c: 'red', b: false, r: [] };
-      return { c: v.c === 'red' ? 'red' : '', b: !!v.b, r: Array.isArray(v.r) ? v.r.filter(x => Array.isArray(x) && x[1] > x[0] && x[2]) : [] };
+      return { c: v.c === 'red' ? 'red' : '', b: !!v.b, a: v.a === 'c' ? 'c' : '', r: Array.isArray(v.r) ? v.r.filter(x => Array.isArray(x) && x[1] > x[0] && x[2]) : [] };
     }
     function isFmtPut(o, k, f) {
       const r = (f.r || []).filter(x => x[1] > x[0] && x[2]);
-      if (!f.c && !f.b && !r.length) { delete o[k]; return; }
-      if (f.c === 'red' && !f.b && !r.length) { o[k] = 'red'; return; }
-      const v = {}; if (f.c) v.c = f.c; if (f.b) v.b = 1; if (r.length) v.r = r; o[k] = v;
+      if (!f.c && !f.b && !f.a && !r.length) { delete o[k]; return; }
+      if (f.c === 'red' && !f.b && !f.a && !r.length) { o[k] = 'red'; return; }
+      const v = {}; if (f.c) v.c = f.c; if (f.b) v.b = 1; if (f.a) v.a = f.a; if (r.length) v.r = r; o[k] = v;
     }
     const isFlagSet = (f, ch, on) => { let s = String(f || '').replace(ch, ''); if (on) s += ch; return s.split('').sort().join(''); };
     function isRunsToFlags(runs, len) { const a = new Array(len).fill(''); (runs || []).forEach(([s, e, f]) => { for (let i = Math.max(0, s); i < Math.min(len, e); i++) a[i] = f; }); return a; }
@@ -10369,7 +10375,7 @@
       return h;
     }
     const isCellColor = (r, k) => { const f = isFmtGet(r, k); return f.c === 'red' || f.r.some(x => String(x[2]).includes('r')) ? 'red' : 'black'; };
-    const isFmtDesc = (v) => { if (!v) return '기본'; if (v === 'red') return '빨강'; const p = []; if (v.c === 'red') p.push('빨강'); if (v.b) p.push('굵게'); if (v.r && v.r.length) p.push('일부 글자 서식'); return p.join('·') || '기본'; };
+    const isFmtDesc = (v) => { if (!v) return '기본'; if (v === 'red') return '빨강'; const p = []; if (v.c === 'red') p.push('빨강'); if (v.b) p.push('굵게'); if (v.a === 'c') p.push('가운데'); if (v.r && v.r.length) p.push('일부 글자 서식'); return p.join('·') || '기본'; };
     const IS_NODATA = '데이터 없음';
     // 자동 칸이지만 코드를 찾지 못한('데이터 없음') 경우 직접 입력 가능한 칸
     const IS_NODATA_EDIT = { temperature: 'product', unit: 'product', item_designation: 'product', stock_type: 'product' };
@@ -11073,8 +11079,8 @@
     const hoPt = (pt) => Math.round(pt * 4 / 3);                   // pt → px
     const hoTomorrow = () => ibToday(1);
     const hoSt = { date: null, rows: [], zoom: 0, edit: null, loading: false };
-    function hoFmtOf(r) { const v = r && r.fmt; return { c: v && v.c === 'red' ? 'red' : '', b: !!(v && v.b), r: (v && Array.isArray(v.r)) ? v.r : [] }; }
-    function hoFmtPack(f) { const o = {}; if (f.c) o.c = f.c; if (f.b) o.b = 1; if (f.r && f.r.length) o.r = f.r; return Object.keys(o).length ? o : null; }
+    function hoFmtOf(r) { const v = r && r.fmt; return { c: v && v.c === 'red' ? 'red' : '', b: !!(v && v.b), a: v && v.a === 'c' ? 'c' : '', r: (v && Array.isArray(v.r)) ? v.r : [] }; }
+    function hoFmtPack(f) { const o = {}; if (f.c) o.c = f.c; if (f.b) o.b = 1; if (f.a) o.a = f.a; if (f.r && f.r.length) o.r = f.r; return Object.keys(o).length ? o : null; }
     function hoCellHtml(r) {
       const t = String(r.content || ''), f = hoFmtOf(r);
       if (!f.r.length) return svEsc(t);
@@ -11173,9 +11179,18 @@
             <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">인수인계</h3><p id="hoMeta" class="text-[11.5px] text-gray-500"></p></div>
             <div class="ml-auto flex items-center gap-1.5 flex-wrap">
               <div class="flex items-center gap-0.5 bg-gray-100 rounded-xl p-0.5"><button type="button" onclick="hoMoveDate(-1)" class="ios-btn-tap w-8 h-8 rounded-lg hover:bg-white"><i class="ph-bold ph-caret-left"></i></button><input type="date" id="hoDate" onchange="hoSetDate(this.value)" class="bg-transparent text-[12.5px] font-bold px-1 w-[124px]"><button type="button" onclick="hoMoveDate(1)" class="ios-btn-tap w-8 h-8 rounded-lg hover:bg-white"><i class="ph-bold ph-caret-right"></i></button></div>
-              <button type="button" onmousedown="event.preventDefault()" onclick="hoFormat('color','black')" class="ios-btn-tap px-2.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-900 text-[12.5px] font-bold">검정</button>
-              <button type="button" onmousedown="event.preventDefault()" onclick="hoFormat('color','red')" class="ios-btn-tap px-2.5 py-2 rounded-xl bg-white border border-gray-200 text-[#FF3B30] text-[12.5px] font-bold">빨강</button>
-              <button type="button" onmousedown="event.preventDefault()" onclick="hoFormat('bold')" class="ios-btn-tap px-2.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-900 text-[12.5px] font-extrabold" title="굵게 (Ctrl+B)">굵게</button>
+              <div class="relative">
+                <button type="button" id="hoColorBtn" onmousedown="event.preventDefault()" onclick="hoToggleColorMenu()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-800 text-[12.5px] font-bold flex items-center gap-1" title="글자색"><span class="font-extrabold leading-none border-b-[3px] border-[#FF3B30] px-0.5">A</span>글자색</button>
+                <div id="hoColorMenu" onmousedown="event.preventDefault()" class="hidden absolute right-0 top-full mt-1.5 z-[45] w-[232px] bg-white rounded-2xl border border-gray-200 shadow-2xl p-2.5 space-y-2">
+                  <div><div class="flex justify-between text-[10.5px] font-bold text-gray-400 px-0.5 mb-1"><span>드래그한 글자 · 없으면 칸 전체</span></div>
+                    <div class="grid grid-cols-3 gap-1.5"><button type="button" onclick="hoToggleColorMenu(false); hoFormat('color','black')" class="py-1.5 rounded-lg bg-gray-100 text-[12px] font-bold text-gray-900">검정</button><button type="button" onclick="hoToggleColorMenu(false); hoFormat('color','red')" class="py-1.5 rounded-lg bg-red-50 text-[12px] font-bold text-[#FF3B30]">빨강</button><button type="button" onclick="hoToggleColorMenu(false); hoFormat('bold')" class="py-1.5 rounded-lg bg-gray-100 text-[12px] font-extrabold text-gray-900">굵게</button></div></div>
+                  <p class="text-[10.5px] text-gray-400 leading-snug px-0.5">내용 칸을 눌러 글자를 드래그한 뒤 고르세요. 굵게는 <b>Ctrl+B</b>.</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-0.5 bg-white border border-gray-200 rounded-xl p-0.5" title="정렬 : 편집 중인 칸">
+                <button type="button" onmousedown="event.preventDefault()" onclick="hoFormat('align','')" class="ios-btn-tap w-8 h-[30px] rounded-lg text-gray-700 hover:bg-gray-100 flex items-center justify-center" title="왼쪽 맞춤"><i class="ph-bold ph-text-align-left text-[15px]"></i></button>
+                <button type="button" onmousedown="event.preventDefault()" onclick="hoFormat('align','c')" class="ios-btn-tap w-8 h-[30px] rounded-lg text-gray-700 hover:bg-gray-100 flex items-center justify-center" title="가운데 맞춤"><i class="ph-bold ph-text-align-center text-[15px]"></i></button>
+              </div>
               <button type="button" onclick="hoOpenDefaults()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1" title="새 출고일에 자동으로 만들어지는 칸"><i class="ph-bold ph-list-numbers"></i>기본칸</button>
               <button type="button" onclick="hoAdd()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-plus"></i>행 추가</button>
               <label class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gray-100 text-[11.5px] font-semibold text-gray-600" title="인쇄 배율 (자동이면 글이 잘리지 않게 맞춤)">배율 <input type="range" id="hoZoom" min="40" max="100" step="1" oninput="hoSetZoom(this.value)" class="w-[80px] accent-[#007AFF]"><span id="hoZoomTxt" class="w-[60px]"></span></label>
@@ -11184,7 +11199,7 @@
             </div>
           </div>
           <div class="overflow-auto rounded-xl border border-gray-200 bg-[#F2F2F7] p-3 flex-1 min-h-0"><div id="hoSheet" class="relative mx-auto bg-white shadow-sm" style="width:${HO_W}px"></div></div>
-          <p class="mt-2 text-[11px] text-gray-400">내용 칸을 눌러 바로 적어요. 글자를 드래그한 뒤 검정 · 빨강 · 굵게(Ctrl+B)로 서식을 바꿀 수 있어요. 행 아래쪽 끝을 끌면 높이가 바뀌어요. 파란 점선은 인쇄할 때 쪽이 나뉘는 위치예요.</p>
+          <p class="mt-2 text-[11px] text-gray-400">내용 칸을 눌러 바로 적어요. 글자를 드래그한 뒤 글자색(검정 · 빨강 · 굵게, Ctrl+B)으로 서식을, 정렬 버튼으로 왼쪽 · 가운데 맞춤을 바꿀 수 있어요. 행 아래쪽 끝을 끌면 높이가 바뀌어요. 파란 점선은 인쇄할 때 쪽이 나뉘는 위치예요.</p>
         </div>`;
       isEl('hoDate').value = hoSt.date;
       hoRenderSheet();
@@ -11208,7 +11223,7 @@
         h += `<tr data-ho-row="${r.id}" style="height:${hpx}px;break-inside:avoid;page-break-inside:avoid">
           <td style="${bd}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle;position:relative">${i + 1}${print ? '' : `<button type="button" data-ho-del="${r.id}" class="ho-noprint rounded-full bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-[#FF3B30]" style="position:absolute;left:4px;top:4px;width:24px;height:24px;font-size:11px" title="이 행 삭제"><i class="ph-bold ph-x"></i></button>`}</td>
           <td colspan="3" style="${bd}position:relative;vertical-align:middle;padding:6px 10px">
-            <div ${print ? '' : `data-ho-cell="${r.id}"`} style="min-height:${hpx - 14}px;font-size:18pt;line-height:1.35;white-space:pre-wrap;word-break:break-all;${f.c ? 'color:#FF0000;' : ''}${f.b ? 'font-weight:800;' : 'font-weight:400;'}${print ? '' : 'cursor:text;'}display:flex;align-items:center"><div style="width:100%">${editing ? '' : (hoCellHtml(r) || (print ? '' : '<span style="color:#C7C7CC;font-weight:400">내용을 입력하세요</span>'))}</div></div>
+            <div ${print ? '' : `data-ho-cell="${r.id}"`} style="min-height:${hpx - 14}px;font-size:18pt;line-height:1.35;white-space:pre-wrap;word-break:break-all;${f.c ? 'color:#FF0000;' : ''}${f.b ? 'font-weight:800;' : 'font-weight:400;'}${print ? '' : 'cursor:text;'}display:flex;align-items:center"><div style="width:100%;text-align:${f.a === 'c' ? 'center' : 'left'}">${editing ? '' : (hoCellHtml(r) || (print ? '' : '<span style="color:#C7C7CC;font-weight:400">내용을 입력하세요</span>'))}</div></div>
             ${print ? '' : `<div data-ho-rsz="${r.id}" class="ho-noprint" style="position:absolute;left:0;right:0;bottom:-4px;height:8px;cursor:row-resize;z-index:10" title="끌어서 높이 조절"></div>`}
           </td></tr>`;
       });
@@ -11316,7 +11331,7 @@
       const ta = old || document.createElement('textarea');
       if (!old) { ta.value = r.content || ''; ta.spellcheck = false; }
       const f = hoFmtOf(r);
-      Object.assign(ta.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', padding: '6px 10px', border: '2px solid #007AFF', outline: 'none', resize: 'none', background: '#fff', fontSize: '18pt', lineHeight: '1.35', fontWeight: f.b ? '800' : '400', color: f.c ? '#FF0000' : '#000', fontFamily: 'inherit', zIndex: 5 });
+      Object.assign(ta.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', padding: '6px 10px', border: '2px solid #007AFF', outline: 'none', resize: 'none', background: '#fff', fontSize: '18pt', lineHeight: '1.35', fontWeight: f.b ? '800' : '400', color: f.c ? '#FF0000' : '#000', textAlign: f.a === 'c' ? 'center' : 'left', fontFamily: 'inherit', zIndex: 5 });
       cell.parentElement.appendChild(ta);
       hoSt.edit = { id, el: ta, orig: r.content || '' };
       if (!old) {
@@ -11356,11 +11371,12 @@
     // 서식 : 드래그한 글자가 있으면 그 글자만, 없으면 편집 중인 칸 전체
     async function hoFormat(kind, val) {
       const ed = hoSt.edit;
-      if (!ed) { showToastNotification('서식', '내용 칸을 눌러 글자를 고른 뒤 눌러 주세요.', 'info'); return; }
+      if (!ed) { showToastNotification('서식', kind === 'align' ? '맞출 내용 칸을 먼저 눌러 주세요.' : '내용 칸을 눌러 글자를 고른 뒤 눌러 주세요.', 'info'); return; }
       const r = hoSt.rows.find(x => x.id === ed.id); if (!r) return;
       const T = ed.el.value, a = ed.el.selectionStart, b = ed.el.selectionEnd;
       let f = hoFmtOf(r);
-      if (a != null && b != null && a !== b) f = hoApplyRange(f, r.content || '', T, a, b, kind, val);
+      if (kind === 'align') { f.r = isRebaseRuns(f.r, r.content || '', T); f.a = val === 'c' ? 'c' : ''; }
+      else if (a != null && b != null && a !== b) f = hoApplyRange(f, r.content || '', T, a, b, kind, val);
       else {
         f.r = isRebaseRuns(f.r, r.content || '', T);
         if (kind === 'bold') { f.b = !f.b; f.r = f.r.map(x => [x[0], x[1], isFlagSet(x[2], 'b', false)]); }
@@ -11370,6 +11386,8 @@
       await hoSave(r.id, { content: T, fmt: hoFmtPack(f) });
       hoRenderSheet();
     }
+    function hoToggleColorMenu(force) { const m = isEl('hoColorMenu'); if (!m) return; m.classList.toggle('hidden', !(force === undefined ? m.classList.contains('hidden') : force)); }
+    document.addEventListener('mousedown', (e) => { const m = isEl('hoColorMenu'); if (m && !m.classList.contains('hidden') && !m.contains(e.target) && !e.target.closest('#hoColorBtn')) hoToggleColorMenu(false); });
     // 이벤트 : 칸 누르기 · 행 삭제 · 높이 끌기
     document.addEventListener('mousedown', (e) => {
       if (!isEl('hoSheet') || !e.target.closest('#hoSheet')) return;
@@ -11548,7 +11566,7 @@
             const mine = r._mine.has(c.k), rem = !mine && r._rem && (r._rem.keys.has(c.k) || r._rem.isNew);
             const nodata = c.ro && IS_NODATA_EDIT[c.k] && isNoDataNow(r, IS_NODATA_EDIT[c.k]);
             const fm = r[IS_COLOR_KEY] ? isFmtGet(r, c.k) : null;
-            const cls = [c.ml && ln > 1 ? 'is-ml' : '', fm && fm.c === 'red' ? 'is-red' : '', fm && fm.b ? 'is-bold' : '', c.ro && !nodata ? 'is-ro' : '', nodata && r[c.k] === IS_NODATA ? 'is-miss' : '', mine ? 'is-dirty' : '', rem ? 'is-rdirty' : '', isState.miss.has(r.id + '|' + c.k) ? 'is-miss' : '', isState.sel && isState.sel.id === r.id && isState.sel.col === c.k ? 'is-sel' : ''].filter(Boolean).join(' ');
+            const cls = [c.ml && ln > 1 ? 'is-ml' : '', fm && fm.c === 'red' ? 'is-red' : '', fm && fm.b ? 'is-bold' : '', fm && fm.a === 'c' ? 'is-center' : '', c.ro && !nodata ? 'is-ro' : '', nodata && r[c.k] === IS_NODATA ? 'is-miss' : '', mine ? 'is-dirty' : '', rem ? 'is-rdirty' : '', isState.miss.has(r.id + '|' + c.k) ? 'is-miss' : '', isState.sel && isState.sel.id === r.id && isState.sel.col === c.k ? 'is-sel' : ''].filter(Boolean).join(' ');
             const v = r[c.k] ?? '';
             const tip = rem ? remTitle : nodata ? `${v || '(빈칸)'} · 데이터가 없어 직접 입력할 수 있습니다` : String(v);
             return `<td data-col="${c.k}" class="${cls}" title="${svEsc(tip)}">${fm && fm.r.length ? isCellHtml(r, c.k, v) : svEsc(v)}</td>`;
@@ -11725,7 +11743,8 @@
       const r = isRectIn(td);
       const wide = ed.col === 'detail' ? 320 : ed.col === 'content' ? 280 : ed.col === 'delivery_date' ? 130 : 0;
       const lines = ed.el.tagName === 'TEXTAREA' ? ed.el.value.split('\n').length : 1;
-      Object.assign(ed.el.style, { left: r.x + 'px', top: r.y + 'px', width: Math.max(r.w, wide) + 'px', height: Math.max(r.h, lines * 16 + 14) + 'px' });
+      const fr = isFindRow(ed.id);
+      Object.assign(ed.el.style, { left: r.x + 'px', top: r.y + 'px', width: Math.max(r.w, wide) + 'px', height: Math.max(r.h, lines * 16 + 14) + 'px', textAlign: fr && isFmtGet(fr, ed.col).a === 'c' ? 'center' : '' });
     }
     function isCloseEditor(refocus) {
       const ed = isState.edit; if (!ed) return;
@@ -12021,7 +12040,7 @@
           }
         }
       } finally { hideBusy(); }
-      isRenderBottom();                                                // 저장 후 맨 아래(최신)로
+      isRenderKeep(isAtBottom());                                      // 저장 후 : 보던 위치 그대로 (맨 아래에 있었으면 맨 아래)
       isSendDrafts();
       isLog(logs);
       if (fail) showToastNotification('일부 저장 실패', `${ok}행 저장 · ${fail}행 실패 — ${dbErrorMessage(lastErr)}`, 'warning');
@@ -12310,7 +12329,7 @@
     async function xlFinish(wb, name, hovers) {
       let buf = await wb.xlsx.writeBuffer();
       if (hovers && hovers.length) {
-        try { await costLoadScript(XL_JSZIP); buf = await xlInjectHover(buf, hovers); }
+        try { await costLoadScript(XL_JSZIP); if (!window.JSZip) throw new Error('JSZip 없음'); buf = await xlInjectHover(buf, hovers); }
         catch (e) { console.warn('사진 확대 메모를 넣지 못함(사진은 그대로):', e); }
       }
       xlSaveBlob(buf, name);
@@ -12618,6 +12637,21 @@
         await isDraftSet(id, { [IS_COLOR_KEY]: Object.keys(o).length ? JSON.stringify(o) : '' }, true);
       }
       if (targets.length) showToastNotification('글자색 변경', `${color === 'red' ? '빨간색' : '검정색'}으로 바꿨어요. 저장을 눌러야 반영됩니다.`, 'success');
+    }
+    // 정렬 (왼쪽 / 가운데) : 선택한 칸, 칸을 고르지 않았으면 체크한 행의 상세내용
+    async function isSetAlign(a) {
+      if (isNeedUser()) return;
+      if (isState.edit) await isCommit(isState.edit.el.value, null);
+      const targets = [];
+      if (isState.sel) targets.push([isState.sel.id, isState.sel.col]);
+      else [...isState.checked].forEach(id => targets.push([id, 'detail']));
+      if (!targets.length) { showToastNotification('정렬', '칸을 먼저 고르거나, 상세내용을 바꿀 행을 체크해 주세요.', 'info'); return; }
+      for (const [id, k] of targets) {
+        const row = isFindRow(id); if (!row) continue;
+        const o = isColors(row), f = isFmtGet(row, k); f.a = a === 'c' ? 'c' : ''; isFmtPut(o, k, f);
+        await isDraftSet(id, { [IS_COLOR_KEY]: Object.keys(o).length ? JSON.stringify(o) : '' }, true);
+      }
+      showToastNotification('정렬', `${a === 'c' ? '가운데' : '왼쪽'} 맞춤으로 바꿨어요. 저장을 눌러야 반영됩니다.`, 'success');
     }
     document.addEventListener('mousedown', (e) => { const m = isEl('isColorMenu'); if (m && !m.classList.contains('hidden') && !m.contains(e.target) && !e.target.closest('#isColorBtn')) isToggleColorMenu(false); });
     isEl('isFpSearch').addEventListener('input', () => {
