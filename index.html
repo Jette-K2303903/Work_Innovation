@@ -105,6 +105,8 @@
     .is-red-tg-sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: left .2s; }
     .is-red-tg.on { color: #FF3B30; } .is-red-tg.on .is-red-tg-sw { background: #FF3B30; } .is-red-tg.on .is-red-tg-sw::after { left: 14px; }
     #hoPrintRoot { display: none; }
+    #onStockBox td input, #onStockBox td select { width: 100%; box-sizing: border-box; min-width: 0; }
+    #onStockBox td input[type=date] { padding-left: 2px; padding-right: 0; font-size: 11.5px; }
     @media print {
       @page { size: A4 portrait; margin: 0 0.1in; }
       body.ho-printing > *:not(#hoPrintRoot) { display: none !important; }
@@ -2356,7 +2358,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.043</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.044</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -11018,7 +11020,7 @@
     // ========== 원앤원 재고 상자 (구분 입고 + / 출고 - · 파렛트 입고현황 천안 자동 기입) ==========
     const ON_TABLE = 'onenone_stock';
     const ON_COLS = [['kpp_n11', 'KPP N11'], ['kpp_n12', 'KPP N12'], ['aj_11a', 'AJ 11A'], ['aj_12a', 'AJ 12A'], ['kimchi_l', '김치 P박스(大)'], ['kimchi_s', '김치 P박스(小)'], ['kimchi_lid', '김치 P박스 뚜껑'], ['normal_box', '일반 P박스']];
-    const onSt = { rows: [], err: '', loading: false };
+    const onSt = { rows: [], err: '', loading: false, edit: null };
     async function onLoad() {
       onSt.loading = true;
       try {
@@ -11034,41 +11036,80 @@
       onSt.loading = false;
       onRender();
     }
+    const ON_PALLET = new Set(['kpp_n11', 'kpp_n12', 'aj_11a', 'aj_12a']);   // 파렛트 입고현황에서 자동으로 들어오는 칸
     function onRender() {
       const box = isEl('onStockBox'); if (!box) return;
+      if (onSt.edit && box.contains(document.activeElement) && document.activeElement.closest('[data-on-edit]')) return;   // 고치는 중이면 다시 그리지 않음
       const today = isToday(), d = new Date();
       const lbl = `${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}(${'일월화수목금토'[d.getDay()]}) 기준 재고`;
       const sum = Object.fromEntries(ON_COLS.map(([k]) => [k, 0]));
       onSt.rows.forEach(r => { if (r.entry_date && r.entry_date > today) return; const sg = r.kind === '출고' ? -1 : 1; ON_COLS.forEach(([k]) => { sum[k] += sg * (+r[k] || 0); }); });
-      const td = 'px-2 py-1.5 border border-gray-300 text-center';
+      const td = 'px-1 py-1.5 border border-gray-300 text-center', th = `${td} font-bold leading-tight`, hs = 'background:#44546A;color:#fff;white-space:normal;word-break:keep-all';
+      const inp = 'inline-cell-input w-full px-1 py-1 rounded-md bg-white border border-gray-200 text-[12px]';
+      const rowHtml = (r) => {
+        const auto = !!r.source_pallet_id;
+        if (onSt.edit === r.id) return `<tr data-on-edit="${r.id}" class="bg-blue-50/60">
+          <td class="${td}">${auto ? svEsc(String(r.entry_date || '').slice(2).replace(/-/g, '.')) : `<input type="date" data-on-f="entry_date" value="${svEsc(r.entry_date || '')}" class="${inp}">`}</td>
+          <td class="${td}">${auto ? `<b class="${r.kind === '출고' ? 'text-[#FF3B30]' : 'text-[#007AFF]'}">${svEsc(r.kind)}</b>` : `<select data-on-f="kind" class="${inp}"><option ${r.kind === '입고' ? 'selected' : ''}>입고</option><option ${r.kind === '출고' ? 'selected' : ''}>출고</option></select>`}</td>
+          ${ON_COLS.map(([k]) => auto && ON_PALLET.has(k) ? `<td class="${td} bg-gray-50 text-gray-500" title="파렛트 입고현황에서 자동으로 들어온 값 (파렛트 입고현황에서 고쳐요)"><i class="ph-bold ph-lock-simple text-[10px] text-gray-400 mr-0.5"></i>${+r[k] ? (+r[k]).toLocaleString() : ''}</td>` : `<td class="${td}"><input type="number" min="0" inputmode="numeric" data-on-f="${k}" value="${+r[k] || ''}" class="${inp} text-center"></td>`).join('')}
+          <td class="${td}"><input type="text" data-on-f="note" value="${svEsc(r.note || '')}" class="${inp}"></td>
+          <td class="${td} whitespace-nowrap"><button type="button" onclick="onSaveEdit(${r.id})" class="px-1.5 py-0.5 rounded-md bg-[#007AFF] text-white text-[11px] font-bold">저장</button> <button type="button" onclick="onCancelEdit()" class="px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-600 text-[11px] font-bold">취소</button></td></tr>`;
+        return `<tr>
+          <td class="${td}">${svEsc(String(r.entry_date || '').slice(2).replace(/-/g, '.'))}</td>
+          <td class="${td} font-bold ${r.kind === '출고' ? 'text-[#FF3B30]' : 'text-[#007AFF]'}">${svEsc(r.kind)}</td>
+          ${ON_COLS.map(([k]) => `<td class="${td}">${+r[k] ? (r.kind === '출고' ? '-' : '') + (+r[k]).toLocaleString() : ''}</td>`).join('')}
+          <td class="${td} text-left text-[12px] text-gray-600 truncate" title="${svEsc(r.note || '')}">${auto ? '<span class="px-1 rounded bg-gray-100 text-gray-500 text-[10.5px] font-bold mr-1">자동</span>' : ''}${svEsc(r.note || '')}</td>
+          <td class="${td} whitespace-nowrap"><button type="button" onclick="onStartEdit(${r.id})" class="text-[#007AFF] text-[11.5px] font-bold" title="${auto ? '김치 P박스 · 뚜껑 · 일반 P박스 · 비고만 고칠 수 있어요' : '수정'}">수정</button> <button type="button" onclick="onDel(${r.id})" class="text-[#FF3B30] text-[11.5px] font-bold" title="삭제">삭제</button></td></tr>`;
+      };
       box.innerHTML = `
-        <div class="flex items-center gap-2 mb-2"><h4 class="text-[15px] font-bold text-gray-900">원앤원 재고</h4><span class="text-[11px] text-gray-500">입고 + · 출고 − · 파렛트 입고현황(상하차지 천안)은 자동으로 들어와요</span></div>
+        <div class="flex items-center gap-2 mb-2 flex-wrap"><h4 class="text-[15px] font-bold text-gray-900">원앤원 재고</h4><span class="text-[11px] text-gray-500">입고 + · 출고 − · 파렛트(KPP · AJ)는 파렛트 입고현황(상하차지 천안)에서 자동으로 들어와요 · 김치 P박스 · 뚜껑 · 일반 P박스는 <b>수정</b>으로 고칠 수 있어요</span></div>
         <div class="overflow-x-auto rounded-xl">
-          <table class="pallet-table w-full border-collapse min-w-[860px] text-[12.5px]">
-            <thead><tr style="background:#44546A;color:#fff">
-              <th colspan="2" class="${td} !text-white font-bold" style="background:#44546A;color:#fff">구분</th>
-              ${ON_COLS.map(([, h]) => `<th class="${td} font-bold" style="background:#44546A;color:#fff">${svEsc(h)}</th>`).join('')}
-              <th class="${td} font-bold" style="background:#44546A;color:#fff">비고</th><th class="${td}" style="background:#44546A;color:#fff;width:44px"></th>
+          <table class="pallet-table w-full border-collapse min-w-[640px] text-[12px]" style="table-layout:fixed;width:100%;min-width:640px">
+            <colgroup><col style="width:9%"><col style="width:6%">${ON_COLS.map(() => '<col style="width:7.5%">').join('')}<col style="width:15%"><col style="width:10%"></colgroup>
+            <thead><tr style="${hs}">
+              <th colspan="2" class="${th}" style="${hs}">구분</th>
+              ${ON_COLS.map(([, h]) => `<th class="${th}" style="${hs}">${svEsc(h)}</th>`).join('')}
+              <th class="${th}" style="${hs}">비고</th><th class="${th}" style="${hs}"></th>
             </tr></thead>
             <tbody>
-              <tr style="background:#DDEBF7" class="font-bold text-black"><td colspan="2" class="${td}">${lbl}</td>${ON_COLS.map(([k]) => `<td class="${td} ${sum[k] < 0 ? 'text-[#FF3B30]' : ''}">${sum[k].toLocaleString()}</td>`).join('')}<td class="${td}"></td><td class="${td}"></td></tr>
+              <tr style="background:#DDEBF7" class="font-bold text-black"><td colspan="2" class="${td} leading-tight">${lbl}</td>${ON_COLS.map(([k]) => `<td class="${td} ${sum[k] < 0 ? 'text-[#FF3B30]' : ''}">${sum[k].toLocaleString()}</td>`).join('')}<td class="${td}"></td><td class="${td}"></td></tr>
               <tr class="new-inline-row">
-                <td class="${td}"><input type="date" id="onNewDate" value="${today}" class="inline-cell-input w-[118px] px-1 py-1 rounded-lg bg-white border border-gray-200 text-[12px]"></td>
-                <td class="${td}"><select id="onNewKind" class="inline-cell-input px-1 py-1 rounded-lg bg-white border border-gray-200 text-[12px]"><option>입고</option><option>출고</option></select></td>
-                ${ON_COLS.map(([k]) => `<td class="${td}"><input type="number" min="0" inputmode="numeric" data-on-new="${k}" class="inline-cell-input w-[64px] px-1 py-1 rounded-lg bg-white border border-gray-200 text-[12px] text-center"></td>`).join('')}
-                <td class="${td}"><input type="text" id="onNewNote" placeholder="비고" class="inline-cell-input w-[120px] px-1 py-1 rounded-lg bg-white border border-gray-200 text-[12px]"></td>
+                <td class="${td}"><input type="date" id="onNewDate" value="${today}" class="${inp}"></td>
+                <td class="${td}"><select id="onNewKind" class="${inp}"><option>입고</option><option>출고</option></select></td>
+                ${ON_COLS.map(([k]) => `<td class="${td}"><input type="number" min="0" inputmode="numeric" data-on-new="${k}" class="${inp} text-center"></td>`).join('')}
+                <td class="${td}"><input type="text" id="onNewNote" placeholder="비고" class="${inp}"></td>
                 <td class="${td}"><button type="button" onclick="onAdd()" class="ios-btn-tap px-2 py-1 rounded-lg bg-[#007AFF] text-white text-[11.5px] font-bold">등록</button></td>
               </tr>
-              ${onSt.rows.length ? onSt.rows.slice(0, 300).map(r => `<tr>
-                <td class="${td}">${svEsc(String(r.entry_date || '').slice(2).replace(/-/g, '.'))}</td>
-                <td class="${td} font-bold ${r.kind === '출고' ? 'text-[#FF3B30]' : 'text-[#007AFF]'}">${svEsc(r.kind)}</td>
-                ${ON_COLS.map(([k]) => `<td class="${td}">${+r[k] ? (r.kind === '출고' ? '-' : '') + (+r[k]).toLocaleString() : ''}</td>`).join('')}
-                <td class="${td} text-left text-[12px] text-gray-600 max-w-[200px] truncate" title="${svEsc(r.note || '')}">${r.source_pallet_id ? '<span class="px-1 rounded bg-gray-100 text-gray-500 text-[10.5px] font-bold mr-1">자동</span>' : ''}${svEsc(r.note || '')}</td>
-                <td class="${td}"><button type="button" onclick="onDel(${r.id})" class="text-[#FF3B30] text-[11.5px] font-bold" title="삭제">삭제</button></td></tr>`).join('')
+              ${onSt.rows.length ? onSt.rows.slice(0, 300).map(rowHtml).join('')
                 : `<tr><td colspan="${ON_COLS.length + 4}" class="${td} text-gray-400 py-4">${onSt.err ? '불러오지 못했어요: ' + svEsc(onSt.err) : onSt.loading ? '불러오는 중…' : '아직 기록이 없어요.'}</td></tr>`}
             </tbody>
           </table>
         </div>`;
+    }
+    function onStartEdit(id) { if (isNeedUser()) return; onSt.edit = id; onRender(); const f = document.querySelector(`[data-on-edit="${id}"] input:not([type=date])`); if (f) f.focus(); }
+    function onCancelEdit() { onSt.edit = null; onRender(); }
+    async function onSaveEdit(id) {
+      if (isNeedUser()) return;
+      const r = onSt.rows.find(x => x.id === id), tr = document.querySelector(`[data-on-edit="${id}"]`); if (!r || !tr) return;
+      const auto = !!r.source_pallet_id, patch = {};
+      tr.querySelectorAll('[data-on-f]').forEach(el => {
+        const k = el.dataset.onF;
+        if (auto && (ON_PALLET.has(k) || k === 'entry_date' || k === 'kind')) return;          // 자동 칸은 그대로
+        if (ON_COLS.some(([c]) => c === k)) patch[k] = Math.max(0, parseInt(el.value || '0', 10) || 0);
+        else if (k === 'note') { patch.note = el.value.trim() || null; if (auto && patch.note !== (r.note || null)) patch.note_edited = true; }
+        else if (k === 'entry_date') patch.entry_date = el.value || r.entry_date;
+        else patch[k] = el.value;
+      });
+      const changed = Object.keys(patch).filter(k => k !== 'note_edited' && String(patch[k] ?? '') !== String(r[k] ?? ''));
+      if (!changed.length) { onCancelEdit(); return; }
+      const { error } = await supabaseClient.from(ON_TABLE).update(patch).eq('id', id);
+      if (error) { showToastNotification('저장 실패', dbErrorMessage(error), 'warning'); return; }
+      const nm = (k) => (ON_COLS.find(c => c[0] === k) || [k, { note: '비고', entry_date: '날짜', kind: '구분' }[k] || k])[1];
+      isLog(changed.map(k => ({ action: '수정', row_id: null, field_key: '', field: `원앤원 재고 ${nm(k)}`, old_value: String(r[k] ?? ''), new_value: String(patch[k] ?? ''), row_label: `원앤원 재고 ${r.kind} (${r.entry_date || ''})` })));
+      Object.assign(r, patch); onSt.edit = null;
+      isBroadcast('onstock', {});
+      showToastNotification('저장 완료', '원앤원 재고를 고쳤어요.', 'success');
+      onRender();
     }
     async function onAdd() {
       if (isNeedUser()) return;
@@ -11102,6 +11143,8 @@
           if (!String(r.location || '').includes('천안') || !kind || !sum) { await supabaseClient.from(ON_TABLE).delete().eq('source_pallet_id', String(r.id)); continue; }
           const row = { entry_date: r.date || null, kind, kpp_n11: +r.kppN11 || 0, kpp_n12: +r.kppN12 || 0, aj_11a: +r.aj11A || 0, aj_12a: +r.aj12A || 0,
                         note: `파렛트 ${r.type}${r.carNum && r.carNum !== '-' ? ' · ' + r.carNum : ''}${r.note && r.note !== '-' ? ' · ' + r.note : ''}`, source_pallet_id: String(r.id), created_by: r.worker || null };
+          const { data: ex } = await supabaseClient.from(ON_TABLE).select('id,note_edited').eq('source_pallet_id', String(r.id)).limit(1);
+          if (ex && ex[0] && ex[0].note_edited) delete row.note;           // 사람이 고친 비고는 그대로
           await supabaseClient.from(ON_TABLE).upsert(row, { onConflict: 'source_pallet_id' });
         }
       } catch (e) { console.warn('원앤원 재고 자동 기입 실패(무시):', e); }
