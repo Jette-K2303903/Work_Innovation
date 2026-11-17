@@ -97,6 +97,7 @@
     .is-table td.is-red { color: #FF3B30 !important; }
     .is-table td.is-bold { font-weight: 800 !important; }
     .is-table td.is-center { text-align: center; }
+    .is-table td.is-msel { background: #E8F1FF !important; box-shadow: inset 0 0 0 1px #9CC3FF; }
     .is-table td .is-fr { color: #FF3B30; }
     .is-tab-full { position: fixed !important; inset: 12px; z-index: 45; margin: 0 !important; overflow: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
     .is-red-tg { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; vertical-align: middle; font-size: 10.5px; font-weight: 700; color: #9CA3AF; }
@@ -108,7 +109,9 @@
       @page { size: A4 portrait; margin: 0 0.1in; }
       body.ho-printing > *:not(#hoPrintRoot) { display: none !important; }
       body.ho-printing #hoPrintRoot { display: block !important; }
-      body.ho-printing { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body.ho-printing { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; display: block !important; height: auto !important; min-height: 0 !important; overflow: visible !important; }
+      html:has(body.ho-printing) { height: auto !important; overflow: visible !important; }
+      body.ho-printing #hoPrintRoot { margin: 0 !important; padding: 0 !important; position: static !important; }
       .ho-noprint { display: none !important; }
     }
     .is-rsz { position: absolute; top: 0; right: -4px; width: 8px; height: 100%; cursor: col-resize; z-index: 5; }
@@ -2353,7 +2356,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.042</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.043</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -10421,6 +10424,7 @@
     const IS_COLORS = ['#007AFF', '#FF9500', '#34C759', '#AF52DE', '#FF2D55', '#32ADE6', '#FF3B30', '#5856D6', '#00A86B', '#C68E17'];
     const IS_USER_KEY = 'issue_sheet_user_v1';
     const isState = {
+      msel: new Set(), mAnchor: null, lastChk: null, chkShift: false,
       rows: [], loaded: false, missing: false, q: '', sel: null, edit: null, checked: new Set(), miss: new Set(),
       drafts: new Map(),      // 내가 저장 전에 고친 내용 : id → { patch, isNew, t }
       remote: new Map(),      // 다른 사람이 저장 전에 고친 내용 : cid → { name, drafts: [...] }
@@ -11110,9 +11114,9 @@
     const HO_W = HO_COLS_PX.reduce((a, b) => a + b, 0);
     const hoPt = (pt) => Math.round(pt * 4 / 3);                   // pt → px
     const hoTomorrow = () => ibToday(1);
-    const hoSt = { date: null, rows: [], zoom: 0, edit: null, loading: false, remote: new Map(), later: false };
-    function hoFmtOf(r) { const v = r && r.fmt; return { c: v && v.c === 'red' ? 'red' : '', b: !!(v && v.b), a: v && v.a === 'c' ? 'c' : '', r: (v && Array.isArray(v.r)) ? v.r : [] }; }
-    function hoFmtPack(f) { const o = {}; if (f.c) o.c = f.c; if (f.b) o.b = 1; if (f.a) o.a = f.a; if (f.r && f.r.length) o.r = f.r; return Object.keys(o).length ? o : null; }
+    const hoSt = { date: null, rows: [], zoom: 0, edit: null, loading: false, remote: new Map(), later: false, msel: new Set(), anchor: null };
+    function hoFmtOf(r) { const v = r && r.fmt; return { c: v && v.c === 'red' ? 'red' : '', b: !!(v && v.b), a: v && v.a === 'l' ? 'l' : 'c', r: (v && Array.isArray(v.r)) ? v.r : [] }; }
+    function hoFmtPack(f) { const o = {}; if (f.c) o.c = f.c; if (f.b) o.b = 1; if (f.a === 'l') o.a = 'l'; if (f.r && f.r.length) o.r = f.r; return Object.keys(o).length ? o : null; }
     function hoCellHtml(r) {
       const t = String(r.content || ''), f = hoFmtOf(r);
       if (!f.r.length) return svEsc(t);
@@ -11129,6 +11133,40 @@
       else for (let i = a; i < b; i++) flags[i] = isFlagSet(flags[i], 'r', val === 'red');
       f.r = isFlagsToRuns(flags);
       return f;
+    }
+    // 머리말 제목 : app_settings 'handover_titles' = [{ from: 'YYYY-MM-DD', t: '제목' }] · 그 출고일 이전에 정한 것 중 가장 최근
+    const HO_TITLE_KEY = 'handover_titles', HO_TITLE_DEFAULT = '밀양센터 주간 → 야간 인수인계';
+    let HO_TITLES = [], hoTitlesLoaded = false;
+    async function hoLoadTitles(force) {
+      if (hoTitlesLoaded && !force) return HO_TITLES;
+      try { const { data } = await supabaseClient.from(SETTINGS_TABLE).select('value').eq('key', HO_TITLE_KEY).limit(1); const v = data && data[0] && data[0].value; HO_TITLES = Array.isArray(v) ? v.filter(x => x && x.from && x.t) : []; hoTitlesLoaded = true; } catch (e) {}
+      return HO_TITLES;
+    }
+    function hoTitleFor(d) { const l = HO_TITLES.filter(x => x.from <= d).sort((a, b) => a.from < b.from ? -1 : 1); return l.length ? l[l.length - 1].t : HO_TITLE_DEFAULT; }
+    function hoEditTitle(td) {
+      if (td.querySelector('input')) return;
+      const d = hoSt.date || hoTomorrow(), cur = hoTitleFor(d);
+      td.innerHTML = `<input type="text" class="ho-noprint" style="width:100%;font:inherit;text-align:center;border:2px solid #007AFF;border-radius:6px;padding:2px 6px;outline:none" value="${svEsc(cur)}">`;
+      const inp = td.querySelector('input'); inp.focus(); inp.select();
+      let done = false;
+      const finish = async (save) => {
+        if (done) return; done = true;
+        const v = inp.value.trim();
+        if (save && v && v !== cur) {
+          const from = ibToday(0);
+          await hoLoadTitles(true);
+          const list = HO_TITLES.filter(x => x.from !== from).concat([{ from, t: v }]).sort((a, b) => a.from < b.from ? -1 : 1);
+          const res = await dbRun('인수인계 머리말 저장', async () => { await settingsSave([{ key: HO_TITLE_KEY, value: list }]); });
+          if (res.ok) {
+            HO_TITLES = list; isBroadcast('hotitle', {});
+            isLog([{ action: '수정', row_id: null, field_key: '', field: '인수인계 머리말', old_value: cur, new_value: `${v} (${from}부터)`, row_label: '인수인계 머리말' }]);
+            showToastNotification('머리말 수정', `${from} 출고일부터 '${v}'(으)로 나와요. 지난 날짜는 그대로예요.`, 'success');
+          }
+        }
+        hoRenderSheet();
+      };
+      inp.addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.isComposing || ev.keyCode === 229) return; if (ev.key === 'Enter') finish(true); else if (ev.key === 'Escape') finish(false); });
+      inp.addEventListener('blur', () => finish(true));
     }
     // 그 출고일에 아무 행이 없으면 기본 6칸을 만듦 (두 사람이 동시에 열어도 한 번만 : is_default + 고유 색인)
     const HO_DEFAULTS_KEY = 'handover_defaults';
@@ -11245,7 +11283,7 @@
       cell.style.minHeight = (hpx - 14) + 'px';
       cell.style.color = f.c ? '#FF0000' : ''; cell.style.fontWeight = f.b ? '800' : '400';
       cell.style.outline = rm ? `2px solid ${isColor(rm.name)}` : ''; cell.style.outlineOffset = rm ? '2px' : '';
-      const inner = cell.firstElementChild; if (inner) { inner.style.textAlign = f.a === 'c' ? 'center' : 'left'; inner.innerHTML = hoCellInner(r); }
+      const inner = cell.firstElementChild; if (inner) { inner.style.textAlign = f.a === 'l' ? 'left' : 'center'; inner.innerHTML = hoCellInner(r); }
       let tag = cell.parentElement.querySelector('.ho-rtag');
       if (rm) { if (!tag) { tag = document.createElement('div'); tag.className = 'ho-rtag ho-noprint'; Object.assign(tag.style, { position: 'absolute', right: '6px', top: '4px', zIndex: 6, padding: '1px 7px', borderRadius: '6px', color: '#fff', fontSize: '11px', fontWeight: '700', pointerEvents: 'none' }); cell.parentElement.appendChild(tag); } tag.style.background = isColor(rm.name); tag.textContent = `${rm.name} 입력 중`; }
       else if (tag) tag.remove();
@@ -11278,12 +11316,14 @@
               <button type="button" onclick="hoPrint()" class="ios-btn-tap px-3.5 py-2 rounded-xl bg-[#007AFF] text-white text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-printer"></i>인쇄</button>
             </div>
           </div>
+          <div id="hoSelBar" class="hidden mb-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-[12.5px]"><b data-n class="text-[#007AFF]"></b><span class="text-gray-500">글자색 · 정렬 버튼이 고른 칸 모두에 적용돼요.</span><button type="button" onclick="hoSelDelete()" class="ml-auto ios-btn-tap px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-[#FF3B30] font-bold">선택 삭제</button><button type="button" onclick="hoSelClear()" class="ios-btn-tap px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-gray-700 font-bold">선택 해제</button></div>
           <div class="overflow-auto rounded-xl border border-gray-200 bg-[#F2F2F7] p-3 flex-1 min-h-0"><div id="hoSheet" class="relative mx-auto bg-white shadow-sm" style="width:${HO_W}px"></div></div>
-          <p class="mt-2 text-[11px] text-gray-400">내용 칸을 눌러 바로 적어요. 글자를 드래그한 뒤 글자색(검정 · 빨강 · 굵게, Ctrl+B)으로 서식을, 정렬 버튼으로 왼쪽 · 가운데 맞춤을 바꿀 수 있어요. 행 아래쪽 끝을 끌면 높이가 바뀌어요. 파란 점선은 인쇄할 때 쪽이 나뉘는 위치예요.</p>
+          <p class="mt-2 text-[11px] text-gray-400">내용 칸을 눌러 바로 적어요. Shift+클릭(범위) · Alt/Ctrl+클릭(하나씩)으로 여러 칸을 골라 한 번에 서식 · 정렬 · 삭제할 수 있어요. 제목을 누르면 머리말을 고칠 수 있어요. 글자를 드래그한 뒤 글자색(검정 · 빨강 · 굵게, Ctrl+B)으로 서식을, 정렬 버튼으로 왼쪽 · 가운데 맞춤을 바꿀 수 있어요. 행 아래쪽 끝을 끌면 높이가 바뀌어요. 파란 점선은 인쇄할 때 쪽이 나뉘는 위치예요.</p>
         </div>`;
       isEl('hoDate').value = hoSt.date;
       isZoomApply();
       hoRenderSheet();
+      hoLoadTitles().then(() => hoRenderSheet());
       hoLoad();
     }
     function hoSheetHtml(print) {
@@ -11295,7 +11335,7 @@
       let h = `<table style="width:${HO_W}px;${print ? 'margin:0 auto;' : ''}border-collapse:collapse;table-layout:fixed;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;color:#000">
         <colgroup>${HO_COLS_PX.map(w => `<col style="width:${w}px">`).join('')}</colgroup>
         <thead data-ho-head style="display:table-header-group"><tr style="height:${hoPt(18.75)}px"><td colspan="4"></td></tr>
-        <tr style="height:${hoPt(30)}px">${cell(`${ttl}text-align:center;vertical-align:middle`, '출고일')}${cell(`${ttl}text-align:center;vertical-align:middle`, m ? `${+m[2]}/${+m[3]}(${wk})` : '')}<td colspan="2" style="${ttl}text-align:center;vertical-align:middle">밀양센터 주간 → 야간 인수인계</td></tr>
+        <tr style="height:${hoPt(30)}px">${cell(`${ttl}text-align:center;vertical-align:middle`, '출고일')}${cell(`${ttl}text-align:center;vertical-align:middle`, m ? `${+m[2]}/${+m[3]}(${wk})` : '')}<td colspan="2" ${print ? '' : 'data-ho-title title="눌러서 머리말 고치기 (오늘 출고일부터 적용)"'} style="${ttl}text-align:center;vertical-align:middle;position:relative;${print ? '' : 'cursor:pointer;'}">${svEsc(hoTitleFor(d))}${print ? '' : '<i class="ph-bold ph-pencil-simple ho-noprint" style="font-size:12pt;color:#C7C7CC;margin-left:6px"></i>'}</td></tr>
         <tr style="height:${hoPt(30)}px"><td colspan="4"></td></tr>
         <tr style="height:${hoPt(30)}px">${cell(`${rows.length ? bd : ''}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle`, '순번')}<td colspan="3" style="${rows.length ? bd : ''}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle">내용</td></tr></thead><tbody>`;
       rows.forEach((r, i) => {
@@ -11303,8 +11343,8 @@
         const editing = !print && hoSt.edit && hoSt.edit.id === r.id;
         h += `<tr data-ho-row="${r.id}" style="height:${hpx}px;break-inside:avoid;page-break-inside:avoid">
           <td style="${bd}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle;position:relative">${i + 1}${print ? '' : `<button type="button" data-ho-del="${r.id}" class="ho-noprint rounded-full bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-[#FF3B30]" style="position:absolute;left:4px;top:4px;width:24px;height:24px;font-size:11px" title="이 행 삭제"><i class="ph-bold ph-x"></i></button>`}</td>
-          <td colspan="3" style="${bd}position:relative;vertical-align:middle;padding:6px 10px">
-            <div ${print ? '' : `data-ho-cell="${r.id}"`} style="min-height:${hpx - 14}px;font-size:18pt;line-height:1.35;white-space:pre-wrap;word-break:break-all;${f.c ? 'color:#FF0000;' : ''}${f.b ? 'font-weight:800;' : 'font-weight:400;'}${print ? '' : 'cursor:text;'}display:flex;align-items:center"><div style="width:100%;text-align:${f.a === 'c' ? 'center' : 'left'}">${editing ? '' : print ? hoCellHtml(r) : hoCellInner(r)}</div></div>
+          <td colspan="3" style="${bd}position:relative;vertical-align:middle;padding:6px 10px;${!print && hoSt.msel.has(r.id) ? 'background:#E8F1FF;box-shadow:inset 0 0 0 2px #007AFF;' : ''}">
+            <div ${print ? '' : `data-ho-cell="${r.id}"`} style="min-height:${hpx - 14}px;font-size:18pt;line-height:1.35;white-space:pre-wrap;word-break:break-all;${f.c ? 'color:#FF0000;' : ''}${f.b ? 'font-weight:800;' : 'font-weight:400;'}${print ? '' : 'cursor:text;'}display:flex;align-items:center"><div style="width:100%;text-align:${f.a === 'l' ? 'left' : 'center'}">${editing ? '' : print ? hoCellHtml(r) : hoCellInner(r)}</div></div>
             ${print ? '' : `<div data-ho-rsz="${r.id}" class="ho-noprint" style="position:absolute;left:0;right:0;bottom:-4px;height:8px;cursor:row-resize;z-index:10" title="끌어서 높이 조절"></div>`}
           </td></tr>`;
       });
@@ -11338,9 +11378,10 @@
       if (hoSt.edit) hoOpenEditor(hoSt.edit.id, true);
       if (!print_) hoSt.remote.forEach((v, id) => hoPatchCell(id));
       const hp = isEl('hoPeers'); if (hp) hp.innerHTML = hoPeersHtml();
+      const sb = isEl('hoSelBar'); if (sb) { sb.classList.toggle('hidden', !hoSt.msel.size); sb.querySelector('[data-n]').textContent = `${hoSt.msel.size}칸 선택됨`; }
     }
     function hoSetZoom(v) { hoSt.zoom = +v || 0; hoRenderSheet(); }
-    function hoSetDate(v) { if (!v) return; hoCommitEdit(); hoSt.date = v; hoSt.remote.clear(); hoLoad(); }
+    function hoSetDate(v) { if (!v) return; hoCommitEdit(); hoSt.date = v; hoSt.remote.clear(); hoSt.msel.clear(); hoSt.anchor = null; hoLoad(); }
     function hoMoveDate(d) { const x = new Date((hoSt.date || hoTomorrow()) + 'T00:00:00'); x.setDate(x.getDate() + d); hoSetDate(ibIso(x)); const el = isEl('hoDate'); if (el) el.value = hoSt.date; }
     async function hoAdd(content, fmt, sourceRowId, date) {
       if (isNeedUser()) return null;
@@ -11419,7 +11460,7 @@
       const hadFocus = !!old && document.activeElement === old, ss = old ? old.selectionStart : 0, se = old ? old.selectionEnd : 0;
       if (!old) { ta.value = r.content || ''; ta.spellcheck = false; }
       const f = hoFmtOf(r);
-      Object.assign(ta.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', padding: '6px 10px', border: '2px solid #007AFF', outline: 'none', resize: 'none', background: '#fff', fontSize: '18pt', lineHeight: '1.35', fontWeight: f.b ? '800' : '400', color: f.c ? '#FF0000' : '#000', textAlign: f.a === 'c' ? 'center' : 'left', fontFamily: 'inherit', zIndex: 5 });
+      Object.assign(ta.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', padding: '6px 10px', border: '2px solid #007AFF', outline: 'none', resize: 'none', background: '#fff', fontSize: '18pt', lineHeight: '1.35', fontWeight: f.b ? '800' : '400', color: f.c ? '#FF0000' : '#000', textAlign: f.a === 'l' ? 'left' : 'center', fontFamily: 'inherit', zIndex: 5 });
       if (ta.parentElement !== cell.parentElement) cell.parentElement.appendChild(ta);
       if (hadFocus && document.activeElement !== ta) { ta.focus({ preventScroll: true }); try { ta.setSelectionRange(ss, se); } catch (e) {} }
       hoSt.edit = { id, el: ta, orig: old && hoSt.edit ? hoSt.edit.orig : (r.content || '') };
@@ -11463,11 +11504,25 @@
     // 서식 : 드래그한 글자가 있으면 그 글자만, 없으면 편집 중인 칸 전체
     async function hoFormat(kind, val) {
       const ed = hoSt.edit;
+      if (!ed && hoSt.msel.size) {
+        if (isNeedUser()) return;
+        const sel = hoSt.rows.filter(r => hoSt.msel.has(r.id));
+        const allBold = kind === 'bold' && sel.every(r => hoFmtOf(r).b);
+        for (const r of sel) {
+          const f = hoFmtOf(r);
+          if (kind === 'align') f.a = val === 'c' ? 'c' : 'l';
+          else if (kind === 'bold') { f.b = !allBold; f.r = f.r.map(x => [x[0], x[1], isFlagSet(x[2], 'b', false)]); }
+          else { f.c = val === 'red' ? 'red' : ''; f.r = f.r.map(x => [x[0], x[1], isFlagSet(x[2], 'r', false)]); }
+          await hoSave(r.id, { fmt: hoFmtPack(f) });
+        }
+        hoRenderSheet();
+        return;
+      }
       if (!ed) { showToastNotification('서식', kind === 'align' ? '맞출 내용 칸을 먼저 눌러 주세요.' : '내용 칸을 눌러 글자를 고른 뒤 눌러 주세요.', 'info'); return; }
       const r = hoSt.rows.find(x => x.id === ed.id); if (!r) return;
       const T = ed.el.value, a = ed.el.selectionStart, b = ed.el.selectionEnd;
       let f = hoFmtOf(r);
-      if (kind === 'align') { f.r = isRebaseRuns(f.r, r.content || '', T); f.a = val === 'c' ? 'c' : ''; }
+      if (kind === 'align') { f.r = isRebaseRuns(f.r, r.content || '', T); f.a = val === 'c' ? 'c' : 'l'; }
       else if (a != null && b != null && a !== b) f = hoApplyRange(f, r.content || '', T, a, b, kind, val);
       else {
         f.r = isRebaseRuns(f.r, r.content || '', T);
@@ -11505,9 +11560,34 @@
         }, '인수인계 행 삭제', '이 행을 삭제할까요? 순번은 자동으로 다시 매겨져요.');
         return;
       }
+      const tt = e.target.closest('[data-ho-title]');
+      if (tt) { if (isNeedUser()) return; e.preventDefault(); hoEditTitle(tt); return; }
       const c = e.target.closest('[data-ho-cell]');
-      if (c && !(hoSt.edit && hoSt.edit.id === +c.dataset.hoCell)) { if (isNeedUser()) return; e.preventDefault(); const id = +c.dataset.hoCell; if (hoSt.edit) hoCommitEdit().then(() => hoOpenEditor(id)); else hoOpenEditor(id); }
+      if (c && (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey)) {          // 여러 칸 선택
+        if (isNeedUser()) return; e.preventDefault();
+        const id = +c.dataset.hoCell, ids = hoSt.rows.map(r => r.id);
+        const base = hoSt.anchor != null ? hoSt.anchor : hoSt.edit ? hoSt.edit.id : null;
+        const go = () => {
+          if (e.shiftKey && base != null && ids.includes(base)) { const a = ids.indexOf(base), b = ids.indexOf(id); hoSt.msel = new Set(ids.slice(Math.min(a, b), Math.max(a, b) + 1)); }
+          else { if (!hoSt.msel.size && base != null && base !== id) hoSt.msel.add(base); if (hoSt.msel.has(id)) hoSt.msel.delete(id); else hoSt.msel.add(id); hoSt.anchor = id; }
+          if (hoSt.anchor == null) hoSt.anchor = id;
+          hoRenderSheet();
+        };
+        if (hoSt.edit) hoCommitEdit().then(go); else go();
+        return;
+      }
+      if (c && !(hoSt.edit && hoSt.edit.id === +c.dataset.hoCell)) { if (isNeedUser()) return; e.preventDefault(); const id = +c.dataset.hoCell; hoSt.anchor = id; if (hoSt.msel.size) { hoSt.msel.clear(); hoRenderSheet(); } if (hoSt.edit) hoCommitEdit().then(() => hoOpenEditor(id)); else hoOpenEditor(id); }
     });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && hoSt.msel.size && isState.tab === 'handover' && !hoSt.edit) { hoSt.msel.clear(); hoRenderSheet(); } });
+    function hoSelClear() { hoSt.msel.clear(); hoRenderSheet(); }
+    function hoSelDelete() {
+      const ids = [...hoSt.msel]; if (!ids.length || isNeedUser()) return;
+      showConfirmModal(async () => {
+        const { error } = await supabaseClient.from(HO_TABLE).delete().in('id', ids);
+        if (error) { showToastNotification('삭제 실패', dbErrorMessage(error), 'warning'); return; }
+        hoSt.rows = hoSt.rows.filter(x => !ids.includes(x.id)); hoSt.msel.clear(); isBroadcast('handover', {}); hoRenderSheet();
+      }, '인수인계 행 삭제', `선택한 ${ids.length}칸을 삭제할까요? 순번은 자동으로 다시 매겨져요.`);
+    }
     // 인쇄 : 여백 좌우 0.1인치 · 위아래 0, 쪽 너비에 맞춰 자동 배율 (글이 잘리지 않게)
     function hoBuildPrint() {
       let root = isEl('hoPrintRoot');
@@ -11659,7 +11739,7 @@
             const mine = r._mine.has(c.k), rem = !mine && r._rem && (r._rem.keys.has(c.k) || r._rem.isNew);
             const nodata = c.ro && IS_NODATA_EDIT[c.k] && isNoDataNow(r, IS_NODATA_EDIT[c.k]);
             const fm = r[IS_COLOR_KEY] ? isFmtGet(r, c.k) : null;
-            const cls = [c.ml && ln > 1 ? 'is-ml' : '', fm && fm.c === 'red' ? 'is-red' : '', fm && fm.b ? 'is-bold' : '', fm && fm.a === 'c' ? 'is-center' : '', c.ro && !nodata ? 'is-ro' : '', nodata && r[c.k] === IS_NODATA ? 'is-miss' : '', mine ? 'is-dirty' : '', rem ? 'is-rdirty' : '', isState.miss.has(r.id + '|' + c.k) ? 'is-miss' : '', isState.sel && isState.sel.id === r.id && isState.sel.col === c.k ? 'is-sel' : ''].filter(Boolean).join(' ');
+            const cls = [c.ml && ln > 1 ? 'is-ml' : '', fm && fm.c === 'red' ? 'is-red' : '', fm && fm.b ? 'is-bold' : '', fm && fm.a === 'c' ? 'is-center' : '', c.ro && !nodata ? 'is-ro' : '', nodata && r[c.k] === IS_NODATA ? 'is-miss' : '', mine ? 'is-dirty' : '', rem ? 'is-rdirty' : '', isState.miss.has(r.id + '|' + c.k) ? 'is-miss' : '', isState.sel && isState.sel.id === r.id && isState.sel.col === c.k ? 'is-sel' : '', isState.msel.size && isState.msel.has(r.id + '|' + c.k) ? 'is-msel' : ''].filter(Boolean).join(' ');
             const v = r[c.k] ?? '';
             const tip = rem ? remTitle : nodata ? `${v || '(빈칸)'} · 데이터가 없어 직접 입력할 수 있습니다` : String(v);
             return `<td data-col="${c.k}" class="${cls}" title="${svEsc(tip)}">${fm && fm.r.length ? isCellHtml(r, c.k, v) : svEsc(v)}</td>`;
@@ -12716,13 +12796,20 @@
       await isDraftSet(id, patch);
       return true;
     }
+    function isSelCells() {                                            // 선택한 칸(여러 칸 포함) → [[id, [cols]], ...]
+      const m = new Map();
+      const add = (id, col) => { if (!m.has(id)) m.set(id, []); if (!m.get(id).includes(col)) m.get(id).push(col); };
+      if (isState.msel.size) isState.msel.forEach(k => { const i = k.lastIndexOf('|'); add(+k.slice(0, i), k.slice(i + 1)); });
+      else if (isState.sel) add(isState.sel.id, isState.sel.col);
+      return [...m.entries()];
+    }
     // 칸 전체 · 체크한 행 굵게 (이미 모두 굵으면 해제)
     async function isSetBold(scope) {
       isToggleColorMenu(false);
       if (isNeedUser()) return;
       if (scope === 'cell' && isState.edit) await isCommit(isState.edit.el.value, null);
       const targets = [];
-      if (scope === 'cell') { if (!isState.sel) return; targets.push([isState.sel.id, [isState.sel.col]]); }
+      if (scope === 'cell') targets.push(...isSelCells());
       else [...isState.checked].forEach(id => targets.push([id, IS_COLS.map(c => c.k)]));
       if (!targets.length) return;
       const allBold = targets.every(([id, keys]) => { const r = isFindRow(id); return r && keys.every(k => isFmtGet(r, k).b); });
@@ -12738,7 +12825,7 @@
       if (isNeedUser()) return;
       if (scope === 'cell' && isState.edit) await isCommit(isState.edit.el.value, null);
       const targets = [];                                         // [id, [keys]]
-      if (scope === 'cell') { if (!isState.sel) return; targets.push([isState.sel.id, [isState.sel.col]]); }
+      if (scope === 'cell') targets.push(...isSelCells());
       else [...isState.checked].forEach(id => targets.push([id, IS_COLS.map(c => c.k)]));
       for (const [id, keys] of targets) {
         const row = isFindRow(id); if (!row) continue;
@@ -12753,7 +12840,7 @@
       if (isNeedUser()) return;
       if (isState.edit) await isCommit(isState.edit.el.value, null);
       const targets = [];
-      if (isState.sel) targets.push([isState.sel.id, isState.sel.col]);
+      if (isState.sel) isSelCells().forEach(([id, cols]) => cols.forEach(k => targets.push([id, k])));
       else [...isState.checked].forEach(id => targets.push([id, 'detail']));
       if (!targets.length) { showToastNotification('정렬', '칸을 먼저 고르거나, 상세내용을 바꿀 행을 체크해 주세요.', 'info'); return; }
       for (const [id, k] of targets) {
@@ -13027,6 +13114,7 @@
         .on('broadcast', { event: 'pend' }, () => { isLoadPending(); })
         .on('broadcast', { event: 'colw' }, () => { isLoadColW(); })
         .on('broadcast', { event: 'hodefaults' }, () => { hoDefLoaded = false; })
+        .on('broadcast', { event: 'hotitle' }, () => { hoLoadTitles(true).then(() => { if (isState.tab === 'handover' && !hoSt.edit) hoRenderSheet(); }); })
         .on('broadcast', { event: 'handover' }, () => { if (isState.tab === 'handover') { clearTimeout(isState.hoT); isState.hoT = setTimeout(() => hoLoad(true), 150); } })
         .on('broadcast', { event: 'hotype' }, ({ payload }) => hoOnType(payload))
         .on('broadcast', { event: 'onstock' }, () => { if (isEl('onStockBox')) onLoad(); })
@@ -13192,6 +13280,28 @@
       if (!td || !tr || !tr.dataset.id) return;
       const id = +tr.dataset.id, col = td.dataset.col;
       if (isPendId(id)) { e.preventDefault(); if (isState.edit) isCommit(isState.edit.el.value, null); isOpenPend(id); return; }
+      if (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) {           // 여러 칸 선택 : Shift = 범위 · Alt/Ctrl = 하나씩
+        e.preventDefault();
+        if (isState.edit) isCommit(isState.edit.el.value, null);
+        const base = isState.mAnchor || isState.sel;
+        if (e.shiftKey && base && isState.viewIdx.has(base.id)) {
+          const v = isState.view, ks = IS_COLS.map(x => x.k);
+          const r0 = isState.viewIdx.get(base.id), r1 = isState.viewIdx.get(id), c0 = ks.indexOf(base.col), c1 = ks.indexOf(col);
+          isState.msel = new Set();
+          for (let i = Math.min(r0, r1); i <= Math.max(r0, r1); i++) for (let j = Math.min(c0, c1); j <= Math.max(c0, c1); j++) isState.msel.add(v[i].id + '|' + ks[j]);
+          isState.mAnchor = base;
+        } else {
+          if (!isState.msel.size && isState.sel) isState.msel.add(isState.sel.id + '|' + isState.sel.col);
+          const key = id + '|' + col;
+          if (isState.msel.has(key)) isState.msel.delete(key); else isState.msel.add(key);
+          isState.mAnchor = { id, col };
+        }
+        isState.sel = { id, col };
+        isRenderBody(); isTrack();
+        return;
+      }
+      if (isState.msel.size) { isState.msel.clear(); isState.mAnchor = null; isRenderBody(); }
+      isState.mAnchor = { id, col };
       const again = isState.sel && isState.sel.id === id && isState.sel.col === col && !isState.edit;
       if (isState.edit) isCommit(isState.edit.el.value, null);
       isSelect(id, col, { noScroll: true });
@@ -13208,10 +13318,17 @@
       if (isState.sel && isState.sel.id === id) isState.sel = null;
       isRender(); isSendDrafts();
     });
+    isEl('isBody').addEventListener('click', (e) => { if (e.target.closest('[data-is-check]')) isState.chkShift = e.shiftKey; }, true);
     isEl('isBody').addEventListener('dblclick', (e) => { if (e.target.closest('td[data-col]') && !isState.edit) isBeginEdit(); });
     isEl('isBody').addEventListener('change', (e) => {
       const cb = e.target.closest('[data-is-check]'); if (!cb) return;
       const id = +cb.dataset.isCheck;
+      if (cb.checked && isState.chkShift && isState.lastChk != null && isState.viewIdx.has(isState.lastChk) && isState.viewIdx.has(id)) {   // Shift+클릭 : 사이 행 모두 체크
+        const a = isState.viewIdx.get(isState.lastChk), b = isState.viewIdx.get(id);
+        isState.view.slice(Math.min(a, b), Math.max(a, b) + 1).forEach(r => { if (!r._pend) isState.checked.add(r.id); });
+        isState.lastChk = id; isRender(); return;
+      }
+      isState.lastChk = id;
       if (cb.checked) { isState.checked.add(id); isRender(); return; }
       isUncheckRows([id], () => { cb.checked = true; });
     });
@@ -13237,6 +13354,22 @@
       if (!isHomeOn() || isModalOpen() || isState.edit || isTyping()) return;
       if (e.isComposing) return;
       const k = e.key;
+      if (isState.msel.size) {
+        if (k === 'Escape') { e.preventDefault(); isState.msel.clear(); isRenderBody(); return; }
+        if (k === 'Delete' || k === 'Backspace') {
+          e.preventDefault(); if (isNeedUser()) return;
+          (async () => { for (const [id, cols] of isSelCells()) for (const ck of cols) { const c = IS_COLS.find(x => x.k === ck); if (c && (!c.ro || IS_NODATA_EDIT[c.k]) && await isCanEdit(isFindRow(id), c)) await isSetCell(id, c.k, ''); } })();
+          return;
+        }
+        if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'c') {
+          const ks = IS_COLS.map(x => x.k), cells = isSelCells().sort((a, b) => (isState.viewIdx.get(a[0]) ?? 0) - (isState.viewIdx.get(b[0]) ?? 0));
+          const txt = cells.map(([id, cols]) => { const r = isFindRow(id) || {}; return cols.sort((a, b) => ks.indexOf(a) - ks.indexOf(b)).map(ck => String(r[ck] ?? '')).join('\t'); }).join('\n');
+          if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(() => {});
+          showToastNotification('복사', `${isState.msel.size}칸을 복사했어요.`, 'info');
+          return;
+        }
+        if (/^Arrow/.test(k)) { isState.msel.clear(); isRenderBody(); }
+      }
       if (k === 'ArrowDown') { e.preventDefault(); isMove(1, 0); }
       else if (k === 'ArrowUp') { e.preventDefault(); isMove(-1, 0); }
       else if (k === 'ArrowRight') { e.preventDefault(); isMove(0, 1); }
@@ -13718,10 +13851,16 @@
       }
       return null;
     }
+    function ibContentList() { const l = (issueSheetOptions.content || []).filter(Boolean); return l.length ? l : IB_CONTENT_BASE.filter((x, i, a) => a.indexOf(x) === i); }
     function ibOptList(k) {
-      const base = k === 'content' ? IB_CONTENT_BASE : [];
-      return [...new Set((issueSheetOptions[k] || []).concat(base))].sort((a, b) => b.length - a.length);
+      if (k === 'content') return ibContentList().slice().sort((a, b) => b.length - a.length);     // 내용은 특이사항 양식 목록만
+      return [...new Set(issueSheetOptions[k] || [])].sort((a, b) => b.length - a.length);
     }
+    function ibReasonWords() {                                         // 사유(문제 모양) : 때때 유형 + 흔한 말 중 내용 목록에 없는 것
+      const inList = new Set(ibContentList().map(ibNorm));
+      return [...new Set(IB_LABELS.map(x => x[1]).concat(IB_CONTENT_BASE, ['찢어짐', '찌그러짐', '젖음', '샘', '누수', '터짐', '깨짐', '변형']))].filter(w => w && !inList.has(ibNorm(w))).sort((a, b) => b.length - a.length);
+    }
+    const ibDetailOf = (d) => [d._reason, d.detail].filter(Boolean).join('\n');
     // 문장 → 항목 (거래처·제품은 아직 후보 단어만)
     function ibParse(text) {
       let rest = ' ' + String(text || '').replace(/\s+/g, ' ').trim() + ' ';
@@ -13729,6 +13868,18 @@
       // 상세내용 : "상세: ..." / "상세내용 ..." / "내용: ..."
       let m = rest.match(/상세(?:내용)?\s*[:：]?\s*(.+)$/);
       if (m) { f.detail = m[1].trim(); take(m[0]); }
+      // 사유 → 내용(양식 목록) 순서로 먼저 찾음 ('오입고' 가 '입고' 라벨로 잘못 읽히지 않게)
+      // 사유 (파손 또는 찢어짐 · 찌그러짐 등) → 상세내용
+      for (const w of ibReasonWords()) {
+        const mm = rest.match(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s*')));
+        if (mm) { f.reason = w; take(mm[0]); break; }
+      }
+      // 내용 (문제 유형) : 목록에 있는 말
+      for (const c of ibOptList('content')) {
+        const cc = c.replace(/\s+/g, '\\s*');
+        const mm = rest.match(new RegExp(cc));
+        if (mm) { f.content = c; take(mm[0]); break; }
+      }
       // 라벨이 붙은 항목 : "주체 센터", "귀책 기사", "입고 완료", "자료등록 O", "수량 3"
       [['subject', '주체'], ['fault', '귀책'], ['data_reg', '자료\\s*등록'], ['inbound', '입고']].forEach(([k, w]) => {
         let mm = rest.match(new RegExp(`${w}\\s*[:：은는이가]?\\s*([^\\s,]+)`));
@@ -13741,12 +13892,6 @@
       // 수량
       m = rest.match(new RegExp(`수량\\s*[:：]?\\s*(\\d+(?:\\.\\d+)?)\\s*(${IB_UNITS})?`)) || rest.match(new RegExp(`(?<![\\w가-힣])(\\d+(?:\\.\\d+)?)\\s*(${IB_UNITS})(?![a-zA-Z])`));
       if (m) { f.qty = m[1]; take(m[0]); }
-      // 내용 (문제 유형) : 목록에 있는 말
-      for (const c of ibOptList('content')) {
-        const cc = c.replace(/\s+/g, '\\s*');
-        const mm = rest.match(new RegExp(cc));
-        if (mm) { f.content = c.replace(/\s+/g, ' ') === '수량부족' ? '수량 부족' : c; take(mm[0]); break; }
-      }
       // 주체/귀책 목록에 있는 말이 단독으로 있으면 (예: "기사 귀책" 은 위에서 처리)
       // 남은 단어 = 거래처/제품 후보
       const words = rest.replace(/[,，.。!?~]/g, ' ').split(' ').map(w => w.trim().replace(/(에서|으로|에게|의|을|를|은|는|이|가|에|로)$/, '')).filter(w => w && !IB_FILLER.has(w));
@@ -13907,7 +14052,7 @@
         const label = d.items ? (() => { const i = d.items.findIndex(it => !(it.qty || it.qtySkip)); ib.curItem = i; return `<b>${svEsc(d.items[i].product_name)}</b>의 수량`; })() : '<b>수량</b>';
         ibBot(`${label}은 몇 개인가요?<div class="mt-2 flex flex-wrap gap-1.5">${['1', '2', '3', '5'].map(v => ibBtn(`data-ib-ans="${v}"`, v)).join('')}${ibBtn('data-ib-ans="__skip"', '모름 · 건너뛰기')}</div>`);
       } else if (f === 'content') {
-        const opts = [...new Set((issueSheetOptions.content || []).concat(['파손', '누락', '오배송', '수량 부족', '유통기한', '이물질', '품질 불량']))].slice(0, 10);
+        const opts = ibContentList();
         ibBot(`<b>내용</b>(문제 유형)을 골라 주세요.<div class="mt-2 flex flex-wrap gap-1.5">${opts.map(v => ibBtn(`data-ib-ans="${svEsc(v)}"`, svEsc(v))).join('')}</div><div class="mt-1.5 text-[11.5px] text-gray-500">목록에 없으면 직접 입력해 주세요.</div>`);
       } else if (f === 'detail') {
         ibBot(`<b>상세내용</b>이 있으면 적어 주세요.<div class="mt-2">${ibBtn('data-ib-ans="__skip"', '없음')}</div>`);
@@ -13993,7 +14138,20 @@
         const target = d.items ? d.items[ib.curItem] : null;
         if (skip) { if (target) target.qtySkip = true; else d._skip.qty = true; }
         else { const m = text.match(/\d+(?:\.\d+)?/); if (!m) { ibBot('숫자로 알려 주세요. (모르면 "건너뛰기")'); return; } if (target) target.qty = m[0]; else d.qty = m[0]; }
-      } else if (step === 'content') { if (skip) { ibBot('내용은 꼭 필요해요. 골라 주세요.'); return; } d.content = text; }
+      } else if (step === 'content') {
+        if (skip) { ibBot('내용은 꼭 필요해요. 골라 주세요.'); return; }
+        const list = ibContentList(), exact = list.find(c => ibNorm(c) === ibNorm(text));
+        if (exact) d.content = exact;
+        else {
+          const r = ibRank(text, list.map(c => ({ name: c, code: '' })), 6);
+          if (r.length && r[0].s >= 80 && (r.length === 1 || r[0].s - r[1].s >= 10)) d.content = r[0].it.name;
+          else if (r.length) { ibAskPick('choice', r.map(x => x.it), text, null, async (it) => { d.content = it.name; await ibNext(); }, '내용'); return; }
+          else {                                                       // 목록에 없는 말 = 사유 → 상세내용에 넣고 내용은 다시 고르기
+            d._reason = [d._reason, text].filter(Boolean).join(', ');
+            ibBot(`'${svEsc(text)}'${ibJosaRo(text) === '로' ? '는' : '은'} 특이사항 양식의 내용 목록에 없어서 <b>상세내용(사유)</b>에 넣었어요.`);
+          }
+        }
+      }
       else if (step === 'detail' || step === 'subject' || step === 'fault') { if (skip) d._skip[step] = true; else d[step] = text; }
       await ibNext();
     }
@@ -14011,7 +14169,7 @@
           ${row('delivery_date', '배송일', svEsc(ibFmtDate(d.delivery_date)))}
           ${row('store', '매장명', d.store_name ? svEsc(d.store_name) + (d.store_code ? ` <span class="text-gray-400 font-normal">(${svEsc(d.store_code)})</span>` : '') : '')}
           ${row('product', '제품명', products)}
-          ${d.items ? '' : row('qty', '수량', svEsc(d.qty || ''))}${row('content', '내용', svEsc(d.content || ''))}${row('detail', '상세내용', svEsc(d.detail || ''))}
+          ${d.items ? '' : row('qty', '수량', svEsc(d.qty || ''))}${row('content', '내용', svEsc(d.content || ''))}${row('detail', '상세내용', svEsc(ibDetailOf(d)).replace(/\n/g, ' / '))}
           ${row('subject', '주체', svEsc(d.subject || ''))}${row('fault', '귀책', svEsc(d.fault || ''))}
         </div>
         ${photos ? `<div class="mt-1 text-[11.5px] text-gray-500">사진 ${photos}장이 함께 저장돼요.</div>` : ''}
@@ -14037,6 +14195,7 @@
       const d = ib.draft || (ib.draft = ibNewDraft());
       if (f.delivery_date) { d.delivery_date = f.delivery_date; d._dateOk = true; }
       ['content', 'detail', 'subject', 'fault'].forEach(k => { if (f[k]) d[k] = f[k]; });
+      if (f.reason) d._reason = f.reason;
       // 제품 구분은 원래 문장을 쉼표 등으로 나눠서 (각 조각의 수량을 지키기 위해) — 조각마다 날짜 · 내용 · 귀책 같은 공통 정보는 빠짐
       const segs = String(t || '').split(/[,，]|\s\/\s|\s(?:및|그리고|하고|랑)\s/).map(x => x.trim()).filter(x => x && ibParse(x)._words.length);
       if (segs.length >= 2) {
@@ -14692,6 +14851,7 @@
       if (isState.tab !== 'home') isSwitchTab('home');
       const shared = {};
       ['delivery_date', 'store_code', 'store_name', 'content', 'detail', 'subject', 'fault', 'inbound', 'data_reg'].forEach(k => { if (d[k]) shared[k] = d[k]; });
+      shared.detail = ['■ 때때에서 작성됨', ibDetailOf(d)].filter(Boolean).join('\n');   // 때때로 등록한 건 표시
       const lines = d.items ? d.items.map(it => ({ product_code: it.product_code, product_name: it.product_name, qty: it.qty })) : [{ product_code: d.product_code, product_name: d.product_name, qty: d.qty }];
       const ids = [];
       for (const ln of lines) {
@@ -14864,13 +15024,13 @@
     }
     async function ibChooseType(id, ko, confirmed) {
       const d = ib.draft || (ib.draft = { ...ibNewDraft(), _photo: true, _photos: [] });
-      d.content = ko;
+      d._reason = ko;                                                  // 사진 유형 = 사유 → 상세내용 (내용은 양식 목록에서 따로 고름)
       ibPush('me', svEsc(ko));
       const photo = ib.photo;
       if (photo && photo.recordId) supabaseClient.from('issue_sheet_photos').update({ chosen_issue: id, chosen_label: ko }).eq('id', photo.recordId).then(() => {}, () => {});
       ibFeedback(photo, id, confirmed);
       ib.guess = null;
-      ibBot(`좋아요, 내용은 <b>${svEsc(ko)}</b>${ibJosaRo(ko)} 넣을게요.`);
+      ibBot(`좋아요, 사유 <b>${svEsc(ko)}</b>${ibJosaRo(ko) === '로' ? '는' : '은'} 상세내용에 넣을게요.`);
       await ibNext();
     }
     function ibLinkPhotos(tempId, realId) {
