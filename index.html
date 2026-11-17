@@ -1212,7 +1212,7 @@
       <div class="flex-1 min-h-0 flex gap-3">
       <div class="flex-1 min-w-0 min-h-0 flex flex-col">
       <div class="flex flex-wrap items-center gap-2 mb-2">
-        <input type="search" id="isSearch" oninput="clearTimeout(window.__isQ); const v = this.value.trim(); window.__isQ = setTimeout(() => { isState.q = v; isRender(); }, 150)" placeholder="거래처 · 제품 · 내용 검색" class="flex-1 min-w-[160px] px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-blue-200">
+        <input type="search" id="isSearch" oninput="clearTimeout(window.__isQ); const v = this.value.trim(); window.__isQ = setTimeout(() => { isState.q = v; isRenderBottom(); }, 150)" placeholder="거래처 · 제품 · 내용 검색" class="flex-1 min-w-[160px] px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-blue-200">
         <button type="button" onclick="isAddRow()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-plus"></i>행 추가</button>
         <button type="button" id="isSaveBtn" onclick="isSaveDrafts()" class="ios-btn-tap px-3.5 py-2 rounded-xl bg-[#007AFF] text-white text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-floppy-disk"></i><span>저장</span></button>
         <button type="button" onclick="isOpenApply()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1" title="체크한 행을 웰스토리 · 유통물류 · 원앤원 등 탭에 추가"><i class="ph-bold ph-paper-plane-tilt"></i>적용</button>
@@ -1471,6 +1471,21 @@
           <button type="button" id="isPendNo" onclick="isPendAction('reject')" class="ios-btn-tap flex-1 py-2.5 bg-white border border-gray-200 text-[#FF3B30] font-semibold rounded-xl text-[14px]">취소</button>
           <button type="button" onclick="isPendAction('wait')" class="ios-btn-tap flex-1 py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[14px]">대기</button>
           <button type="button" id="isPendOk" onclick="isPendAction('confirm')" class="ios-btn-tap flex-1 py-2.5 bg-[#34C759] text-white font-semibold rounded-xl text-[14px]">확정</button>
+        </div>
+      </div>
+    </div>
+    <!-- [인수인계 : 기본칸 설정] -->
+    <div id="hoDefModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
+      <div class="bg-white rounded-[28px] w-full max-w-lg p-5 shadow-2xl border border-gray-100 flex flex-col max-h-[88vh]">
+        <div class="flex items-center gap-2.5 pb-3 border-b border-gray-100 flex-shrink-0">
+          <div class="w-8 h-8 rounded-xl bg-blue-50 text-[#007AFF] flex items-center justify-center"><i class="ph-bold ph-list-numbers text-lg"></i></div>
+          <div class="min-w-0 flex-1"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">인수인계 기본칸 <span id="hoDefCount" class="text-[12px] font-semibold text-gray-400"></span></h3><p class="text-[11px] text-gray-500">새 출고일을 처음 열 때 이 순서대로 칸이 만들어져요. 이미 만든 날짜에는 영향이 없어요.</p></div>
+        </div>
+        <div id="hoDefList" class="mt-3 space-y-2 overflow-y-auto min-h-0 flex-1"></div>
+        <button type="button" onclick="hoDefAdd()" class="ios-btn-tap mt-2 w-full py-2 rounded-xl border border-dashed border-gray-300 text-[#007AFF] text-[13px] font-bold flex items-center justify-center gap-1 flex-shrink-0"><i class="ph-bold ph-plus"></i>칸 추가</button>
+        <div class="grid grid-cols-2 gap-2 mt-3 flex-shrink-0">
+          <button type="button" onclick="hoCloseDefaults()" class="ios-btn-tap py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-[14px]">취소</button>
+          <button type="button" onclick="hoDefSave()" class="ios-btn-tap py-2.5 bg-[#007AFF] text-white font-semibold rounded-xl text-[14px]">저장</button>
         </div>
       </div>
     </div>
@@ -2327,7 +2342,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.036</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.037</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -5271,7 +5286,7 @@
     let selectedPalletIds = new Set();
     let pendingNewRows = [];
     let currentPalletPage = 1;
-    const ITEMS_PER_PAGE = 5;
+    const ITEMS_PER_PAGE = 15;
 
     const palletTableBody = document.getElementById('palletTableBody');
     const palletSelectAllCheckbox = document.getElementById('palletSelectAllCheckbox');
@@ -11078,11 +11093,59 @@
       return f;
     }
     // 그 출고일에 아무 행이 없으면 기본 6칸을 만듦 (두 사람이 동시에 열어도 한 번만 : is_default + 고유 색인)
-    const HO_DEFAULTS = ['●용차정보\n\n', '●차감이고\n\n', '', '', '', ''];
+    const HO_DEFAULTS_KEY = 'handover_defaults';
+    let HO_DEFAULTS = ['●용차정보\n\n', '●차감이고\n\n', '', '', '', ''];
+    let hoDefLoaded = false;
+    async function hoLoadDefaults(force) {
+      if (hoDefLoaded && !force) return HO_DEFAULTS;
+      try {
+        const { data } = await supabaseClient.from(SETTINGS_TABLE).select('value').eq('key', HO_DEFAULTS_KEY).limit(1);
+        const v = data && data[0] && data[0].value;
+        if (Array.isArray(v)) HO_DEFAULTS = v.map(x => String(x ?? ''));
+        hoDefLoaded = true;
+      } catch (e) {}
+      return HO_DEFAULTS;
+    }
+    // 기본칸 팝업 : 새 출고일을 처음 열 때 만들어지는 칸 (추가 · 수정 · 삭제 · 순서)
+    let hoDefDraft = [];
+    async function hoOpenDefaults() {
+      await hoLoadDefaults(true);
+      hoDefDraft = HO_DEFAULTS.slice();
+      hoRenderDefaults();
+      isDlShow('hoDefModal', true);
+    }
+    function hoCloseDefaults() { isDlShow('hoDefModal', false); }
+    function hoRenderDefaults() {
+      isEl('hoDefList').innerHTML = hoDefDraft.map((v, i) => `<div class="flex gap-2 items-start">
+          <span class="flex-none w-7 h-7 mt-1 rounded-lg bg-gray-100 text-[12px] font-bold text-gray-600 flex items-center justify-center">${i + 1}</span>
+          <textarea data-hodef="${i}" rows="3" placeholder="빈칸" class="flex-1 min-w-0 px-3 py-2 bg-gray-100 rounded-xl text-[13px] border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200 resize-y">${svEsc(v)}</textarea>
+          <div class="flex flex-col gap-1 flex-none">
+            <button type="button" onclick="hoDefMove(${i},-1)" ${i ? '' : 'disabled'} class="w-7 h-7 rounded-lg bg-white border border-gray-200 text-gray-500 disabled:opacity-30" title="위로"><i class="ph-bold ph-caret-up"></i></button>
+            <button type="button" onclick="hoDefMove(${i},1)" ${i < hoDefDraft.length - 1 ? '' : 'disabled'} class="w-7 h-7 rounded-lg bg-white border border-gray-200 text-gray-500 disabled:opacity-30" title="아래로"><i class="ph-bold ph-caret-down"></i></button>
+            <button type="button" onclick="hoDefDel(${i})" class="w-7 h-7 rounded-lg bg-white border border-gray-200 text-[#FF3B30]" title="삭제"><i class="ph-bold ph-x"></i></button>
+          </div></div>`).join('') || '<div class="py-4 text-center text-[12.5px] text-gray-400">기본칸이 없어요. (새 출고일은 빈 시트로 시작해요)</div>';
+      isEl('hoDefCount').textContent = `${hoDefDraft.length}칸`;
+    }
+    const hoDefSync = () => { isEl('hoDefList').querySelectorAll('[data-hodef]').forEach(t => { hoDefDraft[+t.dataset.hodef] = t.value; }); };
+    function hoDefAdd() { hoDefSync(); hoDefDraft.push(''); hoRenderDefaults(); const t = isEl('hoDefList').querySelectorAll('[data-hodef]'); if (t.length) t[t.length - 1].focus(); }
+    function hoDefDel(i) { hoDefSync(); hoDefDraft.splice(i, 1); hoRenderDefaults(); }
+    function hoDefMove(i, d) { hoDefSync(); const j = i + d; if (j < 0 || j >= hoDefDraft.length) return; [hoDefDraft[i], hoDefDraft[j]] = [hoDefDraft[j], hoDefDraft[i]]; hoRenderDefaults(); }
+    async function hoDefSave() {
+      hoDefSync();
+      const res = await dbRun('인수인계 기본칸 저장', async () => { await settingsSave([{ key: HO_DEFAULTS_KEY, value: hoDefDraft }]); });
+      if (!res.ok) return;
+      HO_DEFAULTS = hoDefDraft.slice(); hoDefLoaded = true;
+      isBroadcast('hodefaults', {});
+      isLog([{ action: '수정', row_id: null, field_key: '', field: '인수인계 기본칸', old_value: '', new_value: `${HO_DEFAULTS.length}칸`, row_label: '인수인계 기본칸' }]);
+      hoCloseDefaults();
+      showToastNotification('기본칸 저장', `다음에 새 출고일을 열면 ${HO_DEFAULTS.length}칸으로 시작해요. (이미 만든 날짜는 그대로)`, 'success');
+    }
     async function hoEnsureDefaults(d) {
       try {
         const { count } = await supabaseClient.from(HO_TABLE).select('id', { count: 'exact', head: true }).eq('out_date', d);
         if (count) return false;
+        await hoLoadDefaults();
+        if (!HO_DEFAULTS.length) return false;
         const rows = HO_DEFAULTS.map((c, i) => ({ out_date: d, content: c, fmt: { b: 1 }, height_pt: 200, sort_order: i + 1, is_default: true, created_by: isState.me || null }));
         const { error } = await supabaseClient.from(HO_TABLE).insert(rows);
         if (!error) isBroadcast('handover', {});
@@ -11113,6 +11176,7 @@
               <button type="button" onmousedown="event.preventDefault()" onclick="hoFormat('color','black')" class="ios-btn-tap px-2.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-900 text-[12.5px] font-bold">검정</button>
               <button type="button" onmousedown="event.preventDefault()" onclick="hoFormat('color','red')" class="ios-btn-tap px-2.5 py-2 rounded-xl bg-white border border-gray-200 text-[#FF3B30] text-[12.5px] font-bold">빨강</button>
               <button type="button" onmousedown="event.preventDefault()" onclick="hoFormat('bold')" class="ios-btn-tap px-2.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-900 text-[12.5px] font-extrabold" title="굵게 (Ctrl+B)">굵게</button>
+              <button type="button" onclick="hoOpenDefaults()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1" title="새 출고일에 자동으로 만들어지는 칸"><i class="ph-bold ph-list-numbers"></i>기본칸</button>
               <button type="button" onclick="hoAdd()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-plus"></i>행 추가</button>
               <label class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gray-100 text-[11.5px] font-semibold text-gray-600" title="인쇄 배율 (자동이면 글이 잘리지 않게 맞춤)">배율 <input type="range" id="hoZoom" min="40" max="100" step="1" oninput="hoSetZoom(this.value)" class="w-[80px] accent-[#007AFF]"><span id="hoZoomTxt" class="w-[60px]"></span></label>
               <button type="button" onclick="hoSetZoom(0)" class="ios-btn-tap px-2.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12px] font-bold">자동</button>
@@ -11393,7 +11457,7 @@
         + IS_COLS.map(c => `<th title="${svEsc(c.h)}${c.auto ? ' (자동)' : ''}" style="${c.auto ? 'color:#9CA3AF' : ''}"><span class="is-rsz" data-rsz="${c.k}" title="끌어서 너비 조절"></span>${svEsc(c.h)}<button type="button" class="is-th-btn" data-is-filter="${c.k}" title="${svEsc(c.h)} 필터"><i class="ph-bold ph-caret-down text-[10px]"></i></button>${c.k === 'detail' ? '<button type="button" class="is-red-tg" data-red-toggle title="미처리 내역 : 상세내용에 빨간 글자가 있는 행만 보기"><span class="is-red-tg-lbl">미처리</span><span class="is-red-tg-sw"></span></button>' : ''}</th>`).join('');
       isEl('isHead').addEventListener('click', (e) => {
         const tg = e.target.closest('[data-red-toggle]');
-        if (tg) { e.stopPropagation(); isState.redOnly = !isState.redOnly; isRender(); showToastNotification('미처리 내역', isState.redOnly ? '상세내용에 빨간 글자가 있는 행만 보여요.' : '모든 행을 보여요.', 'info'); return; }
+        if (tg) { e.stopPropagation(); isState.redOnly = !isState.redOnly; isRenderBottom(); showToastNotification('미처리 내역', isState.redOnly ? '상세내용에 빨간 글자가 있는 행만 보여요.' : '모든 행을 보여요.', 'info'); return; }
         const b = e.target.closest('[data-is-filter]'); if (b) { e.stopPropagation(); isOpenFilter(b.dataset.isFilter, b); } });
       isEl('isCheckAll').addEventListener('change', (e) => {
         const rows = isRowsView();
@@ -11438,20 +11502,26 @@
         const i = Math.min(v.length - 1, isIdxAt(Math.max(0, w.scrollTop - IS_HEAD_H)));
         anchor = { id: v[i].id, off: w.scrollTop - (IS_HEAD_H + isState.offs[i]) };
       }
-      isRender();
+      isState.noStick = !stickBottom; isRender(); isState.noStick = false;
       if (stickBottom) { isScrollBottom(); return; }
       if (anchor && isState.viewIdx.has(anchor.id)) { w.scrollTop = IS_HEAD_H + isState.offs[isState.viewIdx.get(anchor.id)] + anchor.off; isRenderBody(); }
     }
     function isRender() {
       if (!isEl('isHead').children.length) isRenderStatic();
+      // 그리기 전에 맨 아래였거나(대부분), 저장 · 필터처럼 맨 아래로 가야 하는 경우 → 그린 뒤 맨 아래로
+      const w0 = isEl('isWrap'), hadView = (isState.view || []).length > 0;
+      const stick = isState.forceBottom || !hadView || isAtBottom();
       const rows = isRowsView();
       isState.view = rows;
       isState.viewIdx = new Map(rows.map((r, i) => [r.id, i]));
       isState.offs = isBuildOffs(rows);
       isRenderMeta();
       isRenderBody();
+      if (stick && !isState.noStick) { w0.scrollTop = w0.scrollHeight; isRenderBody(); }
+      isState.forceBottom = false;
       isRenderAfter(rows);
     }
+    function isRenderBottom() { isState.forceBottom = true; isRender(); }
     function isRenderBody() {
       const rows = isState.view || [];
       const body = isEl('isBody');
@@ -11951,7 +12021,7 @@
           }
         }
       } finally { hideBusy(); }
-      isRender();
+      isRenderBottom();                                                // 저장 후 맨 아래(최신)로
       isSendDrafts();
       isLog(logs);
       if (fail) showToastNotification('일부 저장 실패', `${ok}행 저장 · ${fail}행 실패 — ${dbErrorMessage(lastErr)}`, 'warning');
@@ -12171,13 +12241,94 @@
       } catch (e) { console.warn('사진을 불러오지 못함', e); }
       return null;
     }
-    async function xlPhotosFor(rows, boxW, boxH, cover) {
+    // ===== 엑셀 사진 : 마우스를 올리면 크게 보기 (셀 메모에 사진 채우기 → 올리면 확대 · 벗어나면 사라짐) =====
+    //  ExcelJS 가 만든 메모(VML)를 JSZip 으로 열어, 메모 배경을 큰 사진으로 바꾸고 크기를 정함
+    const XL_JSZIP = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    function xlHoverNote(ws, hovers, sheetName, row0, col0, zoom, wPx, hPx, anchor) {
+      if (!zoom) return;
+      const cell = ws.getRow(row0 + 1).getCell(col0 + 1);
+      cell.note = { texts: [{ text: ' ' }] };
+      hovers.push({ sheet: sheetName, row0, col0, zoom, wPt: Math.round(wPx * 0.75), hPt: Math.round(hPx * 0.75), anchor });
+    }
+    function xlXmlAttr(tag, name) { const m = new RegExp(`\\s${name.replace(':', '\\:')}="([^"]*)"`).exec(tag); return m ? m[1] : null; }
+    function xlPathJoin(base, target) {
+      if (target.startsWith('/')) return target.slice(1);
+      const parts = base.split('/'); parts.pop();
+      target.split('/').forEach(x => { if (x === '..') parts.pop(); else if (x && x !== '.') parts.push(x); });
+      return parts.join('/');
+    }
+    const xlRelsPath = (p) => p.replace(/([^/]+)$/, '_rels/$1.rels');
+    async function xlInjectHover(buf, hovers, Zip) {
+      if (!hovers || !hovers.length) return buf;
+      Zip = Zip || window.JSZip;
+      const zip = await Zip.loadAsync(buf);
+      const rd = async (p) => { const f = zip.file(p); return f ? f.async('string') : null; };
+      const wbx = await rd('xl/workbook.xml'), wbr = await rd('xl/_rels/workbook.xml.rels');
+      if (!wbx || !wbr) return buf;
+      const relTarget = (xml, id) => { const m = [...xml.matchAll(/<Relationship\b[^>]*>/g)].map(x => x[0]).find(t => xlXmlAttr(t, 'Id') === id); return m ? xlXmlAttr(m, 'Target') : null; };
+      const sheets = {};
+      [...wbx.matchAll(/<sheet\b[^>]*\/?>/g)].forEach(m => { const name = xlXmlAttr(m[0], 'name'), id = xlXmlAttr(m[0], 'r:id'); const t = id && relTarget(wbr, id); if (name && t) sheets[name.replace(/&amp;/g, '&')] = xlPathJoin('xl/workbook.xml', t); });
+      let n = 0;
+      const bySheet = new Map(); hovers.forEach(h => { if (!bySheet.has(h.sheet)) bySheet.set(h.sheet, []); bySheet.get(h.sheet).push(h); });
+      for (const [name, list] of bySheet) {
+        const sp = sheets[name]; if (!sp) continue;
+        const srx = await rd(xlRelsPath(sp)); if (!srx) continue;
+        const vt = [...srx.matchAll(/<Relationship\b[^>]*>/g)].map(x => x[0]).find(t => /vmlDrawing$/.test(xlXmlAttr(t, 'Type') || ''));
+        if (!vt) continue;
+        const vp = xlPathJoin(sp, xlXmlAttr(vt, 'Target'));
+        let vml = await rd(vp); if (!vml) continue;
+        const vrp = xlRelsPath(vp);
+        let vrx = await rd(vrp) || '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+        const byCell = new Map(list.map(h => [`${h.row0},${h.col0}`, h]));
+        vml = vml.replace(/<(\w+):shape\b[\s\S]*?<\/\1:shape>/g, (sh, P) => {          // 접두어(v: · ns0: 등)와 상관없이
+          const r = /<(?:\w+:)?Row>\s*(\d+)\s*<\/(?:\w+:)?Row>/.exec(sh), c = /<(?:\w+:)?Column>\s*(\d+)\s*<\/(?:\w+:)?Column>/.exec(sh);
+          const h = r && c && byCell.get(`${r[1]},${c[1]}`); if (!h) return sh;
+          n++;
+          const rid = `rIdHover${n}`;
+          zip.file(`xl/media/hover${n}.jpeg`, h.zoom.buf);
+          vrx = vrx.replace('</Relationships>', `<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/hover${n}.jpeg"/></Relationships>`);
+          const fill = `<${P}:fill xmlns:o="urn:schemas-microsoft-com:office:office" o:relid="${rid}" o:title="" recolor="t" rotate="t" type="frame"/>`;
+          const fSelf = new RegExp(`<${P}:fill\\b[^>]*?\\/>`), fFull = new RegExp(`<${P}:fill\\b[\\s\\S]*?<\\/${P}:fill>`), open = new RegExp(`(<${P}:shape\\b[^>]*>)`);
+          let s2 = fSelf.test(sh) ? sh.replace(fSelf, fill) : fFull.test(sh) ? sh.replace(fFull, fill) : sh.replace(open, `$1${fill}`);
+          s2 = s2.replace(new RegExp(`(<${P}:shape\\b[^>]*style=)(["'])([^"']*)\\2`), (m, a, q, st) => a + q + st.replace(/width:[^;]*/, `width:${h.wPt}pt`).replace(/height:[^;]*/, `height:${h.hPt}pt`) + q);
+          if (h.anchor) {
+            const an = /<((?:\w+:)?)Anchor>[\s\S]*?<\/(?:\w+:)?Anchor>/;
+            if (an.test(s2)) s2 = s2.replace(an, (m, X) => `<${X}Anchor>${h.anchor.join(', ')}</${X}Anchor>`);
+            else s2 = s2.replace(/<((?:\w+:)?)Row>/, (m, X) => `<${X}Anchor>${h.anchor.join(', ')}</${X}Anchor>${m}`);
+          }
+          return s2;
+        });
+        if (!/xmlns:o=/.test(vml)) vml = vml.replace(/<xml\b/, '<xml xmlns:o="urn:schemas-microsoft-com:office:office"');
+        zip.file(vp, vml); zip.file(vrp, vrx);
+      }
+      if (!n) return buf;
+      let ct = await rd('[Content_Types].xml');
+      if (ct && !/Extension="jpeg"/i.test(ct)) ct = ct.replace(/(<Types\b[^>]*>)/, '$1<Default Extension="jpeg" ContentType="image/jpeg"/>');
+      if (ct) zip.file('[Content_Types].xml', ct);
+      return zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+    }
+    async function xlFinish(wb, name, hovers) {
+      let buf = await wb.xlsx.writeBuffer();
+      if (hovers && hovers.length) {
+        try { await costLoadScript(XL_JSZIP); buf = await xlInjectHover(buf, hovers); }
+        catch (e) { console.warn('사진 확대 메모를 넣지 못함(사진은 그대로):', e); }
+      }
+      xlSaveBlob(buf, name);
+    }
+    async function xlPhotosFor(rows, boxW, boxH, cover, zoomW, zoomH) {
       const src = await xlRowPhotos(rows), imgs = new Map();
       const jobs = [...src.entries()];
       for (let i = 0; i < jobs.length; i += 6) {
         await Promise.all(jobs.slice(i, i + 6).map(async ([id, list]) => {
           const got = [];
-          for (const s of list) { const b = await xlFetchPhoto(s); if (b) { try { got.push(await xlCompress(b, boxW, boxH, cover)); } catch (e) {} } }
+          for (const s of list) {
+            const b = await xlFetchPhoto(s); if (!b) continue;
+            try {
+              const img = await xlCompress(b, boxW, boxH, cover);
+              if (zoomW) { try { img.zoom = await xlCompress(b, zoomW, zoomH, false); } catch (e) {} }      // 확대용 큰 사진
+              got.push(img);
+            } catch (e) {}
+          }
           if (got.length) imgs.set(id, got);
         }));
       }
@@ -12222,7 +12373,8 @@
       ['C4', 'D4', 'E4', 'F4', 'G4'].forEach(a => { ws.getCell(a).fill = xlFill(XL_BLUE1); });
       const H = [30, 22, 26, 26];                                       // 1건 4줄 높이(pt)
       const boxW = xlColPx(7) * 3, boxH = Math.round(H.reduce((a, b) => a + b, 0) * 4 / 3);
-      const [imgs, regs] = await Promise.all([xlPhotosFor(rows, boxW, boxH, true), xlStoreRegions(rows.map(r => r.store_code))]);
+      const ZW = 520, ZH = 400, hovers = [];
+      const [imgs, regs] = await Promise.all([xlPhotosFor(rows, boxW, boxH, true, ZW, ZH), xlStoreRegions(rows.map(r => r.store_code))]);
       rows.forEach((r, i) => {
         const s = 5 + i * 4;
         H.forEach((h, k) => { ws.getRow(s + k).height = h; });
@@ -12240,14 +12392,19 @@
         (imgs.get(r.id) || []).slice(0, two ? 2 : 1).forEach((img, k) => {             // 1장 : E~G / 2장 : 바로 옆 H~J (같은 크기 · 겹치지 않게)
           const id = wb.addImage({ buffer: img.buf, extension: 'jpeg' });
           ws.addImage(id, { tl: { col: 4 + k * 3, row: s - 1 }, br: { col: 7 + k * 3, row: s + 3 }, editAs: 'twoCell' });
+          if (img.zoom) { const c0 = 4 + k * 3; xlHoverNote(ws, hovers, '웰스토리', s - 1, c0, img.zoom, img.zoom.w, img.zoom.h, [c0 + (two ? 6 : 3), 8, s - 1, 4, c0 + (two ? 6 : 3) + 8, 8, s + 18, 4]); }
         });
       });
       xlBox(ws, 4, 3, 4 + rows.length * 4, two ? 10 : 7);
-      xlSaveBlob(await wb.xlsx.writeBuffer(), name);
+      await xlFinish(wb, name, hovers);
     }
-    function xlIssueSheet(wb, rows, imgs, title, sheetName) {
+    const XL_ISS_W = [10.5, 8.5, 16.13, 10.25, 20.88, 12, 50.75, 5.5, 6.25, 6.38, 6.38, 6.5, 8.25, 32.75, 8];
+    const XL_ISS_PH = 60;                                              // 사진 행 높이(pt)
+    const XL_ISS_BOX = { w: xlColPx(8), h: Math.round(XL_ISS_PH * 4 / 3) };
+    const XL_ISS_ZOOM = { w: XL_ISS_W.slice(7, 15).reduce((a, w) => a + xlColPx(w), 0), h: Math.round((12.75 + XL_ISS_PH * 7) * 4 / 3) };   // H2~O9
+    function xlIssueSheet(wb, rows, imgs, title, sheetName, hovers) {
       const ws = wb.addWorksheet(sheetName, XL_NOGRID);
-      [10.5, 8.5, 16.13, 10.25, 20.88, 12, 50.75, 5.5, 6.25, 6.38, 6.38, 6.5, 8.25, 32.75, 8].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+      XL_ISS_W.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
       ws.getColumn(10).hidden = true;                                 // J : 품목지정 숨김
       ws.mergeCells('A1:E1');
       const a1 = ws.getCell('A1'); a1.value = { formula: 'TODAY()' }; a1.numFmt = `yyyy-mm-dd"${title}"`; a1.font = { bold: true, size: 14 };
@@ -12257,14 +12414,18 @@
       if (two) ws.getColumn(16).width = 8;
       heads.forEach((h, i) => { const c = ws.getRow(2).getCell(i + 1); c.value = h; c.font = { bold: true, size: 9 }; c.fill = xlFill(XL_GREEN); });
       ws.getRow(2).height = 12.75;
-      const PH = 60, boxW = xlColPx(8) - 6, boxH = Math.round(PH * 4 / 3) - 6;
+      const PH = XL_ISS_PH, boxW = XL_ISS_BOX.w, boxH = XL_ISS_BOX.h;
       rows.forEach((r, i) => {
         const n = 3 + i, row = ws.getRow(n);
         const q = parseFloat(r.qty);
         [r.main_center, String(r.delivery_date || '').slice(0, 10), r.client_name, r.store_code, r.store_name, r.product_code, r.product_name, r.temperature, r.unit, r.item_designation, r.stock_type, isNaN(q) ? (r.qty || '') : q, r.content, r.detail, '']
           .forEach((v, k) => { const c = row.getCell(k + 1); c.value = v ?? ''; c.font = { size: 8 }; });
         row.height = PH;
-        ((imgs && imgs.get(r.id)) || []).slice(0, two ? 2 : 1).forEach((img, k) => xlPlaceImage(wb, ws, img, 14 + k, n - 1, boxW + 6, boxH + 6));
+        ((imgs && imgs.get(r.id)) || []).slice(0, two ? 2 : 1).forEach((img, k) => {          // O(·P) 칸에 꽉 맞춤
+          const id = wb.addImage({ buffer: img.buf, extension: 'jpeg' });
+          ws.addImage(id, { tl: { col: 14 + k, row: n - 1 }, br: { col: 15 + k, row: n }, editAs: 'twoCell' });
+          if (hovers && img.zoom) xlHoverNote(ws, hovers, sheetName, n - 1, 14 + k, img.zoom, XL_ISS_ZOOM.w, XL_ISS_ZOOM.h, [7, 0, 1, 0, 15, 0, 9, 0]);   // 확대 : 약 H2~O9
+        });
       });
       const lastC = two ? 16 : 15;
       xlBox(ws, 2, 1, 2, lastC);
@@ -12293,15 +12454,17 @@
       });
       xlBox(ws, 1, 1, 1 + list.length, 15, { shrink: true });
       // 특이사항
-      const imgs = await xlPhotosFor(rows, xlColPx(8) - 6, 74);
-      xlIssueSheet(wb, rows, imgs, '밀양센터 유통물류 배송특이사항', '특이사항');
-      xlSaveBlob(await wb.xlsx.writeBuffer(), name);
+      const hovers = [];
+      const imgs = await xlPhotosFor(rows, XL_ISS_BOX.w, XL_ISS_BOX.h, true, XL_ISS_ZOOM.w, XL_ISS_ZOOM.h);
+      xlIssueSheet(wb, rows, imgs, '밀양센터 유통물류 배송특이사항', '특이사항', hovers);
+      await xlFinish(wb, name, hovers);
     }
     async function xlGeneric(rows, name, tabName) {
       const wb = new ExcelJS.Workbook();
-      const imgs = await xlPhotosFor(rows, xlColPx(8) - 6, 74);
-      xlIssueSheet(wb, rows, imgs, `밀양센터 ${tabName} 배송특이사항`, '특이사항');
-      xlSaveBlob(await wb.xlsx.writeBuffer(), name);
+      const hovers = [];
+      const imgs = await xlPhotosFor(rows, XL_ISS_BOX.w, XL_ISS_BOX.h, true, XL_ISS_ZOOM.w, XL_ISS_ZOOM.h);
+      xlIssueSheet(wb, rows, imgs, `밀양센터 ${tabName} 배송특이사항`, '특이사항', hovers);
+      await xlFinish(wb, name, hovers);
     }
     // 고객사 이름으로 행 고르기 : 웰스토리 · 원앤원은 이름으로, 유통물류는 나머지 / 추가 탭은 그 이름
     function xlRowsFor(fmt, rows) {
@@ -12370,11 +12533,11 @@
       else if (isFp.sel.size === isFp.vals.length) delete isState.filters[k];
       else isState.filters[k] = new Set(isFp.sel);
       if (isFp.color) isState.colorFilters[k] = isFp.color; else delete isState.colorFilters[k];
-      isCloseFilter(); isRender();
+      isCloseFilter(); isRenderBottom();
     }
     function isClearFilter(k) {
       if (k) { delete isState.filters[k]; delete isState.colorFilters[k]; } else { isState.filters = {}; isState.colorFilters = {}; }
-      isCloseFilter(); isRender();
+      isCloseFilter(); isRenderBottom();
     }
     function isCloseFilter() { isEl('isFilterPop').classList.add('hidden'); }
     function isFpColorRender() { isEl('isFpColor').querySelectorAll('[data-fpc]').forEach(b => { const on = b.dataset.fpc === (isFp.color || ''); b.classList.toggle('bg-white', on); b.classList.toggle('shadow-sm', on); }); }
@@ -12681,6 +12844,7 @@
         .on('broadcast', { event: 'reload' }, () => { isLoad(); })
         .on('broadcast', { event: 'pend' }, () => { isLoadPending(); })
         .on('broadcast', { event: 'colw' }, () => { isLoadColW(); })
+        .on('broadcast', { event: 'hodefaults' }, () => { hoDefLoaded = false; })
         .on('broadcast', { event: 'handover' }, () => { if (isState.tab === 'handover' && !hoSt.edit) hoLoad(); })
         .on('broadcast', { event: 'onstock' }, () => { if (isEl('onStockBox')) onLoad(); })
         .on('broadcast', { event: 'tabitems' }, ({ payload }) => { if (payload && payload.tab && isState.tab !== 'home' && isEl('isTabBody_' + payload.tab)) isLoadTabItems(payload.tab); })
