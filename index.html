@@ -2359,7 +2359,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.052</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.053</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -15023,19 +15023,55 @@
       ibBot('출고매장은 어디인가요? <span class="text-[12px] text-gray-500">(매장명을 입력해 주세요)</span>');
       ib.awaitKind = 'tabout'; ib.await = (ans) => ibOutSetStore(ans);
     }
+    // 출고매장 : 주문 업로드 · 배차 업로드에서 가장 최근 매장을 찾아 추천 → 없으면 비슷한 매장 / 입력한 그대로
+    let ibStorePool = null, ibStorePoolAt = 0;
+    async function ibOutStorePool() {                                   // 최근 배차 · 주문 매장 (비슷한 이름 찾기용)
+      if (ibStorePool && Date.now() - ibStorePoolAt < 10 * 60 * 1000) return ibStorePool;
+      const m = new Map();
+      const add = (name, code, date) => { name = String(name || '').trim(); if (!name) return; const p = m.get(name); if (!p || String(date || '') > String(p.date || '')) m.set(name, { name, code: code || (p && p.code) || '', date: date || (p && p.date) || '' }); };
+      try { const { data } = await supabaseClient.from('dispatch_data').select('business_name,business_code,delivery_date').order('delivery_date', { ascending: false }).limit(5000); (data || []).forEach(r => add(r.business_name, r.business_code, r.delivery_date)); } catch (e) {}
+      try { const { data } = await supabaseClient.from('order_data').select('store_name,store_code,delivery_date').order('delivery_date', { ascending: false }).limit(5000); (data || []).forEach(r => add(r.store_name, r.store_code, r.delivery_date)); } catch (e) {}
+      ibStorePool = [...m.values()]; ibStorePoolAt = Date.now();
+      return ibStorePool;
+    }
     async function ibOutSetStore(text) {
       const q = String(text || '').trim();
       if (!q) { ibOutSetDate(ibOut.date); return; }
-      let name = q;
-      try {                                                             // 매장정보 · 배차에서 비슷한 이름이 딱 하나면 그 이름으로
-        const like = `%${homeLikeEsc(q)}%`, set = new Set();
-        const a = await supabaseClient.from('store_master').select('store_name').ilike('store_name', like).limit(10); (a.data || []).forEach(x => x.store_name && set.add(x.store_name));
-        if (set.size !== 1) { const b = await supabaseClient.from('dispatch_data').select('business_name').ilike('business_name', like).limit(20); (b.data || []).forEach(x => x.business_name && set.add(x.business_name)); }
-        const exact = [...set].find(n => n === q);
-        if (exact) name = exact; else if (set.size === 1) name = [...set][0];
-        else if (set.size > 1 && set.size <= 6) { ibAskPick('choice', [...set].map(n => ({ name: n })), q, null, (it) => ibOutConfirm(it.name), '매장'); return; }
+      const m = new Map();
+      const add = (name, code, date) => { name = String(name || '').trim(); if (!name) return; const p = m.get(name); if (!p || String(date || '') > String(p.date || '')) m.set(name, { name, code: code || (p && p.code) || '', date: date || (p && p.date) || '' }); };
+      const like = `%${homeLikeEsc(q)}%`;
+      try {
+        const [d, o] = await Promise.all([
+          supabaseClient.from('dispatch_data').select('business_name,business_code,delivery_date').ilike('business_name', like).order('delivery_date', { ascending: false }).limit(300),
+          supabaseClient.from('order_data').select('store_name,store_code,delivery_date').ilike('store_name', like).order('delivery_date', { ascending: false }).limit(300)]);
+        (d.data || []).forEach(r => add(r.business_name, r.business_code, r.delivery_date));
+        (o.data || []).forEach(r => add(r.store_name, r.store_code, r.delivery_date));
       } catch (e) {}
-      ibOutConfirm(name);
+      // 정렬 : 이름이 똑같은 매장 → 가장 최근 배송일 → 이름이 짧은 순
+      let list = [...m.values()].sort((a, b) => (b.name === q) - (a.name === q) || String(b.date).localeCompare(String(a.date)) || a.name.length - b.name.length);
+      let similar = false;
+      if (!list.length) {                                                // 이름이 들어간 매장이 없으면 비슷한 이름
+        const pool = await ibOutStorePool();
+        list = ibRank(q, pool, 6).map(x => x.it); similar = true;
+      }
+      ibOut.storeCands = list.slice(0, 6);
+      const when = (it) => it.date ? ` · 최근 ${ibFmtDate(String(it.date).slice(0, 10))}` : '';
+      const raw = ibBtn(`data-ib-os="__raw"`, `입력한 그대로 '${svEsc(q)}'`);
+      ibOut.storeRaw = q;
+      if (!list.length) {
+        ibBot(`주문 · 배차 업로드에서 <b>'${svEsc(q)}'</b>${ibJosaWa(q)} 비슷한 매장을 찾지 못했어요.<div class="mt-2 flex flex-wrap gap-1.5">${raw}</div><div class="mt-1.5 text-[11.5px] text-gray-500">다른 이름으로 다시 입력해도 돼요.</div>`);
+        ib.awaitKind = 'tabout'; ib.await = (ans) => ibOutSetStore(ans);
+        return;
+      }
+      const top = list[0];
+      const others = list.slice(1, 6);
+      ibBot(`${similar ? `<b>'${svEsc(q)}'</b>${ibJosaWa(q)} 딱 맞는 매장이 없어 비슷한 매장을 찾았어요.` : `주문 · 배차 업로드 기준 가장 최근 매장이에요.`}
+        <div class="mt-2 space-y-1">
+          <button type="button" data-ib-os="0" class="ios-btn-tap ib-pop w-full flex items-center gap-2 px-2.5 py-2 rounded-xl border border-[#007AFF] bg-blue-50 text-left"><span class="flex-1 min-w-0"><b class="block truncate text-[13px] text-gray-900">${svEsc(top.name)}</b><span class="block text-[11px] text-gray-500">${svEsc(top.code || '')}${when(top)}</span></span><span class="flex-none px-2 py-1 rounded-lg bg-[#007AFF] text-white text-[11.5px] font-bold">${similar ? '이 매장' : '추천'}</span></button>
+          ${others.map((it, k) => `<button type="button" data-ib-os="${k + 1}" class="ios-btn-tap ib-pop w-full flex items-center gap-2 px-2.5 py-2 rounded-xl border border-gray-200 bg-gray-50 text-left"><span class="flex-1 min-w-0"><span class="block truncate text-[13px] font-semibold text-gray-800">${svEsc(it.name)}</span><span class="block text-[11px] text-gray-500">${svEsc(it.code || '')}${when(it)}</span></span></button>`).join('')}
+        </div>
+        <div class="mt-2 flex flex-wrap gap-1.5">${raw}</div>`);
+      ib.awaitKind = 'tabout'; ib.await = (ans) => ibOutSetStore(ans);   // 다른 이름을 입력하면 다시 찾기
     }
     function ibOutConfirm(store) {
       ibOut.store = store;
@@ -15696,6 +15732,14 @@
         ibOut.ids = sel.map(b => +b.dataset.ibOi);
         ibOut.names = sel.slice(0, 3).map(b => b.closest('label').querySelector('span').textContent).join(', ') + (sel.length > 3 ? ` 외 ${sel.length - 3}개` : '');
         ibPush('me', `${sel.length}개 선택`); ibOut.qty = {}; ibOutAskQty(0); return;
+      }
+      const os = e.target.closest('[data-ib-os]');
+      if (os) {
+        ib.await = null; ib.awaitKind = null;
+        const v = os.dataset.ibOs, it = v === '__raw' ? null : (ibOut.storeCands || [])[+v];
+        const name = it ? it.name : ibOut.storeRaw;
+        if (!name) return;
+        ibPush('me', svEsc(name)); ibOutConfirm(name); return;
       }
       const oq = e.target.closest('[data-ib-oq]');
       if (oq) { const [id, n, i] = oq.dataset.ibOq.split('|'); const r = (ibOut.items || []).find(x => x.id === +id); ibPush('me', +n >= (isQtyNum(r && r.qty) || 0) ? `전부 (${n}개)` : `${n}개`); ibOutSetQty(+id, +n, +i); return; }
