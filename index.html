@@ -2359,7 +2359,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.048</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.049</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -11270,10 +11270,28 @@
       hoCloseDefaults();
       showToastNotification('기본칸 저장', `다음에 새 출고일을 열면 ${HO_DEFAULTS.length}칸으로 시작해요. (이미 만든 날짜는 그대로)`, 'success');
     }
+    const HO_COPY_FROM = '2026-11-19';
     async function hoEnsureDefaults(d) {
       try {
         const { count } = await supabaseClient.from(HO_TABLE).select('id', { count: 'exact', head: true }).eq('out_date', d);
         if (count) return false;
+        if (d >= HO_COPY_FROM) {                                       // 11/19부터 : 바로 앞 출고일의 마지막 저장본을 복사해 시작
+          const { data: prev } = await supabaseClient.from(HO_TABLE).select('out_date').lt('out_date', d).order('out_date', { ascending: false }).limit(1);
+          const pd = prev && prev[0] && prev[0].out_date;
+          if (pd) {
+            const { data: src } = await supabaseClient.from(HO_TABLE).select('content,fmt,height_pt,sort_order,id').eq('out_date', pd).order('sort_order', { ascending: true }).order('id', { ascending: true }).limit(500);
+            if (src && src.length) {
+              const rows = src.map((r, i) => ({ out_date: d, content: r.content || '', fmt: r.fmt || null, height_pt: r.height_pt || 200, sort_order: i + 1, is_default: true, created_by: isState.me || null }));
+              const { error } = await supabaseClient.from(HO_TABLE).insert(rows);
+              if (!error) {
+                isBroadcast('handover', {});
+                if (isState.tab === 'handover') showToastNotification('인수인계', `${pd} 인수인계를 복사해 왔어요. 여기서 고치면 ${d}에만 반영돼요.`, 'info');
+                return true;
+              }
+              return false;                                            // 다른 사람이 먼저 만든 경우 (같은 칸 중복 방지)
+            }
+          }
+        }
         await hoLoadDefaults();
         if (!HO_DEFAULTS.length) return false;
         const rows = HO_DEFAULTS.map((c, i) => ({ out_date: d, content: c, fmt: { b: 1 }, height_pt: 200, sort_order: i + 1, is_default: true, created_by: isState.me || null }));
@@ -11660,7 +11678,11 @@
     });
     // 자료등록 '등록' → 적용 → 인수인계 자동 등록 (빨간 글씨)
     async function hoAddFromRow(r) {
-      const text = `○ 전달사항\n매장명 : ${r.store_name || ''}\n제품명 : ${r.product_name || ''}\n수량 : ${r.qty || ''}\n\n${r.detail || ''}`;
+      const minOrder = /최소\s*주문\s*금액/.test(String(r.detail || ''));
+      const zone = /냉동/.test(String(r.temperature || '')) ? '냉동' : '냉장';      // 냉동 = 냉동 · 냉장 · 상온 = 냉장
+      const text = minOrder
+        ? `○ 전달사항\n거래처명 : ${r.store_name || ''}\n제품명 : ${r.product_name || ''}\n수량 : ${r.qty || ''}\n※ 최소주문금액 미달로 인한 미출고 예정입니다. / ${zone} 정상존에 보관 부탁드립니다.`
+        : `○ 전달사항\n매장명 : ${r.store_name || ''}\n제품명 : ${r.product_name || ''}\n수량 : ${r.qty || ''}\n\n${r.detail || ''}`;
       return hoAdd(text, { c: 'red', b: 1 }, r.id, hoTomorrow());
     }
     function isFindRow(id) {
