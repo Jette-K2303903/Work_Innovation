@@ -1191,6 +1191,12 @@
       <!-- 탭 : 홈화면 · 웰스토리 · 유통물류 · 원앤원 + 사용자 추가 -->
       <div class="flex items-center gap-2 mb-2.5">
         <div id="isTabs" class="flex-1 min-w-0 flex bg-gray-200/80 p-1 rounded-2xl ios-card-shadow overflow-x-auto no-scrollbar"></div>
+        <div class="flex-none flex items-center gap-0.5 bg-white border border-gray-200 rounded-xl p-0.5 ios-card-shadow" title="화면 확대 · 축소 (지금 보는 탭)">
+          <span class="pl-1.5 pr-0.5 text-gray-400"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="4.6"/><path d="M10.5 10.5L14 14"/></svg></span>
+          <button type="button" onclick="isZoomStep(-1)" class="ios-btn-tap w-7 h-7 rounded-lg text-gray-700 hover:bg-gray-100 text-[17px] font-bold leading-none" title="축소">−</button>
+          <button type="button" id="isZoomTxt" onclick="isZoomSet(1)" class="ios-btn-tap min-w-[44px] h-7 px-1 rounded-lg text-gray-800 hover:bg-gray-100 text-[12px] font-bold" title="100%로">100%</button>
+          <button type="button" onclick="isZoomStep(1)" class="ios-btn-tap w-7 h-7 rounded-lg text-gray-700 hover:bg-gray-100 text-[17px] font-bold leading-none" title="확대">+</button>
+        </div>
         <button type="button" onclick="isOpenTabModal()" class="ios-btn-tap flex-none w-9 h-9 rounded-xl bg-white border border-gray-200 text-gray-700 flex items-center justify-center" title="탭 추가"><i class="ph-bold ph-plus"></i></button>
         <button type="button" onclick="ibOpenSettings()" class="ios-btn-tap flex-none w-9 h-9 rounded-xl bg-white border border-gray-200 text-gray-700 flex items-center justify-center" title="설정"><i class="ph-bold ph-gear-six"></i></button>
       </div>
@@ -1230,8 +1236,8 @@
           </div>
         </div>
         <div class="flex items-center gap-0.5 bg-white border border-gray-200 rounded-xl p-0.5" title="정렬 : 선택한 칸 (칸을 고르지 않으면 체크한 행의 상세내용)">
-          <button type="button" onmousedown="event.preventDefault()" onclick="isSetAlign('')" class="ios-btn-tap w-8 h-[30px] rounded-lg text-gray-700 hover:bg-gray-100 flex items-center justify-center" title="왼쪽 맞춤"><i class="ph-bold ph-text-align-left text-[15px]"></i></button>
-          <button type="button" onmousedown="event.preventDefault()" onclick="isSetAlign('c')" class="ios-btn-tap w-8 h-[30px] rounded-lg text-gray-700 hover:bg-gray-100 flex items-center justify-center" title="가운데 맞춤"><i class="ph-bold ph-text-align-center text-[15px]"></i></button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="isSetAlign('')" class="ios-btn-tap w-8 h-[30px] rounded-lg text-gray-700 hover:bg-gray-100 flex items-center justify-center" title="왼쪽 맞춤"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 3h12M2 6.5h8M2 10h12M2 13.5h8"/></svg></button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="isSetAlign('c')" class="ios-btn-tap w-8 h-[30px] rounded-lg text-gray-700 hover:bg-gray-100 flex items-center justify-center" title="가운데 맞춤"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 3h12M4 6.5h8M2 10h12M4 13.5h8"/></svg></button>
         </div>
         <button type="button" id="isFilterReset" onclick="isClearFilter()" class="hidden ios-btn-tap px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-funnel-x"></i><span>필터 초기화</span></button>
         <button type="button" id="isDelBtn" onclick="isDeleteChecked()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-red-600 text-[12.5px] font-bold">선택 삭제</button>
@@ -2347,7 +2353,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.038</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.039</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -10882,9 +10888,9 @@
       e.preventDefault(); e.stopPropagation();
       const list = scope === 'home' ? IS_COLS : IS_TAB_COLS;
       const col = list.find(c => c.k === key); if (!col) return;
-      const x0 = e.clientX, w0 = col.w;
+      const x0 = e.clientX, w0 = col.w, z = isZoomOf(scope === 'home' ? 'home' : 'x');
       document.body.style.cursor = 'col-resize';
-      const move = (ev) => { col.w = Math.max(36, Math.round(w0 + ev.clientX - x0)); isColW[scope][key] = col.w; isApplyColW(); };
+      const move = (ev) => { col.w = Math.max(36, Math.round(w0 + (ev.clientX - x0) / z)); isColW[scope][key] = col.w; isApplyColW(); };
       const up = async () => {
         document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
         document.body.style.cursor = '';
@@ -11188,8 +11194,8 @@
                 </div>
               </div>
               <div class="flex items-center gap-0.5 bg-white border border-gray-200 rounded-xl p-0.5" title="정렬 : 편집 중인 칸">
-                <button type="button" onmousedown="event.preventDefault()" onclick="hoFormat('align','')" class="ios-btn-tap w-8 h-[30px] rounded-lg text-gray-700 hover:bg-gray-100 flex items-center justify-center" title="왼쪽 맞춤"><i class="ph-bold ph-text-align-left text-[15px]"></i></button>
-                <button type="button" onmousedown="event.preventDefault()" onclick="hoFormat('align','c')" class="ios-btn-tap w-8 h-[30px] rounded-lg text-gray-700 hover:bg-gray-100 flex items-center justify-center" title="가운데 맞춤"><i class="ph-bold ph-text-align-center text-[15px]"></i></button>
+                <button type="button" onmousedown="event.preventDefault()" onclick="hoFormat('align','')" class="ios-btn-tap w-8 h-[30px] rounded-lg text-gray-700 hover:bg-gray-100 flex items-center justify-center" title="왼쪽 맞춤"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 3h12M2 6.5h8M2 10h12M2 13.5h8"/></svg></button>
+                <button type="button" onmousedown="event.preventDefault()" onclick="hoFormat('align','c')" class="ios-btn-tap w-8 h-[30px] rounded-lg text-gray-700 hover:bg-gray-100 flex items-center justify-center" title="가운데 맞춤"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 3h12M4 6.5h8M2 10h12M4 13.5h8"/></svg></button>
               </div>
               <button type="button" onclick="hoOpenDefaults()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1" title="새 출고일에 자동으로 만들어지는 칸"><i class="ph-bold ph-list-numbers"></i>기본칸</button>
               <button type="button" onclick="hoAdd()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-plus"></i>행 추가</button>
@@ -11202,6 +11208,7 @@
           <p class="mt-2 text-[11px] text-gray-400">내용 칸을 눌러 바로 적어요. 글자를 드래그한 뒤 글자색(검정 · 빨강 · 굵게, Ctrl+B)으로 서식을, 정렬 버튼으로 왼쪽 · 가운데 맞춤을 바꿀 수 있어요. 행 아래쪽 끝을 끌면 높이가 바뀌어요. 파란 점선은 인쇄할 때 쪽이 나뉘는 위치예요.</p>
         </div>`;
       isEl('hoDate').value = hoSt.date;
+      isZoomApply();
       hoRenderSheet();
       hoLoad();
     }
@@ -11395,9 +11402,9 @@
       if (rz) {
         e.preventDefault();
         const id = +rz.dataset.hoRsz, r = hoSt.rows.find(x => x.id === id), tr = rz.closest('tr'); if (!r || !tr) return;
-        const y0 = e.clientY, h0 = tr.getBoundingClientRect().height;
-        const move = (ev) => { const px = Math.max(hoPt(30), h0 + ev.clientY - y0); tr.style.height = px + 'px'; const c = tr.querySelector('[data-ho-cell]'); if (c) c.style.minHeight = (px - 14) + 'px'; };
-        const up = async (ev) => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); const px = Math.max(hoPt(30), h0 + ev.clientY - y0); await hoSave(id, { height_pt: Math.round(px * 3 / 4 * 100) / 100 }); hoRenderSheet(); };
+        const zz = hoSt.viewZoom || 1, y0 = e.clientY, h0 = tr.getBoundingClientRect().height / zz;
+        const move = (ev) => { const px = Math.max(hoPt(30), h0 + (ev.clientY - y0) / zz); tr.style.height = px + 'px'; const c = tr.querySelector('[data-ho-cell]'); if (c) c.style.minHeight = (px - 14) + 'px'; };
+        const up = async (ev) => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); const px = Math.max(hoPt(30), h0 + (ev.clientY - y0) / zz); await hoSave(id, { height_pt: Math.round(px * 3 / 4 * 100) / 100 }); hoRenderSheet(); };
         document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
         return;
       }
@@ -11502,8 +11509,8 @@
     function isRenderSoon() { if (isRenderRaf) return; isRenderRaf = requestAnimationFrame(() => { isRenderRaf = 0; isRender(); }); }
     function isVisRange(n) {
       // 표 상자 스크롤 + 화면(페이지) 스크롤 모두 고려해 실제로 보이는 부분 계산
-      const wrap = isEl('isWrap'), r = wrap.getBoundingClientRect(), vh = window.innerHeight || 800;
-      const above = Math.max(0, -r.top);                                   // 페이지가 표 위쪽을 지나 스크롤된 만큼
+      const wrap = isEl('isWrap'), r = wrap.getBoundingClientRect(), z = isZoomOf('home'), vh = (window.innerHeight || 800) / z;
+      const above = Math.max(0, -r.top) / z;                                   // 페이지가 표 위쪽을 지나 스크롤된 만큼
       const h = Math.max(200, Math.min(wrap.clientHeight || vh, vh) - Math.max(0, r.top > 0 ? 0 : 0));
       const top = Math.max(0, wrap.scrollTop + above - IS_HEAD_H);
       const s = Math.max(0, isIdxAt(top) - IS_VBUF);
@@ -11596,8 +11603,8 @@
     }
     function isTd(id, col) { return document.querySelector(`#isBody tr[data-id="${id}"] td[data-col="${col}"]`); }
     function isRectIn(td) {
-      const a = td.getBoundingClientRect(), b = isEl('isInner').getBoundingClientRect();
-      return { x: a.left - b.left, y: a.top - b.top, w: a.width, h: a.height };
+      const a = td.getBoundingClientRect(), b = isEl('isInner').getBoundingClientRect(), z = isZoomOf('home');
+      return { x: (a.left - b.left) / z, y: (a.top - b.top) / z, w: a.width / z, h: a.height / z };
     }
     function isRenderAvatars() {
       const box = isEl('isAvatars');
@@ -11649,12 +11656,12 @@
       isTrack();
     }
     function isEnsureVisible(td) {
-      const wrap = isEl('isWrap'), r = td.getBoundingClientRect(), w = wrap.getBoundingClientRect();
-      const top = w.top + 34, left = w.left + IS_GUT_W;
-      if (r.top < top) wrap.scrollTop -= top - r.top;
-      else if (r.bottom > w.bottom) wrap.scrollTop += r.bottom - w.bottom;
-      if (r.left < left) wrap.scrollLeft -= left - r.left;
-      else if (r.right > w.right) wrap.scrollLeft += r.right - w.right;
+      const wrap = isEl('isWrap'), r = td.getBoundingClientRect(), w = wrap.getBoundingClientRect(), z = isZoomOf('home');
+      const top = w.top + 34 * z, left = w.left + IS_GUT_W * z;
+      if (r.top < top) wrap.scrollTop -= (top - r.top) / z;
+      else if (r.bottom > w.bottom) wrap.scrollTop += (r.bottom - w.bottom) / z;
+      if (r.left < left) wrap.scrollLeft -= (left - r.left) / z;
+      else if (r.right > w.right) wrap.scrollLeft += (r.right - w.right) / z;
     }
     function isMove(dr, dc) {
       const rows = isRowsView();
@@ -12168,20 +12175,29 @@
       const scoped = isDl.scope === 'all' ? isState.rows.slice() : isState.rows.filter(r => String(r.delivery_date || '').slice(0, 10) === isDl.sel);
       const ids = new Set(scoped.map(r => r.id));
       [...isState.checked].filter(id => id > 0 && !ids.has(id)).forEach(id => { const r = isState.rows.find(x => x.id === id); if (r) { scoped.push(r); ids.add(id); } });   // 체크한 행은 날짜와 상관없이 포함
-      const base = scoped.sort((a, b) => { const da = a.delivery_date || '', db = b.delivery_date || ''; return da < db ? -1 : da > db ? 1 : a.id - b.id; });
+      const dk = (r) => String(r.delivery_date || '').slice(0, 10).replace(/[./]/g, '-');
+      const base = scoped.sort((a, b) => { const da = dk(a), db = dk(b); return da < db ? -1 : da > db ? 1 : a.id - b.id; });   // 배송일 오름차순
       const rows = xlRowsFor(fmt, base);
       const tab = isAllTabs().find(t => t.id === fmt);
       const label = fmt === 'all' ? '전체고객사' : (tab ? tab.name : fmt).replace(/\s/g, '');
       const tag = isDl.scope === 'all' ? '전체' : isDl.sel;
       if (!rows.length && fmt !== 'distrib') { showToastNotification('다운로드', `${fmt === 'all' ? '' : label + ' '}받을 자료가 없습니다.`, 'warning'); return; }
-      if (fmt === 'all') { isDownloadRows(rows, `${label}_특이사항_${tag}`); isCloseDlFmt(); isCloseDl(); return; }
+      const done = () => {                                             // 받은 파일에 들어간 체크 행은 체크 해제 (고치는 중인 행은 그대로)
+        const got = new Set(rows.map(r => r.id));
+        const un = [...isState.checked].filter(id => got.has(id) && !isState.drafts.has(id));
+        if (!un.length) return;
+        un.forEach(id => isState.checked.delete(id));
+        isRenderKeep(isAtBottom());
+        showToastNotification('체크 해제', `다운로드에 넣은 체크 행 ${un.length}건의 체크를 풀었어요.`, 'info');
+      };
+      if (fmt === 'all') { isDownloadRows(rows, `${label}_특이사항_${tag}`); isCloseDlFmt(); isCloseDl(); done(); return; }
       showBusy('엑셀 만드는 중... (사진 포함)');
       try {
         await costLoadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
         if (fmt === 'wellstory') await xlWellstory(rows, `웰스토리_특이사항_${tag}.xlsx`);
         else if (fmt === 'distrib') await xlDistrib(rows, `유통물류_특이사항_${tag}.xlsx`, { all: isDl.scope === 'all', date: isDl.sel });
         else await xlGeneric(rows, `${label}_특이사항_${tag}.xlsx`, tab ? tab.name : label);
-        isCloseDlFmt(); isCloseDl();
+        isCloseDlFmt(); isCloseDl(); done();
       } catch (e) { console.error(e); showToastNotification('다운로드 실패', '엑셀을 만들지 못했어요: ' + (e.message || e), 'warning'); }
       finally { hideBusy(); }
     }
@@ -12421,7 +12437,9 @@
     const XL_ISS_PH = 60;                                              // 사진 행 높이(pt)
     const XL_ISS_BOX = { w: xlColPx(8), h: Math.round(XL_ISS_PH * 4 / 3) };
     const XL_ISS_ZOOM = { w: XL_ISS_W.slice(7, 15).reduce((a, w) => a + xlColPx(w), 0), h: Math.round((12.75 + XL_ISS_PH * 7) * 4 / 3) };   // H2~O9
-    function xlIssueSheet(wb, rows, imgs, title, sheetName, hovers) {
+    const XL_DIS_PH = XL_ISS_PH * 2;                                   // 유통물류 : 사진 세로 2배
+    const xlZoomAnchor = (ph) => { const n = Math.floor(420 / ph), rem = Math.round((420 - n * ph) * 4 / 3); return [7, 0, 1, 0, 15, 0, 2 + n, rem]; };   // 확대 크기는 그대로 (약 H2~O9)
+    function xlIssueSheet(wb, rows, imgs, title, sheetName, hovers, ph) {
       const ws = wb.addWorksheet(sheetName, XL_NOGRID);
       XL_ISS_W.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
       ws.getColumn(10).hidden = true;                                 // J : 품목지정 숨김
@@ -12433,7 +12451,7 @@
       if (two) ws.getColumn(16).width = 8;
       heads.forEach((h, i) => { const c = ws.getRow(2).getCell(i + 1); c.value = h; c.font = { bold: true, size: 9 }; c.fill = xlFill(XL_GREEN); });
       ws.getRow(2).height = 12.75;
-      const PH = XL_ISS_PH, boxW = XL_ISS_BOX.w, boxH = XL_ISS_BOX.h;
+      const PH = ph || XL_ISS_PH, boxW = XL_ISS_BOX.w, boxH = Math.round(PH * 4 / 3);
       rows.forEach((r, i) => {
         const n = 3 + i, row = ws.getRow(n);
         const q = parseFloat(r.qty);
@@ -12443,7 +12461,7 @@
         ((imgs && imgs.get(r.id)) || []).slice(0, two ? 2 : 1).forEach((img, k) => {          // O(·P) 칸에 꽉 맞춤
           const id = wb.addImage({ buffer: img.buf, extension: 'jpeg' });
           ws.addImage(id, { tl: { col: 14 + k, row: n - 1 }, br: { col: 15 + k, row: n }, editAs: 'twoCell' });
-          if (hovers && img.zoom) xlHoverNote(ws, hovers, sheetName, n - 1, 14 + k, img.zoom, XL_ISS_ZOOM.w, XL_ISS_ZOOM.h, [7, 0, 1, 0, 15, 0, 9, 0]);   // 확대 : 약 H2~O9
+          if (hovers && img.zoom) xlHoverNote(ws, hovers, sheetName, n - 1, 14 + k, img.zoom, XL_ISS_ZOOM.w, XL_ISS_ZOOM.h, xlZoomAnchor(PH));   // 확대 : 약 H2~O9
         });
       });
       const lastC = two ? 16 : 15;
@@ -12474,8 +12492,8 @@
       xlBox(ws, 1, 1, 1 + list.length, 15, { shrink: true });
       // 특이사항
       const hovers = [];
-      const imgs = await xlPhotosFor(rows, XL_ISS_BOX.w, XL_ISS_BOX.h, true, XL_ISS_ZOOM.w, XL_ISS_ZOOM.h);
-      xlIssueSheet(wb, rows, imgs, '밀양센터 유통물류 배송특이사항', '특이사항', hovers);
+      const imgs = await xlPhotosFor(rows, XL_ISS_BOX.w, Math.round(XL_DIS_PH * 4 / 3), true, XL_ISS_ZOOM.w, XL_ISS_ZOOM.h);
+      xlIssueSheet(wb, rows, imgs, '밀양센터 유통물류 배송특이사항', '특이사항', hovers, XL_DIS_PH);
       await xlFinish(wb, name, hovers);
     }
     async function xlGeneric(rows, name, tabName) {
@@ -12727,6 +12745,27 @@
           <i class="ph-bold ${t.icon} text-sm"></i><span>${svEsc(t.name)}</span>${false ? `<i data-tab-del="${svEsc(t.id)}" role="button" class="ph-bold ph-x text-[9px] w-4 h-4 rounded-full bg-gray-300/70 text-white hover:bg-[#FF3B30] inline-flex items-center justify-center ml-1" title="탭 삭제"></i>` : ''}
         </button>`).join('');
     }
+    // 화면 배율 : 홈화면(표) · 탭 목록 · 인수인계(시트) 각각 · 이 기기에 기억
+    const IS_ZOOM_KEY = 'is_view_zoom';
+    let isZooms = {}; try { isZooms = JSON.parse(localStorage.getItem(IS_ZOOM_KEY) || '{}') || {}; } catch (e) { isZooms = {}; }
+    const isZoomKey = (t) => (t || isState.tab || 'home') === 'home' ? 'home' : (t || isState.tab) === 'handover' ? 'handover' : 'tabs';
+    const isZoomOf = (t) => { const z = +isZooms[isZoomKey(t)]; return z >= 0.5 && z <= 2 ? z : 1; };
+    function isZoomApply() {
+      const zh = isZoomOf('home'), zt = isZoomOf('x'), zo = isZoomOf('handover');
+      const w = isEl('isWrap'); if (w) w.style.zoom = zh === 1 ? '' : zh;
+      const p = isEl('isTabPane'); if (p) p.style.zoom = isState.tab !== 'handover' && zt !== 1 ? zt : '';
+      const hs = isEl('hoSheet'); if (hs) hs.style.zoom = zo === 1 ? '' : zo;
+      hoSt.viewZoom = zo;
+      const t = isEl('isZoomTxt'); if (t) t.textContent = Math.round(isZoomOf() * 100) + '%';
+    }
+    function isZoomSet(z) {
+      z = Math.max(0.5, Math.min(2, Math.round(z * 10) / 10));
+      isZooms[isZoomKey()] = z; try { localStorage.setItem(IS_ZOOM_KEY, JSON.stringify(isZooms)); } catch (e) {}
+      isZoomApply();
+      if (isState.tab === 'home') isRenderKeep(isAtBottom());
+      else if (isState.tab === 'handover') hoRenderSheet();
+    }
+    function isZoomStep(d) { isZoomSet(isZoomOf() + d * 0.1); }
     function isSwitchTab(id) {
       if (isState.tab === id) return;
       if (isState.edit) isCommit(isState.edit.el.value, null);
@@ -12736,8 +12775,10 @@
       const home = id === 'home';
       isEl('isHomePane').classList.toggle('hidden', !home);
       isEl('isTabPane').classList.toggle('hidden', home);
+      isZoomApply();
       if (home) { isRender(); }
       else isRenderTabPane(isAllTabs().find(t => t.id === id));
+      isZoomApply();
     }
     function isOpenTabModal() {
       const m = isEl('isTabModal'); isEl('isTabName').value = '';
@@ -15103,6 +15144,7 @@
         showToastNotification('접근 제한', '사무실 담당자 로그인 후 이용할 수 있습니다.', 'warning');
         return;
       }
+      try { isZoomApply(); } catch (e) {}
       mainScrollArea.classList.add('hidden');
       homeFooterBar.classList.add('hidden');
       palletViewArea.classList.add('hidden');
