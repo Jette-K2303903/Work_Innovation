@@ -2359,7 +2359,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.053</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.054</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -14975,6 +14975,7 @@
     }
     async function ibSkillOut(t) {
       if (!isState.me) { ibBot('출고하려면 먼저 사용자를 골라 주세요.'); isOpenUserPicker(); return; }
+      if (!isState.tabs.length) await isLoadTabs();                    // 특이사항 관리를 아직 안 열었으면 탭 목록부터 불러옴
       const lists = isAllLists();
       if (!lists.length) { ibBot('출고할 목록(탭)이 없어요.'); return; }
       const names = lists.map(l => l.tab.name).concat(['오산', '이천', '밀양']).map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
@@ -15088,6 +15089,7 @@
     }
     // 때때 : 출고 원복 ("출고 취소", "원복", "복구")
     async function ibSkillUndoOut() {
+      if (!isState.tabs.length) await isLoadTabs();                    // 목록 이름 표시용
       const { data, error } = await supabaseClient.from(IS_TAB_OUT).select('*').order('id', { ascending: false }).limit(30);
       if (error) { ibBot('출고 기록을 불러오지 못했어요: ' + svEsc(dbErrorMessage(error))); return; }
       const list = (data || []);
