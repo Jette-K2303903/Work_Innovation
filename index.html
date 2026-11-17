@@ -84,6 +84,7 @@
     #isSuggest { position: absolute; z-index: 8; background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,.14); max-height: 260px; overflow-y: auto; padding: 4px; min-width: 260px; }
     #isSuggest .it { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 8px; cursor: pointer; font-size: 12.5px; }
     #isSuggest .it.on, #isSuggest .it:hover { background: #EFF6FF; }
+    body.is-fullview #ibLauncher, body.is-fullview #ibPanel, body.is-fullview #ibBtn { display: none !important; }
     #issueSheetViewArea.is-full { position: fixed !important; inset: 0; z-index: 45; background: #F2F2F7; padding: 12px 16px !important; }
     .is-pv th, .is-pv td { border: 1px solid #E5E7EB; padding: 7px 10px; font-size: 12px; white-space: nowrap; }
     .is-pv thead th { background: #F3F4F6; color: #374151; font-weight: 800; }
@@ -2358,7 +2359,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.047</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.048</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -10586,6 +10587,13 @@
     function isOpenApply() { isOpenApplyAsync(); }
     async function isOpenApplyAsync() {
       if (isNeedUser()) return;
+      if (isState.edit) await isCommit(isState.edit.el.value, null);
+      const ids0 = [...isState.checked].filter(id => id > 0);
+      if (ids0.some(id => { const d = isState.drafts.get(id); return d && Object.keys(d.patch || {}).length; })) {   // 적용 = 먼저 자동 저장
+        await isSaveDrafts();
+        ids0.forEach(id => { const r = isState.rows.find(x => x.id === id); if (r && (String(r.inbound || '').trim() === '입고' || String(r.data_reg || '').trim() === '등록')) isState.checked.add(id); });   // 적용할 행만 다시 체크
+        isRender();
+      }
       const lists = isAllLists();
       const checked = [...isState.checked].filter(id => id > 0).map(id => isFindRow(id)).filter(Boolean);
       const pool = (checked.length ? checked : isState.rows).filter(r => !isLocked(r.id));
@@ -10615,7 +10623,8 @@
       const { data, error } = await supabaseClient.from(IS_TABLE).update({ ...patch, updated_by: isState.me, updated_at: new Date().toISOString() }).in('id', ids).select();
       if (error) { showToastNotification('상태 변경 실패', dbErrorMessage(error), 'warning'); return; }
       (data || []).forEach(row => { isQueueDb({ eventType: 'UPDATE', new: row }); isBroadcast('row', { row }); });
-      ids.forEach(id => { const d = isState.drafts.get(id); if (d) Object.keys(patch).forEach(k => delete d.patch[k]); });
+      ids.forEach(id => { const d = isState.drafts.get(id); if (d) { Object.keys(patch).forEach(k => delete d.patch[k]); if (!d.isNew && !Object.keys(d.patch).length) isState.drafts.delete(id); } });
+      isRender(); isSendDrafts();
     }
     async function isApplyReg(rows) {
       if (!rows.length) return 0;
@@ -11533,7 +11542,10 @@
         hoSendType();
       }
     }
-    function hoAfterEdit() { if (hoSt.later) { hoSt.later = false; hoLoad(true); } else hoRenderSheet(); }
+    function hoAfterEdit(doneId) {
+      if (hoSt.edit) { if (doneId != null) hoPatchCell(doneId); return; }   // 다른 칸을 쓰는 중이면 그 칸은 건드리지 않음
+      if (hoSt.later) { hoSt.later = false; hoLoad(true); } else hoRenderSheet();
+    }
     async function hoCommitEdit() {
       const ed = hoSt.edit; if (!ed) return;
       hoSt.edit = null;
@@ -11544,7 +11556,7 @@
         await hoSave(r.id, { content: v, fmt: hoFmtPack(f) });
       }
       hoSendType({ id: ed.id });
-      hoAfterEdit();
+      hoAfterEdit(ed.id);
     }
     // 서식 : 드래그한 글자가 있으면 그 글자만, 없으면 편집 중인 칸 전체
     async function hoFormat(kind, val) {
@@ -11621,7 +11633,7 @@
         if (hoSt.edit) hoCommitEdit().then(go); else go();
         return;
       }
-      if (c && !(hoSt.edit && hoSt.edit.id === +c.dataset.hoCell)) { if (isNeedUser()) return; e.preventDefault(); const id = +c.dataset.hoCell; hoSt.anchor = id; if (hoSt.msel.size) { hoSt.msel.clear(); hoRenderSheet(); } if (hoSt.edit) hoCommitEdit().then(() => hoOpenEditor(id)); else hoOpenEditor(id); }
+      if (c && !(hoSt.edit && hoSt.edit.id === +c.dataset.hoCell)) { if (isNeedUser()) return; e.preventDefault(); const id = +c.dataset.hoCell; hoSt.anchor = id; if (hoSt.msel.size) { hoSt.msel.clear(); hoRenderSheet(); } if (hoSt.edit) hoCommitEdit(); hoOpenEditor(id); }   // 새 칸을 바로 열어 첫 글자부터 한글 조합
     });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && hoSt.msel.size && isState.tab === 'handover' && !hoSt.edit) { hoSt.msel.clear(); hoRenderSheet(); } });
     function hoSelClear() { hoSt.msel.clear(); hoRenderSheet(); }
@@ -11867,6 +11879,7 @@
       }
       if (td) { td.classList.add('is-sel'); if (!opts.noScroll) isEnsureVisible(td); }
       isTrack();
+      setTimeout(isFocusCatch, 0);                                     // 바로 한글을 쳐도 첫 글자부터 조합되게
     }
     function isEnsureVisible(td) {
       const wrap = isEl('isWrap'), r = td.getBoundingClientRect(), w = wrap.getBoundingClientRect(), z = isZoomOf('home');
@@ -11900,19 +11913,53 @@
       if (row && row._new && row._rem && !isState.drafts.has(row.id)) { showToastNotification('작성 중인 행', `${row._rem.name} 님이 아직 저장하지 않은 행입니다.`, 'warning'); return false; }
       return true;
     }
-    async function isBeginEdit(initial) {
+    // 보이지 않는 입력 칸 : 한글(IME)이 첫 글자부터 조합되도록 (PC 마우스 환경에서만 · 휴대폰은 키보드가 뜨지 않게 제외)
+    const IS_FINE = window.matchMedia ? matchMedia('(hover: hover) and (pointer: fine)').matches : true;
+    function isCatchEl() {
+      let c = isEl('isImeCatch');
+      if (!c) {
+        c = document.createElement('textarea'); c.id = 'isImeCatch'; c.autocomplete = 'off'; c.spellcheck = false; c.setAttribute('aria-hidden', 'true'); c.tabIndex = -1;
+        Object.assign(c.style, { position: 'absolute', opacity: '0', pointerEvents: 'none', resize: 'none', border: '0', padding: '0', margin: '0', overflow: 'hidden', zIndex: 0, width: '2px', height: '18px', fontSize: '12.5px', background: 'transparent', color: 'transparent', caretColor: 'transparent', outline: 'none' });
+        const go = () => {
+          if (isState.edit || c._go || !isState.sel) return;
+          const col = IS_COLS.find(x => x.k === isState.sel.col);
+          if (!col || (col.ro && !IS_NODATA_EDIT[col.k])) { c.value = ''; return; }
+          if (col.type === 'date') { const v = c.value; c.value = ''; if (v) isBeginEdit(v); return; }
+          c._go = true; isBeginEdit(undefined, c).finally(() => { c._go = false; });
+        };
+        c.addEventListener('compositionstart', go);
+        c.addEventListener('input', go);
+      }
+      const inner = isEl('isInner'); if (inner && c.parentElement !== inner) inner.appendChild(c);
+      return c;
+    }
+    function isFocusCatch() {
+      if (!IS_FINE || isState.edit || !isState.sel || !isHomeOn()) return;
+      const a = document.activeElement;
+      if (a && a !== document.body && a !== isEl('isWrap') && a.id !== 'isImeCatch' && !a.closest('#isBody')) return;   // 다른 입력 칸을 쓰는 중이면 그대로
+      const c = isCatchEl(), td = isTd(isState.sel.id, isState.sel.col);
+      if (td) { const r = isRectIn(td); c.style.left = (r.x + 4) + 'px'; c.style.top = (r.y + 6) + 'px'; }
+      if (!c._go) c.value = '';
+      if (document.activeElement !== c) c.focus({ preventScroll: true });
+    }
+    async function isBeginEdit(initial, adopt) {
       if (isState.sel && isPendId(isState.sel.id)) { isOpenPend(isState.sel.id); return; }
       if (!isState.sel || isNeedUser()) return;
       const sel = isState.sel;
       const col = IS_COLS.find(c => c.k === sel.col);
       const row = isFindRow(sel.id);
-      if (!row || !(await isCanEdit(row, col))) return;
-      if (isState.sel !== sel || isState.edit) return;
+      if (!row || !(await isCanEdit(row, col))) { if (adopt) adopt.value = ''; return; }
+      if (isState.sel !== sel || isState.edit) { if (adopt) adopt.value = ''; return; }
       if (initial == null && row[col.k] === IS_NODATA) initial = '';       // '데이터 없음'은 지우고 입력 시작
       isCloseEditor(false);
-      const el = document.createElement(col.ml ? 'textarea' : 'input');       // 상세내용은 여러 줄 (Alt+Enter 줄바꿈)
-      if (!col.ml) el.type = col.type === 'date' ? 'date' : 'text';
-      el.value = initial != null ? initial : (row[col.k] ?? '');
+      let el;
+      if (adopt) {                                                     // 보이지 않던 입력 칸을 그대로 편집 칸으로 (조합 중인 한글 유지)
+        el = adopt; el.removeAttribute('style'); el.removeAttribute('aria-hidden'); el.tabIndex = 0;
+      } else {
+        el = document.createElement(col.ml ? 'textarea' : 'input');       // 상세내용은 여러 줄 (Alt+Enter 줄바꿈)
+        if (!col.ml) el.type = col.type === 'date' ? 'date' : 'text';
+        el.value = initial != null ? initial : (row[col.k] ?? '');
+      }
       el.autocomplete = 'off';
       // 목록 칸(메인센터 · 내용 · 주체 · 귀책) : 누르면 설정 > 사유 목록 > 특이사항 관리 목록이 뜸 (직접 입력도 가능)
       el.id = 'isEditor';
@@ -11950,9 +11997,9 @@
       if (col.suggest && el.value && el.value !== IS_NODATA) isSugInput();
       if (col.opt) isSugInput(true);
       isPlaceEditor();
-      el.focus();
-      if (el.type === 'text' || col.ml) { const n = el.value.length; el.setSelectionRange(n, n); }
-      if (col.ml) el.addEventListener('input', isPlaceEditor);
+      if (!adopt) { el.focus(); if (el.type === 'text' || col.ml) { const n = el.value.length; el.setSelectionRange(n, n); } }
+      else if (document.activeElement !== el) el.focus({ preventScroll: true });
+      if (col.ml || adopt) el.addEventListener('input', isPlaceEditor);
       isTrack();
     }
     function isPlaceEditor() {
@@ -11971,7 +12018,7 @@
       isSugClose();
       isState.edit = null;
       ed.el.remove();
-      if (refocus) isEl('isWrap').focus({ preventScroll: true });
+      if (refocus) { isEl('isWrap').focus({ preventScroll: true }); setTimeout(isFocusCatch, 0); }
       isTrack();
     }
     async function isCommit(value, move) {
@@ -13001,8 +13048,9 @@
       const on = force === undefined ? !v.classList.contains('is-full') : force;
       v.classList.toggle('is-full', on);
       try {                                                            // 확대 : 때때 창이 입력 칸을 가리지 않게 잠시 숨김 · 축소 : 다시 원래대로
-        if (on) { ib.hideForFull = !!ib.open; if (ib.open) ibToggle(false); ibEl('ibBtn').style.visibility = 'hidden'; }
-        else { ibEl('ibBtn').style.visibility = ''; if (ib.hideForFull) ibToggle(true); ib.hideForFull = false; }
+        document.body.classList.toggle('is-fullview', on);
+        if (on) { ib.hideForFull = !!ib.open; if (ib.open) ibToggle(false); }
+        else { if (ib.hideForFull) ibToggle(true); ib.hideForFull = false; }
       } catch (e) {}
       const b = isEl('isFullBtn');
       b.innerHTML = on ? '<i class="ph-bold ph-arrows-in"></i><span>축소</span>' : '<i class="ph-bold ph-arrows-out"></i><span>확대</span>';
@@ -13478,7 +13526,7 @@
     isEl('isWrap').addEventListener('mousemove', isOnMouse);
     isEl('isWrap').addEventListener('mouseleave', () => { if (isState.ch && isState.me) isBroadcast('cursor', { cid: isState.cid, hide: true }); });
     const isModalOpen = () => isEl('isUserModal').classList.contains('opacity-100') || isEl('isTabModal').classList.contains('opacity-100') || isEl('ibSetModal').classList.contains('opacity-100') || !isEl('isFilterPop').classList.contains('hidden');
-    const isTyping = () => { const a = document.activeElement; return a && a !== isEl('isWrap') && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.id !== 'isEditor' && !a.hasAttribute('data-is-check') && a.id !== 'isCheckAll'; };
+    const isTyping = () => { const a = document.activeElement; return a && a !== isEl('isWrap') && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.id !== 'isEditor' && a.id !== 'isImeCatch' && !a.hasAttribute('data-is-check') && a.id !== 'isCheckAll'; };
     document.addEventListener('keydown', (e) => {
       if (isVisible() && e.key === 'Escape' && !isState.edit && isEl('issueSheetViewArea').classList.contains('is-full') && !isModalOpen()) { isToggleFull(false); return; }
       if (!isHomeOn() || isModalOpen() || isState.edit || isTyping()) return;
@@ -13517,12 +13565,14 @@
         if (r && navigator.clipboard) navigator.clipboard.writeText(String(r[isState.sel.col] ?? '')).catch(() => {});
       }
       else if (k.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && isState.sel) {
+        if (document.activeElement && document.activeElement.id === 'isImeCatch') return;   // 글자는 입력 칸으로 들어가고 거기서 편집 시작
         const c = IS_COLS.find(x => x.k === isState.sel.col);
         if (c && (!c.ro || IS_NODATA_EDIT[c.k]) && c.type !== 'date') { e.preventDefault(); isBeginEdit(k); }
       }
     });
     // 한글 입력 시작 (조합 중인 키는 keydown 으로 잡히지 않음) → 편집 칸을 열고 이어서 입력
-    document.addEventListener('compositionstart', () => {
+    document.addEventListener('compositionstart', (e) => {
+      if (e.target && e.target.id === 'isImeCatch') return;
       if (!isHomeOn() || isModalOpen() || isState.edit || isTyping() || !isState.sel) return;
       const c = IS_COLS.find(x => x.k === isState.sel.col);
       if (c && (!c.ro || IS_NODATA_EDIT[c.k]) && c.type !== 'date') isBeginEdit('');
