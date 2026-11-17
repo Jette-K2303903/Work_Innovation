@@ -2359,7 +2359,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.054</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.055</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -13977,12 +13977,78 @@
     isEl('isLogList').addEventListener('click', (e) => {
       const b = e.target.closest('[data-log]'); if (!b) return;
       const l = isState.logs.find(x => x.id === +b.dataset.log); if (!l) return;
+      isOpenLogDetail(l);
+    });
+    // ----- 수정 기록 상세 팝업 : 배송일 · 거래처명 · 제품명 · 수량(단위) · 처리내용(수정 전/후) · 수정일 · 수정자 -----
+    function isLogModalEl() {
+      let m = isEl('isLogModal'); if (m) return m;
+      m = document.createElement('div'); m.id = 'isLogModal';
+      m.style.cssText = 'position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px';
+      m.innerHTML = `<div style="background:#fff;border-radius:24px;width:100%;max-width:440px;max-height:86vh;display:flex;flex-direction:column;overflow:hidden" class="shadow-2xl">
+          <div class="px-5 pt-4 pb-3 border-b border-gray-100 flex items-center gap-2"><h3 class="text-[16px] font-bold text-gray-900 flex-1">수정 기록 상세</h3><button type="button" onclick="isCloseLogDetail()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-600"><i class="ph-bold ph-x"></i></button></div>
+          <div id="isLogBody" class="px-5 py-3 overflow-y-auto" style="overflow-y:auto"></div>
+          <div id="isLogFoot" class="px-5 py-3 border-t border-gray-100 flex gap-2"></div></div>`;
+      m.addEventListener('mousedown', (e) => { if (e.target === m) isCloseLogDetail(); });
+      document.body.appendChild(m);
+      return m;
+    }
+    function isCloseLogDetail() { const m = isEl('isLogModal'); if (m) m.style.display = 'none'; }
+    document.addEventListener('keydown', (e) => { const m = isEl('isLogModal'); if (e.key === 'Escape' && m && m.style.display === 'flex') isCloseLogDetail(); });
+    function isFmtLogTime(ts) {
+      const d = new Date(ts); if (isNaN(d)) return '-';
+      const p = (v) => String(v).padStart(2, '0');
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}(${'일월화수목금토'[d.getDay()]}) ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    }
+    function isOpenLogDetail(l) {
+      const m = isLogModalEl();
+      const row = l.row_id != null ? isState.rows.find(r => r.id === l.row_id) : null;
+      const t0 = new Date(l.created_at).getTime();
+      // 같은 사람이 같은 행을 같은 때(5초 안) 함께 고친 기록은 묶어서
+      const group = l.action === '수정' && l.row_id != null
+        ? isState.logs.filter(x => x.action === '수정' && x.row_id === l.row_id && x.actor === l.actor && Math.abs(new Date(x.created_at).getTime() - t0) <= 5000).sort((a, b) => a.id - b.id)
+        : [l];
+      const lbl = String(l.row_label || '').split(' / ');
+      const dash = '<span class="text-gray-300">-</span>';
+      const v = (x) => { x = String(x ?? '').trim(); return x ? svEsc(x) : dash; };
+      const line = (k, val, extra) => `<div class="flex gap-3 py-1.5 ${extra || ''}"><span class="flex-none w-[64px] text-[12.5px] font-bold text-gray-500">${k}</span><span class="flex-1 min-w-0 text-[13.5px] text-gray-900" style="white-space:pre-wrap;word-break:break-all">${val}</span></div>`;
+      let h = '';
+      if (l.row_id != null) {
+        h += line('배송일', row ? v(String(row.delivery_date || '').slice(0, 10)) : dash);
+        h += line('거래처명', row ? v(row.store_name || row.store_code) : v(lbl[0]));
+        h += line('제품명', row ? v(row.product_name || row.product_code) : v(lbl[1]));
+        h += line('수량', row ? v([row.qty, row.unit].map(x => String(x ?? '').trim()).filter(Boolean).join(' ')) : dash);
+      } else if (l.row_label) h += line('대상', v(l.row_label));
+      h += '<div class="my-1.5 border-t border-gray-100"></div>';
+      const via = l.field_key === 'via:ttaettae' ? ' <span class="px-1.5 rounded-md bg-blue-50 text-[#007AFF] text-[10.5px] font-bold">때때에서 처리함</span>' : '';
+      if (l.action === '수정') {
+        h += line('처리내용', `<b>수정</b>${group.length > 1 ? ` · ${group.length}칸` : ''}${via}`);
+        group.forEach(x => {
+          h += `<div class="mt-1 mb-1.5 p-2.5 rounded-xl bg-gray-50 border border-gray-100"><div class="text-[12px] font-bold text-[#007AFF] mb-1">${svEsc(x.field || x.field_key || '')}</div>`
+            + line('수정 전', x.old_value ? `<span class="text-gray-500">${svEsc(x.old_value)}</span>` : '<span class="text-gray-400">(빈칸)</span>', '!py-1')
+            + line('수정 후', x.new_value ? `<b>${svEsc(x.new_value)}</b>` : '<span class="text-gray-400">(빈칸)</span>', '!py-1') + '</div>';
+        });
+      } else {
+        const what = [l.field, l.action === '삭제' ? l.old_value : l.new_value].map(x => String(x ?? '').trim()).filter(Boolean).join(' · ');
+        h += line('처리내용', `<b>${svEsc(l.action || '')}</b>${what ? ' · ' + svEsc(what) : ''}${via}`);
+      }
+      h += line('수정일', svEsc(isFmtLogTime(l.created_at)));
+      h += line('수정자', v(l.actor));
+      isEl('isLogBody').innerHTML = h;
+      const canGo = row && l.row_id != null;
+      isEl('isLogFoot').innerHTML = (canGo ? `<button type="button" onclick="isLogGoRow(${l.row_id}, '${svEsc(l.field_key && !/^via:/.test(l.field_key) && IS_COLS.some(c => c.k === l.field_key) ? l.field_key : 'store_code')}')" class="flex-1 py-2.5 rounded-xl bg-[#007AFF] text-white text-[13.5px] font-bold">이 행으로 이동</button>`
+          : l.row_id != null ? '<span class="flex-1 self-center text-[12px] text-gray-500">삭제되었거나 지금 표에 없는 행이에요.</span>' : '<span class="flex-1"></span>')
+        + '<button type="button" onclick="isCloseLogDetail()" class="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-[13.5px] font-bold">닫기</button>';
+      m.style.display = 'flex';
+    }
+    function isLogGoRow(id, col) {
+      isCloseLogDetail();
+      const l = { row_id: id, field_key: col };
       if (!isState.rows.some(r => r.id === l.row_id)) { showToastNotification('수정 기록', '이 행은 삭제되었거나 현재 검색 조건에 없습니다.', 'warning'); return; }
       if (isState.tab !== 'home') isSwitchTab('home');
       if (!isRowsView().some(r => r.id === l.row_id)) { isState.q = ''; isEl('isSearch').value = ''; isRender(); }
       isSelect(l.row_id, l.field_key || 'store_code');
       if (window.innerWidth < 768) isTogglePanel('log');
-    });
+    }
 
     // ==========================================
     // [특이사항 관리] 등록 도우미 챗봇 — 외부 AI 없이 규칙 + Supabase 자료로 동작
