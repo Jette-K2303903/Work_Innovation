@@ -2359,7 +2359,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.049</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.050</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -11270,28 +11270,10 @@
       hoCloseDefaults();
       showToastNotification('기본칸 저장', `다음에 새 출고일을 열면 ${HO_DEFAULTS.length}칸으로 시작해요. (이미 만든 날짜는 그대로)`, 'success');
     }
-    const HO_COPY_FROM = '2026-11-19';
     async function hoEnsureDefaults(d) {
       try {
         const { count } = await supabaseClient.from(HO_TABLE).select('id', { count: 'exact', head: true }).eq('out_date', d);
         if (count) return false;
-        if (d >= HO_COPY_FROM) {                                       // 11/19부터 : 바로 앞 출고일의 마지막 저장본을 복사해 시작
-          const { data: prev } = await supabaseClient.from(HO_TABLE).select('out_date').lt('out_date', d).order('out_date', { ascending: false }).limit(1);
-          const pd = prev && prev[0] && prev[0].out_date;
-          if (pd) {
-            const { data: src } = await supabaseClient.from(HO_TABLE).select('content,fmt,height_pt,sort_order,id').eq('out_date', pd).order('sort_order', { ascending: true }).order('id', { ascending: true }).limit(500);
-            if (src && src.length) {
-              const rows = src.map((r, i) => ({ out_date: d, content: r.content || '', fmt: r.fmt || null, height_pt: r.height_pt || 200, sort_order: i + 1, is_default: true, created_by: isState.me || null }));
-              const { error } = await supabaseClient.from(HO_TABLE).insert(rows);
-              if (!error) {
-                isBroadcast('handover', {});
-                if (isState.tab === 'handover') showToastNotification('인수인계', `${pd} 인수인계를 복사해 왔어요. 여기서 고치면 ${d}에만 반영돼요.`, 'info');
-                return true;
-              }
-              return false;                                            // 다른 사람이 먼저 만든 경우 (같은 칸 중복 방지)
-            }
-          }
-        }
         await hoLoadDefaults();
         if (!HO_DEFAULTS.length) return false;
         const rows = HO_DEFAULTS.map((c, i) => ({ out_date: d, content: c, fmt: { b: 1 }, height_pt: 200, sort_order: i + 1, is_default: true, created_by: isState.me || null }));
@@ -11364,11 +11346,12 @@
       if (!hoSt.date) hoSt.date = hoTomorrow();
       isEl('isTabPane').innerHTML = `
         <div class="bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-3 sm:p-4 flex flex-col min-h-0">
-          <div class="flex items-center gap-2 flex-wrap mb-3">
+          <div id="hoBar" class="flex items-center gap-2 flex-wrap mb-3 sticky top-0 z-[30] bg-white -mx-3 sm:-mx-4 -mt-3 sm:-mt-4 px-3 sm:px-4 pt-3 sm:pt-4 pb-2 rounded-t-[22px]" style="position:sticky;top:0;z-index:30;background:#fff">
             <div class="w-9 h-9 rounded-xl bg-blue-50 text-[#007AFF] flex items-center justify-center"><i class="ph-bold ph-clipboard-text text-lg"></i></div>
             <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">인수인계</h3><p id="hoMeta" class="text-[11.5px] text-gray-500"></p><div id="hoPeers" class="text-[11px] mt-0.5 flex flex-wrap gap-1 items-center"></div></div>
             <div class="ml-auto flex items-center gap-1.5 flex-wrap">
               <div class="flex items-center gap-0.5 bg-gray-100 rounded-xl p-0.5"><button type="button" onclick="hoMoveDate(-1)" class="ios-btn-tap w-8 h-8 rounded-lg hover:bg-white"><i class="ph-bold ph-caret-left"></i></button><input type="date" id="hoDate" onchange="hoSetDate(this.value)" class="bg-transparent text-[12.5px] font-bold px-1 w-[124px]"><button type="button" onclick="hoMoveDate(1)" class="ios-btn-tap w-8 h-8 rounded-lg hover:bg-white"><i class="ph-bold ph-caret-right"></i></button></div>
+              <button type="button" onclick="hoOpenImport('all')" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-[#007AFF] text-[12.5px] font-bold flex items-center gap-1" title="다른 날짜의 인수인계 전체를 복사해 와요"><i class="ph-bold ph-download-simple"></i>불러오기</button>
               <div class="relative">
                 <button type="button" id="hoColorBtn" onmousedown="event.preventDefault()" onclick="hoToggleColorMenu()" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-800 text-[12.5px] font-bold flex items-center gap-1" title="글자색"><span class="font-extrabold leading-none border-b-[3px] border-[#FF3B30] px-0.5">A</span>글자색</button>
                 <div id="hoColorMenu" onmousedown="event.preventDefault()" class="hidden absolute right-0 top-full mt-1.5 z-[45] w-[232px] bg-white rounded-2xl border border-gray-200 shadow-2xl p-2.5 space-y-2">
@@ -11388,7 +11371,7 @@
               <button type="button" onclick="hoPrint()" class="ios-btn-tap px-3.5 py-2 rounded-xl bg-[#007AFF] text-white text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-printer"></i>인쇄</button>
             </div>
           </div>
-          <div id="hoSelBar" class="hidden mb-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-[12.5px]"><b data-n class="text-[#007AFF]"></b><span class="text-gray-500">글자색 · 정렬 버튼이 고른 칸 모두에 적용돼요.</span><button type="button" onclick="hoSelDelete()" class="ml-auto ios-btn-tap px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-[#FF3B30] font-bold">선택 삭제</button><button type="button" onclick="hoSelClear()" class="ios-btn-tap px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-gray-700 font-bold">선택 해제</button></div>
+          <div id="hoSelBar" style="position:sticky;top:var(--ho-bar-h,64px);z-index:29" class="hidden mb-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-[12.5px]"><b data-n class="text-[#007AFF]"></b><span class="text-gray-500">글자색 · 정렬 버튼이 고른 칸 모두에 적용돼요.</span><button type="button" onclick="hoSelDelete()" class="ml-auto ios-btn-tap px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-[#FF3B30] font-bold">선택 삭제</button><button type="button" onclick="hoSelClear()" class="ios-btn-tap px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-gray-700 font-bold">선택 해제</button></div>
           <div class="overflow-auto rounded-xl border border-gray-200 bg-[#F2F2F7] p-3 flex-1 min-h-0"><div id="hoSheet" class="relative mx-auto bg-white shadow-sm" style="width:${HO_W}px"></div></div>
           <p class="mt-2 text-[11px] text-gray-400">내용 칸을 눌러 바로 적어요. Shift+클릭(범위) · Alt/Ctrl+클릭(하나씩)으로 여러 칸을 골라 한 번에 서식 · 정렬 · 삭제할 수 있어요. 제목을 누르면 머리말을 고칠 수 있어요. 글자를 드래그한 뒤 글자색(검정 · 빨강 · 굵게, Ctrl+B)으로 서식을, 정렬 버튼으로 왼쪽 · 가운데 맞춤을 바꿀 수 있어요. 행 아래쪽 끝을 끌면 높이가 바뀌어요. 파란 점선은 인쇄할 때 쪽이 나뉘는 위치예요.</p>
         </div>`;
@@ -11414,7 +11397,7 @@
         const f = hoFmtOf(r), hpx = hoPt(+r.height_pt || 200);
         const editing = !print && hoSt.edit && hoSt.edit.id === r.id;
         h += `<tr data-ho-row="${r.id}" style="height:${hpx}px;break-inside:avoid;page-break-inside:avoid">
-          <td style="${bd}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle;position:relative">${i + 1}${print ? '' : `<button type="button" data-ho-del="${r.id}" class="ho-noprint rounded-full bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-[#FF3B30]" style="position:absolute;left:4px;top:4px;width:24px;height:24px;font-size:11px" title="이 행 삭제"><i class="ph-bold ph-x"></i></button>`}</td>
+          <td style="${bd}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle;position:relative">${i + 1}${print ? '' : `<button type="button" data-ho-del="${r.id}" class="ho-noprint rounded-full bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-[#FF3B30]" style="position:absolute;left:4px;top:4px;width:24px;height:24px;font-size:11px" title="이 행 삭제"><i class="ph-bold ph-x"></i></button><button type="button" data-ho-imp="${r.id}" class="ho-noprint rounded-full bg-blue-50 text-[#007AFF] hover:bg-blue-100" style="position:absolute;left:4px;bottom:4px;width:24px;height:24px;font-size:11px" title="다른 날짜에서 이 칸 내용만 불러오기"><i class="ph-bold ph-download-simple"></i></button>`}</td>
           <td colspan="3" style="${bd}position:relative;vertical-align:middle;padding:6px 10px;${!print && hoSt.msel.has(r.id) ? 'background:#E8F1FF;box-shadow:inset 0 0 0 2px #007AFF;' : ''}">
             <div ${print ? '' : `data-ho-cell="${r.id}"`} style="min-height:${hpx - 14}px;font-size:18pt;line-height:1.35;white-space:pre-wrap;word-break:break-all;${f.c ? 'color:#FF0000;' : ''}${f.b ? 'font-weight:800;' : 'font-weight:400;'}${print ? '' : 'cursor:text;'}display:flex;align-items:center"><div style="width:100%;text-align:${f.a === 'l' ? 'left' : 'center'}">${editing ? '' : print ? hoCellHtml(r) : hoCellInner(r)}</div></div>
             ${print ? '' : `<div data-ho-rsz="${r.id}" class="ho-noprint" style="position:absolute;left:0;right:0;bottom:-4px;height:8px;cursor:row-resize;z-index:10" title="끌어서 높이 조절"></div>`}
@@ -11450,6 +11433,7 @@
       if (hoSt.edit) hoOpenEditor(hoSt.edit.id, true);
       if (!print_) hoSt.remote.forEach((v, id) => hoPatchCell(id));
       const hp = isEl('hoPeers'); if (hp) hp.innerHTML = hoPeersHtml();
+      const hb = isEl('hoBar'); if (hb) isEl('isTabPane').style.setProperty('--ho-bar-h', hb.offsetHeight + 'px');
       const sb = isEl('hoSelBar'); if (sb) { sb.classList.toggle('hidden', !hoSt.msel.size); sb.querySelector('[data-n]').textContent = `${hoSt.msel.size}칸 선택됨`; }
     }
     function hoSetZoom(v) { hoSt.zoom = +v || 0; hoRenderSheet(); }
@@ -11609,6 +11593,88 @@
       hoSendType({ id: ed.id });
       hoAfterEdit();
     }
+    // ===== 불러오기 : 다른 날짜 인수인계를 복사 (전체 틀 / 한 칸) =====
+    const hoImp = { mode: 'all', target: null, date: null, rows: [] };
+    function hoImpModalEl() {
+      let m = isEl('hoImpModal');
+      if (m) return m;
+      m = document.createElement('div'); m.id = 'hoImpModal';
+      m.className = 'fixed inset-0 z-[80] hidden items-center justify-center bg-black/40 p-4';
+      m.style.cssText = 'position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px';
+      m.innerHTML = `<div class="bg-white rounded-[24px] shadow-2xl w-full max-w-[560px] max-h-[86vh] flex flex-col overflow-hidden" style="background:#fff;border-radius:24px;width:100%;max-width:560px;max-height:86vh;display:flex;flex-direction:column;overflow:hidden">
+          <div class="px-5 pt-4 pb-3 border-b border-gray-100 flex items-center gap-2"><h3 id="hoImpTitle" class="text-[16px] font-bold text-gray-900 flex-1">불러오기</h3><button type="button" onclick="hoCloseImport()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-600"><i class="ph-bold ph-x"></i></button></div>
+          <div class="px-5 py-3 flex items-center gap-2 border-b border-gray-100">
+            <span class="text-[12.5px] font-bold text-gray-500">날짜</span>
+            <div class="flex items-center gap-0.5 bg-gray-100 rounded-xl p-0.5"><button type="button" onclick="hoImpMove(-1)" class="w-8 h-8 rounded-lg hover:bg-white"><i class="ph-bold ph-caret-left"></i></button><input type="date" id="hoImpDate" onchange="hoImpSetDate(this.value)" class="bg-transparent text-[12.5px] font-bold px-1 w-[124px]"><button type="button" onclick="hoImpMove(1)" class="w-8 h-8 rounded-lg hover:bg-white"><i class="ph-bold ph-caret-right"></i></button></div>
+            <span id="hoImpInfo" class="text-[11.5px] text-gray-500 flex-1 text-right"></span>
+          </div>
+          <div id="hoImpList" class="flex-1 overflow-y-auto px-5 py-3 space-y-2" style="overflow-y:auto"></div>
+          <div id="hoImpFoot" class="px-5 py-3 border-t border-gray-100 flex gap-2"></div>
+        </div>`;
+      m.addEventListener('mousedown', (e) => { if (e.target === m) hoCloseImport(); });
+      document.body.appendChild(m);
+      return m;
+    }
+    async function hoOpenImport(mode, target) {
+      if (isNeedUser()) return;
+      hoImp.mode = mode; hoImp.target = target || null;
+      const m = hoImpModalEl(); m.style.display = 'flex';
+      const ti = isEl('hoImpTitle');
+      if (mode === 'row') { const i = hoSt.rows.findIndex(r => r.id === target); ti.textContent = `${i + 1}번 칸에 불러오기 · 가져올 칸을 골라 주세요`; }
+      else ti.textContent = `${hoSt.date} 인수인계에 전체 불러오기`;
+      // 처음 날짜 : 지금 보는 날짜보다 앞에서 내용이 있는 가장 최근 날짜
+      let d = null;
+      try { const { data } = await supabaseClient.from(HO_TABLE).select('out_date').lt('out_date', hoSt.date).order('out_date', { ascending: false }).limit(1); d = data && data[0] && data[0].out_date; } catch (e) {}
+      hoImpSetDate(d || ibToday(0));
+    }
+    function hoCloseImport() { const m = isEl('hoImpModal'); if (m) m.style.display = 'none'; }
+    function hoImpMove(k) { const x = new Date((hoImp.date || ibToday(0)) + 'T00:00:00'); x.setDate(x.getDate() + k); hoImpSetDate(ibIso(x)); }
+    async function hoImpSetDate(d) {
+      if (!d) return;
+      hoImp.date = d; isEl('hoImpDate').value = d;
+      isEl('hoImpList').innerHTML = '<div class="py-8 text-center text-[12.5px] text-gray-400">불러오는 중…</div>'; isEl('hoImpFoot').innerHTML = '';
+      try { const { data } = await supabaseClient.from(HO_TABLE).select('*').eq('out_date', d).order('sort_order', { ascending: true }).order('id', { ascending: true }).limit(500); hoImp.rows = data || []; } catch (e) { hoImp.rows = []; }
+      if (hoImp.date !== d) return;
+      const same = d === hoSt.date;
+      isEl('hoImpInfo').textContent = same ? '지금 보는 날짜예요' : `${hoImp.rows.length}칸`;
+      const prev = (r) => { const f = hoFmtOf(r), t = String(r.content || '').trim(); return `<div style="white-space:pre-wrap;word-break:break-all;max-height:84px;overflow:hidden;font-size:12.5px;line-height:1.4;${f.c ? 'color:#FF0000;' : ''}${f.b ? 'font-weight:700;' : ''}">${t ? svEsc(t) : '<span style="color:#C7C7CC">(빈 칸)</span>'}</div>`; };
+      isEl('hoImpList').innerHTML = hoImp.rows.length ? hoImp.rows.map((r, i) => `<div class="flex gap-2.5 p-2.5 rounded-2xl border border-gray-200 bg-gray-50 ${hoImp.mode === 'row' && !same ? 'cursor-pointer hover:bg-blue-50 hover:border-blue-200' : ''}" ${hoImp.mode === 'row' && !same ? `onclick="hoImpPickRow(${r.id})"` : ''}>
+            <span class="flex-none w-7 h-7 rounded-lg bg-white border border-gray-200 text-[12px] font-bold text-gray-600 flex items-center justify-center">${i + 1}</span>
+            <div class="flex-1 min-w-0">${prev(r)}</div>
+            ${hoImp.mode === 'row' && !same ? '<span class="flex-none self-center px-2 py-1 rounded-lg bg-[#007AFF] text-white text-[11.5px] font-bold">불러오기</span>' : ''}</div>`).join('')
+        : '<div class="py-8 text-center text-[12.5px] text-gray-400">이 날짜에는 인수인계 내용이 없어요.</div>';
+      if (hoImp.mode === 'all') isEl('hoImpFoot').innerHTML = `<button type="button" onclick="hoCloseImport()" class="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-[13.5px] font-bold">취소</button><button type="button" ${hoImp.rows.length && !same ? '' : 'disabled'} onclick="hoImpAll()" class="flex-[2] py-2.5 rounded-xl bg-[#007AFF] text-white text-[13.5px] font-bold disabled:opacity-40">${d} 전체 불러오기 (${hoImp.rows.length}칸)</button>`;
+      else isEl('hoImpFoot').innerHTML = `<p class="text-[11.5px] text-gray-500">가져올 칸을 누르면 ${hoSt.rows.findIndex(r => r.id === hoImp.target) + 1}번 칸의 내용 · 서식이 그 내용으로 바뀌어요.</p>`;
+    }
+    async function hoImpAll() {
+      const src = hoImp.rows.slice(), d = hoSt.date; if (!src.length || isNeedUser()) return;
+      const hasText = hoSt.rows.some(r => String(r.content || '').trim() && !HO_DEFAULTS.includes(String(r.content || '')));
+      const run = async () => {
+        showBusy('불러오는 중...');
+        try {
+          if (hoSt.rows.length) { const { error } = await supabaseClient.from(HO_TABLE).delete().eq('out_date', d); if (error) throw error; }
+          const rows = src.map((r, i) => ({ out_date: d, content: r.content || '', fmt: r.fmt || null, height_pt: r.height_pt || 200, sort_order: i + 1, is_default: false, created_by: isState.me || null }));
+          const { error } = await supabaseClient.from(HO_TABLE).insert(rows); if (error) throw error;
+          isBroadcast('handover', {});
+          isLog([{ action: '수정', row_id: null, field_key: '', field: '인수인계 불러오기', old_value: '', new_value: `${hoImp.date} → ${d} (${rows.length}칸)`, row_label: '인수인계' }]);
+          hoCloseImport(); hoSt.msel.clear(); await hoLoad(true);
+          showToastNotification('불러오기', `${hoImp.date} 인수인계 ${rows.length}칸을 ${d}에 복사했어요. 여기서 고치면 ${d}에만 반영돼요.`, 'success');
+        } catch (e) { showToastNotification('불러오기 실패', dbErrorMessage(e), 'warning'); }
+        finally { hideBusy(); }
+      };
+      if (hasText) showConfirmModal(run, '전체 불러오기', `${svEsc(d)} 인수인계에 적힌 내용을 지우고 <b>${svEsc(hoImp.date)}</b> 내용 ${src.length}칸으로 바꿀까요?`);
+      else run();
+    }
+    async function hoImpPickRow(id) {
+      const r = hoImp.rows.find(x => x.id === id), t = hoSt.rows.find(x => x.id === hoImp.target); if (!r || !t) return;
+      const ok = await hoSave(t.id, { content: r.content || '', fmt: r.fmt || null });
+      if (!ok) return;
+      const n = hoSt.rows.findIndex(x => x.id === t.id) + 1;
+      isLog([{ action: '수정', row_id: null, field_key: '', field: '인수인계 칸 불러오기', old_value: '', new_value: `${hoImp.date} ${hoImp.rows.indexOf(r) + 1}번 → ${hoSt.date} ${n}번`, row_label: '인수인계' }]);
+      hoCloseImport(); hoRenderSheet();
+      showToastNotification('불러오기', `${hoImp.date} ${hoImp.rows.indexOf(r) + 1}번 내용을 ${n}번 칸에 넣었어요.`, 'success');
+    }
+    document.addEventListener('keydown', (e) => { const m = isEl('hoImpModal'); if (e.key === 'Escape' && m && m.style.display === 'flex') hoCloseImport(); });
     function hoToggleColorMenu(force) { const m = isEl('hoColorMenu'); if (!m) return; m.classList.toggle('hidden', !(force === undefined ? m.classList.contains('hidden') : force)); }
     document.addEventListener('mousedown', (e) => { const m = isEl('hoColorMenu'); if (m && !m.classList.contains('hidden') && !m.contains(e.target) && !e.target.closest('#hoColorBtn')) hoToggleColorMenu(false); });
     // 이벤트 : 칸 누르기 · 행 삭제 · 높이 끌기
@@ -11624,6 +11690,8 @@
         document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
         return;
       }
+      const imp = e.target.closest('[data-ho-imp]');
+      if (imp) { e.preventDefault(); if (isNeedUser()) return; if (hoSt.edit) hoCommitEdit(); hoOpenImport('row', +imp.dataset.hoImp); return; }
       const del = e.target.closest('[data-ho-del]');
       if (del) {
         e.preventDefault();
@@ -11679,10 +11747,11 @@
     // 자료등록 '등록' → 적용 → 인수인계 자동 등록 (빨간 글씨)
     async function hoAddFromRow(r) {
       const minOrder = /최소\s*주문\s*금액/.test(String(r.detail || ''));
+      const qtyU = [r.qty, r.unit].map(v => String(v ?? '').trim()).filter(Boolean).join(' ');       // 수량 : 3 BOX
       const zone = /냉동/.test(String(r.temperature || '')) ? '냉동' : '냉장';      // 냉동 = 냉동 · 냉장 · 상온 = 냉장
       const text = minOrder
-        ? `○ 전달사항\n거래처명 : ${r.store_name || ''}\n제품명 : ${r.product_name || ''}\n수량 : ${r.qty || ''}\n※ 최소주문금액 미달로 인한 미출고 예정입니다. / ${zone} 정상존에 보관 부탁드립니다.`
-        : `○ 전달사항\n매장명 : ${r.store_name || ''}\n제품명 : ${r.product_name || ''}\n수량 : ${r.qty || ''}\n\n${r.detail || ''}`;
+        ? `○ 전달사항\n거래처명 : ${r.store_name || ''}\n제품명 : ${r.product_name || ''}\n수량 : ${qtyU}\n※ 최소주문금액 미달로 인한 미출고 예정입니다. / ${zone} 정상존에 보관 부탁드립니다.`
+        : `○ 전달사항\n매장명 : ${r.store_name || ''}\n제품명 : ${r.product_name || ''}\n수량 : ${qtyU}\n\n${r.detail || ''}`;
       return hoAdd(text, { c: 'red', b: 1 }, r.id, hoTomorrow());
     }
     function isFindRow(id) {
