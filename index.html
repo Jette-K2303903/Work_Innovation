@@ -2353,7 +2353,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.039</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.040</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -7007,10 +7007,30 @@
       const rest = best.c.startsWith(best.t) ? best.c.slice(best.t.length) : ' → ' + best.c;
       return { start: pos - best.t.length, end: pos, c: best.c, rest };
     }
+    function phraseCaret(el) {                                           // 입력칸 안 커서 위치 (같은 모양의 숨은 상자로 계산)
+      const cs = getComputedStyle(el), mir = document.createElement('div');
+      Object.assign(mir.style, { position: 'absolute', visibility: 'hidden', left: '-9999px', top: '0', width: el.clientWidth + 'px', font: cs.font, fontWeight: cs.fontWeight, letterSpacing: cs.letterSpacing, lineHeight: cs.lineHeight,
+        padding: cs.padding, boxSizing: 'border-box', whiteSpace: 'pre-wrap', wordBreak: cs.wordBreak, overflowWrap: 'break-word', textAlign: cs.textAlign });
+      mir.textContent = el.value.slice(0, el.selectionStart);
+      const mk = document.createElement('span'); mk.textContent = '\u200b'; mir.appendChild(mk);
+      document.body.appendChild(mir);
+      const out = { x: mk.offsetLeft, y: mk.offsetTop, h: mk.offsetHeight || parseFloat(cs.lineHeight) || 20 };
+      mir.remove();
+      return out;
+    }
     function phraseGhost(el) {                                           // 입력칸 위에 같은 글꼴로 겹쳐서 회색 나머지 글자 표시
       let g = el._phraseGhost;
       const m = phraseMatch(el);
       if (!m) { if (g) g.style.display = 'none'; return null; }
+      if (el._phraseBelow) {                                             // 인수인계 : 글자 아래에 미리보기 상자
+        if (!g || g.parentElement !== el.parentElement) { g = document.createElement('div'); g.className = 'phrase-ghost ho-noprint'; el.parentElement.appendChild(g); el._phraseGhost = g; }
+        const c = phraseCaret(el), maxL = Math.max(0, el.offsetWidth - 260);
+        Object.assign(g.style, { display: 'flex', alignItems: 'center', gap: '8px', position: 'absolute', pointerEvents: 'none', zIndex: (parseInt(getComputedStyle(el).zIndex, 10) || 5) + 2,
+          left: (el.offsetLeft + Math.min(Math.max(0, c.x - 8), maxL)) + 'px', top: (el.offsetTop + c.y + c.h - el.scrollTop + 4) + 'px',
+          background: '#fff', border: '1px solid #D1D5DB', borderRadius: '10px', boxShadow: '0 6px 18px rgba(0,0,0,.14)', padding: '5px 10px', font: '600 13px/1.3 inherit', color: '#374151', whiteSpace: 'nowrap', maxWidth: '420px', overflow: 'hidden', textOverflow: 'ellipsis' });
+        g.innerHTML = `<span style="color:#9CA3AF;font-size:11px">자동완성</span><span>${svEsc(m.c)}</span><span style="padding:1px 6px;border-radius:5px;background:#F3F4F6;color:#6B7280;font-size:10.5px;font-weight:700">Tab</span>`;
+        return m;
+      }
       if (!g || g.parentElement !== el.parentElement) {
         g = document.createElement('div'); g.className = 'phrase-ghost ho-noprint';
         el.parentElement.appendChild(g); el._phraseGhost = g;
@@ -7034,7 +7054,8 @@
       phraseGhost(el);
       return true;
     }
-    function phraseAttach(el) {
+    function phraseAttach(el, opt) {
+      if (opt && opt.below) el._phraseBelow = true;
       const up = () => phraseGhost(el);
       ['input', 'keyup', 'click', 'scroll', 'focus'].forEach(ev => el.addEventListener(ev, up));
       el.addEventListener('blur', () => { if (el._phraseGhost) el._phraseGhost.style.display = 'none'; });
@@ -10704,9 +10725,12 @@
     }
     function isTabPage(key, d) { const L = isLs(key); L.page = Math.max(0, (L.page || 0) + d); isRenderTabBody(key); }
     document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; const f = document.querySelector('.is-tab-full'); if (f) { isTabExpand(f.dataset.listBox, false); } });
+    function isTabEditing(key) { const b = isEl('isTabBody_' + key), a = document.activeElement; return !!(b && a && a.tagName === 'INPUT' && b.contains(a)); }
+    function isTabPeerSel(key) { const m = new Map(); (isState.peers || []).forEach(p => { const ids = p.tsel && p.tsel[key]; if (p.name && p.name !== isState.me && Array.isArray(ids)) ids.forEach(id => { if (!m.has(id)) m.set(id, p.name); }); }); return m; }
     function isRenderTabBody(key) {
       const body = isEl('isTabBody_' + key); if (!body) return;
-      const L = isLs(key), all = L.rows;
+      if (isTabEditing(key)) { isLs(key).later = true; return; }      // 비고를 고치는 중이면 끝난 뒤에 다시 그림
+      const L = isLs(key), all = L.rows, peerSel = isTabPeerSel(key);
       const pages = Math.max(1, Math.ceil(all.length / IS_TAB_PAGE));
       L.page = Math.min(L.page || 0, pages - 1);
       const paged = !L.expanded && all.length > IS_TAB_PAGE;
@@ -10720,10 +10744,10 @@
       const meta = isEl('isTabMeta_' + key);
       const sub = (IS_SUB_LISTS[isTabSt.tab] ? (isAllTabs().find(t => t.id === isTabSt.tab) || {}).name + ' · ' : '');
       if (meta) meta.textContent = sub + (L.err ? `불러오지 못했어요: ${L.err}` : L.loading && !all.length ? '불러오는 중…' : `${all.length.toLocaleString()}행 · 수량 합계 ${sum.toLocaleString()}`);
-      body.innerHTML = rows.length ? rows.map(r => `<tr class="border-t border-gray-100 ${L.checked.has(r.id) ? 'bg-blue-50/60' : ''}">
+      body.innerHTML = rows.length ? rows.map(r => `<tr class="border-t border-gray-100 ${L.checked.has(r.id) ? 'bg-blue-50/60' : peerSel.has(r.id) ? 'bg-orange-50/70' : ''}">
           <td class="px-2 py-2 text-center"><input type="checkbox" data-tab-check="${r.id}" ${L.checked.has(r.id) ? 'checked' : ''} class="w-3.5 h-3.5 align-middle"></td>
           <td class="px-2 py-2 font-mono text-[12px] text-gray-700 truncate">${svEsc(r.product_code || '')}</td>
-          <td class="px-2 py-2 text-gray-900 font-semibold truncate">${svEsc(r.product_name || '')}</td>
+          <td class="px-2 py-2 text-gray-900 font-semibold truncate">${peerSel.has(r.id) ? `<span class="mr-1 px-1.5 py-0.5 rounded-md text-white text-[10px] font-bold" style="background:${isColor(peerSel.get(r.id))}" title="${svEsc(peerSel.get(r.id))} 님이 체크함">${svEsc(isShort(peerSel.get(r.id)))}</span>` : ''}${svEsc(r.product_name || '')}</td>
           <td class="px-2 py-2 text-gray-600 truncate">${svEsc(r.temperature || '')}</td>
           <td class="px-2 py-2 text-right font-bold text-gray-900">${svEsc(r.qty || '')}</td>
           <td class="px-2 py-2 text-gray-700 truncate cursor-text hover:bg-blue-50/60" data-note-id="${r.id}" title="${svEsc(r.note || '눌러서 비고 입력')}">${r.note ? svEsc(r.note) : '<span class="text-gray-300">비고</span>'}</td></tr>`).join('')
@@ -10747,17 +10771,19 @@
           if (error) showToastNotification('비고 저장 실패', dbErrorMessage(error), 'warning');
           else { r.note = v || null; isBroadcast('tabitems', { tab: key }); }
         }
-        isRenderTabBody(key);
+        inp.blur(); td.innerHTML = '';
+        isLs(key).later = false; isRenderTabBody(key);
       };
       inp.addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.isComposing || ev.keyCode === 229) return; if (ev.key === 'Enter') finish(true); else if (ev.key === 'Escape') finish(false); });
       inp.addEventListener('blur', () => finish(true));
     });
     isEl('isTabPane').addEventListener('change', (e) => {
       const all = e.target.closest('[data-tab-all]');
-      if (all) { const k = all.dataset.tabAll, L = isLs(k); L.checked = all.checked ? new Set(L.rows.map(r => r.id)) : new Set(); isRenderTabBody(k); return; }
+      if (all) { const k = all.dataset.tabAll, L = isLs(k); L.checked = all.checked ? new Set(L.rows.map(r => r.id)) : new Set(); isRenderTabBody(k); isTrack(); return; }
       const c = e.target.closest('[data-tab-check]'); if (!c) return;
       const k = c.closest('[data-list-body]').dataset.listBody, L = isLs(k), id = +c.dataset.tabCheck;
       if (c.checked) L.checked.add(id); else L.checked.delete(id);
+      isTrack();
       isRenderTabBody(k);
     });
 
@@ -11084,7 +11110,7 @@
     const HO_W = HO_COLS_PX.reduce((a, b) => a + b, 0);
     const hoPt = (pt) => Math.round(pt * 4 / 3);                   // pt → px
     const hoTomorrow = () => ibToday(1);
-    const hoSt = { date: null, rows: [], zoom: 0, edit: null, loading: false };
+    const hoSt = { date: null, rows: [], zoom: 0, edit: null, loading: false, remote: new Map(), later: false };
     function hoFmtOf(r) { const v = r && r.fmt; return { c: v && v.c === 'red' ? 'red' : '', b: !!(v && v.b), a: v && v.a === 'c' ? 'c' : '', r: (v && Array.isArray(v.r)) ? v.r : [] }; }
     function hoFmtPack(f) { const o = {}; if (f.c) o.c = f.c; if (f.b) o.b = 1; if (f.a) o.a = f.a; if (f.r && f.r.length) o.r = f.r; return Object.keys(o).length ? o : null; }
     function hoCellHtml(r) {
@@ -11164,17 +11190,65 @@
         return !error;
       } catch (e) { return false; }
     }
-    async function hoLoad() {
+    async function hoLoad(remote) {
       if (!hoSt.date) hoSt.date = hoTomorrow();
-      hoSt.loading = true;
-      await hoEnsureDefaults(hoSt.date);
+      const d = hoSt.date;
+      if (!remote) { hoSt.loading = true; await hoEnsureDefaults(d); }
+      let rows = null;
       try {
-        const { data, error } = await supabaseClient.from(HO_TABLE).select('*').eq('out_date', hoSt.date).order('sort_order', { ascending: true }).order('id', { ascending: true }).limit(500);
+        const { data, error } = await supabaseClient.from(HO_TABLE).select('*').eq('out_date', d).order('sort_order', { ascending: true }).order('id', { ascending: true }).limit(500);
         if (error) throw error;
-        hoSt.rows = data || []; hoSt.err = '';
+        rows = data || []; hoSt.err = '';
       } catch (e) { hoSt.err = dbErrorMessage(e); }
       hoSt.loading = false;
+      if (d !== hoSt.date) return;
+      if (rows && hoSt.edit) {                                         // 내가 고치는 중 : 다른 행만 그 자리에서 바꿈 (입력 · 한글 조합이 끊기지 않게)
+        const same = rows.length === hoSt.rows.length && rows.every((r, i) => r.id === hoSt.rows[i].id);
+        if (!same) { hoSt.later = true; return; }                       // 행이 늘거나 줄면 편집을 마친 뒤 다시 그림
+        rows.forEach((r, i) => { if (r.id === hoSt.edit.id) { hoSt.rows[i].content = r.content; hoSt.rows[i].fmt = r.fmt; return; } hoSt.rows[i] = r; hoPatchCell(r.id); });
+        return;
+      }
+      if (rows) hoSt.rows = rows;
       hoRenderSheet();
+    }
+    // 다른 사람이 입력 중인 내용 (저장 전) : 칸에 바로 보여 줌
+    let hoTypeT = null;
+    function hoSendType(done) {
+      const ed = hoSt.edit; if (!ed && !done) return;
+      clearTimeout(hoTypeT);
+      const send = () => isBroadcast('hotype', { cid: isState.cid, name: isState.me, date: hoSt.date, id: (ed || done).id, text: done ? '' : ed.el.value, done: !!done });
+      if (done) send(); else hoTypeT = setTimeout(send, 150);
+    }
+    function hoOnType(p) {
+      if (!p || !p.cid || p.cid === isState.cid || p.date !== hoSt.date) return;
+      [...hoSt.remote.entries()].forEach(([id, v]) => { if (v.cid === p.cid && id !== p.id) { hoSt.remote.delete(id); hoPatchCell(id); } });
+      if (p.done) hoSt.remote.delete(p.id); else hoSt.remote.set(p.id, { cid: p.cid, name: p.name, text: String(p.text || ''), at: Date.now() });
+      hoPatchCell(p.id);
+      const hp = isEl('hoPeers'); if (hp) hp.innerHTML = hoPeersHtml();
+    }
+    function hoDropRemote(cid) { [...hoSt.remote.entries()].forEach(([id, v]) => { if (v.cid === cid) { hoSt.remote.delete(id); hoPatchCell(id); } }); }
+    function hoPeersHtml() {
+      const ps = isTabPeers('handover'); if (!ps.length) return '';
+      return '<span class="text-gray-400">같이 보는 중</span> ' + ps.map(p => { const typing = [...hoSt.remote.values()].some(v => v.name === p.name); return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-white text-[10.5px] font-bold" style="background:${isColor(p.name)}">${svEsc(p.name)}${typing ? ' · 입력 중' : ''}</span>`; }).join(' ');
+    }
+    function hoCellInner(r) {                                          // 칸 안쪽 내용 (다른 사람이 입력 중이면 그 글)
+      const rm = hoSt.remote.get(r.id);
+      if (rm) return `${svEsc(rm.text) || '<span style="color:#C7C7CC;font-weight:400">…</span>'}`;
+      return hoCellHtml(r) || '<span style="color:#C7C7CC;font-weight:400">내용을 입력하세요</span>';
+    }
+    function hoPatchCell(id) {                                         // 한 칸만 다시 그리기
+      if (hoSt.edit && hoSt.edit.id === id) return;
+      const r = hoSt.rows.find(x => x.id === id), cell = document.querySelector(`[data-ho-cell="${id}"]`);
+      if (!r || !cell) return;
+      const f = hoFmtOf(r), rm = hoSt.remote.get(id), tr = cell.closest('tr'), hpx = hoPt(+r.height_pt || 200);
+      if (tr) tr.style.height = hpx + 'px';
+      cell.style.minHeight = (hpx - 14) + 'px';
+      cell.style.color = f.c ? '#FF0000' : ''; cell.style.fontWeight = f.b ? '800' : '400';
+      cell.style.outline = rm ? `2px solid ${isColor(rm.name)}` : ''; cell.style.outlineOffset = rm ? '2px' : '';
+      const inner = cell.firstElementChild; if (inner) { inner.style.textAlign = f.a === 'c' ? 'center' : 'left'; inner.innerHTML = hoCellInner(r); }
+      let tag = cell.parentElement.querySelector('.ho-rtag');
+      if (rm) { if (!tag) { tag = document.createElement('div'); tag.className = 'ho-rtag ho-noprint'; Object.assign(tag.style, { position: 'absolute', right: '6px', top: '4px', zIndex: 6, padding: '1px 7px', borderRadius: '6px', color: '#fff', fontSize: '11px', fontWeight: '700', pointerEvents: 'none' }); cell.parentElement.appendChild(tag); } tag.style.background = isColor(rm.name); tag.textContent = `${rm.name} 입력 중`; }
+      else if (tag) tag.remove();
     }
     function hoRenderPane() {
       if (!hoSt.date) hoSt.date = hoTomorrow();
@@ -11182,7 +11256,7 @@
         <div class="bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-3 sm:p-4 flex flex-col min-h-0">
           <div class="flex items-center gap-2 flex-wrap mb-3">
             <div class="w-9 h-9 rounded-xl bg-blue-50 text-[#007AFF] flex items-center justify-center"><i class="ph-bold ph-clipboard-text text-lg"></i></div>
-            <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">인수인계</h3><p id="hoMeta" class="text-[11.5px] text-gray-500"></p></div>
+            <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">인수인계</h3><p id="hoMeta" class="text-[11.5px] text-gray-500"></p><div id="hoPeers" class="text-[11px] mt-0.5 flex flex-wrap gap-1 items-center"></div></div>
             <div class="ml-auto flex items-center gap-1.5 flex-wrap">
               <div class="flex items-center gap-0.5 bg-gray-100 rounded-xl p-0.5"><button type="button" onclick="hoMoveDate(-1)" class="ios-btn-tap w-8 h-8 rounded-lg hover:bg-white"><i class="ph-bold ph-caret-left"></i></button><input type="date" id="hoDate" onchange="hoSetDate(this.value)" class="bg-transparent text-[12.5px] font-bold px-1 w-[124px]"><button type="button" onclick="hoMoveDate(1)" class="ios-btn-tap w-8 h-8 rounded-lg hover:bg-white"><i class="ph-bold ph-caret-right"></i></button></div>
               <div class="relative">
@@ -11230,7 +11304,7 @@
         h += `<tr data-ho-row="${r.id}" style="height:${hpx}px;break-inside:avoid;page-break-inside:avoid">
           <td style="${bd}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle;position:relative">${i + 1}${print ? '' : `<button type="button" data-ho-del="${r.id}" class="ho-noprint rounded-full bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-[#FF3B30]" style="position:absolute;left:4px;top:4px;width:24px;height:24px;font-size:11px" title="이 행 삭제"><i class="ph-bold ph-x"></i></button>`}</td>
           <td colspan="3" style="${bd}position:relative;vertical-align:middle;padding:6px 10px">
-            <div ${print ? '' : `data-ho-cell="${r.id}"`} style="min-height:${hpx - 14}px;font-size:18pt;line-height:1.35;white-space:pre-wrap;word-break:break-all;${f.c ? 'color:#FF0000;' : ''}${f.b ? 'font-weight:800;' : 'font-weight:400;'}${print ? '' : 'cursor:text;'}display:flex;align-items:center"><div style="width:100%;text-align:${f.a === 'c' ? 'center' : 'left'}">${editing ? '' : (hoCellHtml(r) || (print ? '' : '<span style="color:#C7C7CC;font-weight:400">내용을 입력하세요</span>'))}</div></div>
+            <div ${print ? '' : `data-ho-cell="${r.id}"`} style="min-height:${hpx - 14}px;font-size:18pt;line-height:1.35;white-space:pre-wrap;word-break:break-all;${f.c ? 'color:#FF0000;' : ''}${f.b ? 'font-weight:800;' : 'font-weight:400;'}${print ? '' : 'cursor:text;'}display:flex;align-items:center"><div style="width:100%;text-align:${f.a === 'c' ? 'center' : 'left'}">${editing ? '' : print ? hoCellHtml(r) : hoCellInner(r)}</div></div>
             ${print ? '' : `<div data-ho-rsz="${r.id}" class="ho-noprint" style="position:absolute;left:0;right:0;bottom:-4px;height:8px;cursor:row-resize;z-index:10" title="끌어서 높이 조절"></div>`}
           </td></tr>`;
       });
@@ -11244,6 +11318,7 @@
       return Math.max(0.3, Math.min(1, z));
     }
     function hoZoom() { const auto = hoAutoZoom(); return hoSt.zoom ? Math.min(hoSt.zoom / 100, auto) : auto; }   // 수동 배율도 잘리지 않게 보정
+    const print_ = false;
     function hoRenderSheet() {
       const sheet = isEl('hoSheet'); if (!sheet) return;
       sheet.innerHTML = hoSheetHtml(false) + (hoSt.rows.length ? '' : `<div class="ho-noprint py-6 text-center text-[13px] text-gray-400">${hoSt.loading ? '불러오는 중…' : hoSt.err ? '불러오지 못했어요: ' + svEsc(hoSt.err) : "'행 추가'를 눌러 인수인계 내용을 적어 주세요."}</div>`);
@@ -11258,9 +11333,11 @@
       if (zr) zr.value = Math.round(z * 100);
       if (zt) zt.textContent = `${Math.round(z * 100)}%${hoSt.zoom ? '' : ' 자동'}`;
       if (hoSt.edit) hoOpenEditor(hoSt.edit.id, true);
+      if (!print_) hoSt.remote.forEach((v, id) => hoPatchCell(id));
+      const hp = isEl('hoPeers'); if (hp) hp.innerHTML = hoPeersHtml();
     }
     function hoSetZoom(v) { hoSt.zoom = +v || 0; hoRenderSheet(); }
-    function hoSetDate(v) { if (!v) return; hoCommitEdit(); hoSt.date = v; hoLoad(); }
+    function hoSetDate(v) { if (!v) return; hoCommitEdit(); hoSt.date = v; hoSt.remote.clear(); hoLoad(); }
     function hoMoveDate(d) { const x = new Date((hoSt.date || hoTomorrow()) + 'T00:00:00'); x.setDate(x.getDate() + d); hoSetDate(ibIso(x)); const el = isEl('hoDate'); if (el) el.value = hoSt.date; }
     async function hoAdd(content, fmt, sourceRowId, date) {
       if (isNeedUser()) return null;
@@ -11336,14 +11413,16 @@
       const cell = document.querySelector(`[data-ho-cell="${id}"]`); if (!cell) return;
       const old = hoSt.edit && hoSt.edit.el && hoSt.edit.id === id ? hoSt.edit.el : null;
       const ta = old || document.createElement('textarea');
+      const hadFocus = !!old && document.activeElement === old, ss = old ? old.selectionStart : 0, se = old ? old.selectionEnd : 0;
       if (!old) { ta.value = r.content || ''; ta.spellcheck = false; }
       const f = hoFmtOf(r);
       Object.assign(ta.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', padding: '6px 10px', border: '2px solid #007AFF', outline: 'none', resize: 'none', background: '#fff', fontSize: '18pt', lineHeight: '1.35', fontWeight: f.b ? '800' : '400', color: f.c ? '#FF0000' : '#000', textAlign: f.a === 'c' ? 'center' : 'left', fontFamily: 'inherit', zIndex: 5 });
-      cell.parentElement.appendChild(ta);
-      hoSt.edit = { id, el: ta, orig: r.content || '' };
+      if (ta.parentElement !== cell.parentElement) cell.parentElement.appendChild(ta);
+      if (hadFocus && document.activeElement !== ta) { ta.focus({ preventScroll: true }); try { ta.setSelectionRange(ss, se); } catch (e) {} }
+      hoSt.edit = { id, el: ta, orig: old && hoSt.edit ? hoSt.edit.orig : (r.content || '') };
       if (!old) {
-        phraseAttach(ta);
-        ta.addEventListener('input', () => hoMentionUpdate(ta));
+        phraseAttach(ta, { below: true });
+        ta.addEventListener('input', () => { hoMentionUpdate(ta); hoSendType(); });
         ta.addEventListener('keyup', (e) => { if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) hoMentionUpdate(ta); });
         ta.addEventListener('keydown', (e) => {
           e.stopPropagation();
@@ -11358,22 +11437,25 @@
             if (e.key === 'Escape') { e.preventDefault(); hoMention.token = null; const bx = isEl('hoMentionBox'); if (bx) bx.remove(); return; }
           }
           if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyB' || String(e.key).toLowerCase() === 'b')) { e.preventDefault(); hoFormat('bold'); }
-          else if (e.key === 'Escape') { e.preventDefault(); hoSt.edit = null; ta.remove(); hoRenderSheet(); }
+          else if (e.key === 'Escape') { e.preventDefault(); hoSendType({ id }); hoSt.edit = null; ta.remove(); hoAfterEdit(); }
         });
         ta.addEventListener('blur', () => { setTimeout(() => { if (hoSt.edit && hoSt.edit.el === ta && document.activeElement !== ta) hoCommitEdit(); }, 120); });
         if (!keep) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+        hoSendType();
       }
     }
+    function hoAfterEdit() { if (hoSt.later) { hoSt.later = false; hoLoad(true); } else hoRenderSheet(); }
     async function hoCommitEdit() {
       const ed = hoSt.edit; if (!ed) return;
       hoSt.edit = null;
       const r = hoSt.rows.find(x => x.id === ed.id), v = ed.el.value;
       ed.el.remove();
-      if (r && v !== (r.content || '')) {
-        const f = hoFmtOf(r); f.r = isRebaseRuns(f.r, r.content || '', v);
+      if (r && v !== (ed.orig || '')) {
+        const f = hoFmtOf(r); f.r = isRebaseRuns(f.r, ed.orig || '', v);
         await hoSave(r.id, { content: v, fmt: hoFmtPack(f) });
       }
-      hoRenderSheet();
+      hoSendType({ id: ed.id });
+      hoAfterEdit();
     }
     // 서식 : 드래그한 글자가 있으면 그 글자만, 없으면 편집 중인 칸 전체
     async function hoFormat(kind, val) {
@@ -11391,7 +11473,8 @@
       }
       hoSt.edit = null; ed.el.remove();
       await hoSave(r.id, { content: T, fmt: hoFmtPack(f) });
-      hoRenderSheet();
+      hoSendType({ id: ed.id });
+      hoAfterEdit();
     }
     function hoToggleColorMenu(force) { const m = isEl('hoColorMenu'); if (!m) return; m.classList.toggle('hidden', !(force === undefined ? m.classList.contains('hidden') : force)); }
     document.addEventListener('mousedown', (e) => { const m = isEl('hoColorMenu'); if (m && !m.classList.contains('hidden') && !m.contains(e.target) && !e.target.closest('#hoColorBtn')) hoToggleColorMenu(false); });
@@ -12437,9 +12520,9 @@
     const XL_ISS_PH = 60;                                              // 사진 행 높이(pt)
     const XL_ISS_BOX = { w: xlColPx(8), h: Math.round(XL_ISS_PH * 4 / 3) };
     const XL_ISS_ZOOM = { w: XL_ISS_W.slice(7, 15).reduce((a, w) => a + xlColPx(w), 0), h: Math.round((12.75 + XL_ISS_PH * 7) * 4 / 3) };   // H2~O9
-    const XL_DIS_PH = XL_ISS_PH * 2;                                   // 유통물류 : 사진 세로 2배
-    const xlZoomAnchor = (ph) => { const n = Math.floor(420 / ph), rem = Math.round((420 - n * ph) * 4 / 3); return [7, 0, 1, 0, 15, 0, 2 + n, rem]; };   // 확대 크기는 그대로 (약 H2~O9)
-    function xlIssueSheet(wb, rows, imgs, title, sheetName, hovers, ph) {
+    const XL_DIS_ZH = 2;                                               // 유통물류 : 마우스 올리면 뜨는 확대 사진만 세로 2배 (행 높이는 그대로)
+    const xlZoomAnchor = (ph, zh) => { const need = (12.75 + 420) * (zh || 1) - 12.75, n = Math.floor(need / ph), rem = Math.round((need - n * ph) * 4 / 3); return [7, 0, 1, 0, 15, 0, 2 + n, rem]; };   // 약 H2~O9 (세로 zh배)
+    function xlIssueSheet(wb, rows, imgs, title, sheetName, hovers, ph, zh) {
       const ws = wb.addWorksheet(sheetName, XL_NOGRID);
       XL_ISS_W.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
       ws.getColumn(10).hidden = true;                                 // J : 품목지정 숨김
@@ -12461,7 +12544,7 @@
         ((imgs && imgs.get(r.id)) || []).slice(0, two ? 2 : 1).forEach((img, k) => {          // O(·P) 칸에 꽉 맞춤
           const id = wb.addImage({ buffer: img.buf, extension: 'jpeg' });
           ws.addImage(id, { tl: { col: 14 + k, row: n - 1 }, br: { col: 15 + k, row: n }, editAs: 'twoCell' });
-          if (hovers && img.zoom) xlHoverNote(ws, hovers, sheetName, n - 1, 14 + k, img.zoom, XL_ISS_ZOOM.w, XL_ISS_ZOOM.h, xlZoomAnchor(PH));   // 확대 : 약 H2~O9
+          if (hovers && img.zoom) xlHoverNote(ws, hovers, sheetName, n - 1, 14 + k, img.zoom, XL_ISS_ZOOM.w, XL_ISS_ZOOM.h * (zh || 1), xlZoomAnchor(PH, zh));   // 확대 : 약 H2~O9
         });
       });
       const lastC = two ? 16 : 15;
@@ -12492,8 +12575,8 @@
       xlBox(ws, 1, 1, 1 + list.length, 15, { shrink: true });
       // 특이사항
       const hovers = [];
-      const imgs = await xlPhotosFor(rows, XL_ISS_BOX.w, Math.round(XL_DIS_PH * 4 / 3), true, XL_ISS_ZOOM.w, XL_ISS_ZOOM.h);
-      xlIssueSheet(wb, rows, imgs, '밀양센터 유통물류 배송특이사항', '특이사항', hovers, XL_DIS_PH);
+      const imgs = await xlPhotosFor(rows, XL_ISS_BOX.w, XL_ISS_BOX.h, true, XL_ISS_ZOOM.w, XL_ISS_ZOOM.h * XL_DIS_ZH);
+      xlIssueSheet(wb, rows, imgs, '밀양센터 유통물류 배송특이사항', '특이사항', hovers, XL_ISS_PH, XL_DIS_ZH);
       await xlFinish(wb, name, hovers);
     }
     async function xlGeneric(rows, name, tabName) {
@@ -12738,11 +12821,24 @@
       list.splice(i >= 0 ? i + 1 : list.length, 0, IS_TAB_HANDOVER);
       return [IS_TAB_HOME].concat(list);
     }
+    function isTabPeers(tab) { const by = new Map(); (isState.peers || []).forEach(p => { if (p.name && p.name !== isState.me && !p.idle && (p.tab || 'home') === tab) by.set(p.name, p); }); return [...by.values()]; }
+    function isTabPeersHtml(tab) {
+      const ps = isTabPeers(tab); if (!ps.length) return '';
+      return `<span class="inline-flex -space-x-1 ml-0.5" title="${svEsc(ps.map(p => p.name).join(', '))} 님이 보고 있어요">${ps.slice(0, 3).map(p => `<span style="background:${isColor(p.name)}" class="w-[17px] h-[17px] rounded-full ring-2 ring-white text-white text-[8.5px] font-bold inline-flex items-center justify-center">${svEsc(isShort(p.name).slice(0, 1))}</span>`).join('')}${ps.length > 3 ? `<span class="w-[17px] h-[17px] rounded-full ring-2 ring-white bg-gray-400 text-white text-[8px] font-bold inline-flex items-center justify-center">+${ps.length - 3}</span>` : ''}</span>`;
+    }
+    let isTabsSig = '';
+    function isRenderTabsIfPeers() {                                     // 접속자가 바뀌었을 때만 다시 그림
+      const sig = JSON.stringify((isState.peers || []).map(p => [p.name, p.tab, p.idle, p.tsel])) + isState.tab;
+      if (sig === isTabsSig) return; isTabsSig = sig;
+      isRenderTabs();
+      if (isState.tab !== 'home' && isTabSt.tab) isListsOf(isAllTabs().find(t => t.id === isTabSt.tab) || { id: isTabSt.tab }).forEach(l => { if (!isTabEditing(l.key)) isRenderTabBody(l.key); });
+      const hp = isEl('hoPeers'); if (hp) hp.innerHTML = hoPeersHtml();
+    }
     function isRenderTabs() {
       const box = isEl('isTabs');
       if (!isAllTabs().some(t => t.id === isState.tab)) isState.tab = 'home';
       box.innerHTML = isAllTabs().map(t => `<button type="button" data-tab="${svEsc(t.id)}" class="segment-tab ${isState.tab === t.id ? 'active' : ''} flex-1 min-w-[84px] py-2 px-2 text-[12px] sm:text-[13px] font-semibold text-gray-600 rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap">
-          <i class="ph-bold ${t.icon} text-sm"></i><span>${svEsc(t.name)}</span>${false ? `<i data-tab-del="${svEsc(t.id)}" role="button" class="ph-bold ph-x text-[9px] w-4 h-4 rounded-full bg-gray-300/70 text-white hover:bg-[#FF3B30] inline-flex items-center justify-center ml-1" title="탭 삭제"></i>` : ''}
+          <i class="ph-bold ${t.icon} text-sm"></i><span>${svEsc(t.name)}</span>${isTabPeersHtml(t.id)}${false ? `<i data-tab-del="${svEsc(t.id)}" role="button" class="ph-bold ph-x text-[9px] w-4 h-4 rounded-full bg-gray-300/70 text-white hover:bg-[#FF3B30] inline-flex items-center justify-center ml-1" title="탭 삭제"></i>` : ''}
         </button>`).join('');
     }
     // 화면 배율 : 홈화면(표) · 탭 목록 · 인수인계(시트) 각각 · 이 기기에 기억
@@ -12771,7 +12867,7 @@
       if (isState.edit) isCommit(isState.edit.el.value, null);
       if (hoSt.edit) hoCommitEdit();
       isState.tab = id;
-      isRenderTabs();
+      isRenderTabs(); isTrack();
       const home = id === 'home';
       isEl('isHomePane').classList.toggle('hidden', !home);
       isEl('isTabPane').classList.toggle('hidden', home);
@@ -12843,7 +12939,8 @@
     // 접속자 표시: Realtime presence 와 함께, 주기적인 '여기 있음' 신호(broadcast)도 사용
     //  → 연결이 잠시 끊겼다 붙거나 presence 동기화가 늦어도, 먼저 들어온 사람에게 나중에 들어온 사람이 새로고침 없이 보이도록
     let isTrackTimer = null, isBeatTimer = null, isRejoinTimer = null;
-    function isMyPresence() { return { cid: isState.cid, name: isState.me, sel: isIdle.on ? null : isState.sel, editing: isIdle.on ? false : !!isState.edit, idle: isIdle.on, at: Date.now() }; }
+    function isTabSelOf() { const o = {}; if (isState.tab !== 'home' && isTabSt.tab) isListsOf(isAllTabs().find(t => t.id === isTabSt.tab) || { id: isTabSt.tab }).forEach(l => { const L = isTabSt.lists && isTabSt.lists[l.key]; if (L && L.checked && L.checked.size) o[l.key] = [...L.checked].slice(0, 300); }); return o; }
+    function isMyPresence() { return { cid: isState.cid, name: isState.me, sel: isIdle.on ? null : isState.sel, editing: isIdle.on ? false : !!isState.edit, idle: isIdle.on, at: Date.now(), tab: isState.tab || 'home', tsel: isIdle.on ? {} : isTabSelOf() }; }
     const IS_IDLE_MS = 30 * 60 * 1000;
     const isIdle = { on: false, last: Date.now() };
     function isActivity() {
@@ -12881,6 +12978,7 @@
       if (gone) isRender();
       isRenderAvatars();
       isDrawLayer();
+      try { isRenderTabsIfPeers(); } catch (e) {}
       const m = isEl('isMeta'); if (m && !isState.missing) isRenderMeta();
     }
     function isRenderMeta() {
@@ -12902,7 +13000,7 @@
           if (!known) { isTrack(); isSendDrafts(); }    // 새로 들어온 사람에게 나도 바로 알림 (+ 저장 전 내용)
           isSyncPeers();
         })
-        .on('broadcast', { event: 'bye' }, ({ payload }) => { if (payload && payload.cid) { isState.roster.delete(payload.cid); isState.cursors.delete(payload.cid); isState.remote.delete(payload.cid); isSyncPeers(); isRender(); } })
+        .on('broadcast', { event: 'bye' }, ({ payload }) => { if (payload && payload.cid) { hoDropRemote(payload.cid); isState.roster.delete(payload.cid); isState.cursors.delete(payload.cid); isState.remote.delete(payload.cid); isSyncPeers(); isRender(); } })
         .on('broadcast', { event: 'drafts' }, ({ payload }) => {
           if (!payload || !payload.cid || payload.cid === isState.cid) return;
           if (payload.drafts && payload.drafts.length) isState.remote.set(payload.cid, { name: payload.name, drafts: payload.drafts });
@@ -12920,7 +13018,8 @@
         .on('broadcast', { event: 'pend' }, () => { isLoadPending(); })
         .on('broadcast', { event: 'colw' }, () => { isLoadColW(); })
         .on('broadcast', { event: 'hodefaults' }, () => { hoDefLoaded = false; })
-        .on('broadcast', { event: 'handover' }, () => { if (isState.tab === 'handover' && !hoSt.edit) hoLoad(); })
+        .on('broadcast', { event: 'handover' }, () => { if (isState.tab === 'handover') { clearTimeout(isState.hoT); isState.hoT = setTimeout(() => hoLoad(true), 150); } })
+        .on('broadcast', { event: 'hotype' }, ({ payload }) => hoOnType(payload))
         .on('broadcast', { event: 'onstock' }, () => { if (isEl('onStockBox')) onLoad(); })
         .on('broadcast', { event: 'tabitems' }, ({ payload }) => { if (payload && payload.tab && isState.tab !== 'home' && isEl('isTabBody_' + payload.tab)) isLoadTabItems(payload.tab); })
         .on('broadcast', { event: 'del' }, ({ payload }) => { if (payload && payload.ids) payload.ids.forEach(id => isQueueDb({ eventType: 'DELETE', old: { id } })); })
@@ -12940,7 +13039,7 @@
         isState.dbCh = supabaseClient.channel('issue-sheet-db')
           .on('postgres_changes', { event: '*', schema: 'public', table: IS_TABLE }, (pl) => isQueueDb(pl))
           .on('postgres_changes', { event: '*', schema: 'public', table: INCIDENT_TABLE }, () => { clearTimeout(isState.pendT); isState.pendT = setTimeout(isLoadPending, 400); })
-          .on('postgres_changes', { event: '*', schema: 'public', table: HO_TABLE }, () => { if (isState.tab === 'handover' && !hoSt.edit) { clearTimeout(isState.hoT); isState.hoT = setTimeout(hoLoad, 400); } })
+          .on('postgres_changes', { event: '*', schema: 'public', table: HO_TABLE }, () => { if (isState.tab === 'handover') { clearTimeout(isState.hoT); isState.hoT = setTimeout(() => hoLoad(true), 400); } })
           .on('postgres_changes', { event: '*', schema: 'public', table: ON_TABLE }, () => { if (isEl('onStockBox')) { clearTimeout(isState.onT); isState.onT = setTimeout(onLoad, 400); } })
           .on('postgres_changes', { event: '*', schema: 'public', table: IS_TAB_ITEMS }, () => { if (isState.tab !== 'home' && isTabSt.tab) { clearTimeout(isState.tabT); isState.tabT = setTimeout(isReloadTabLists, 400); } })
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: IS_MSG_TABLE }, (pl) => isAddMsg(pl.new, true))
