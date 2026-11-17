@@ -2358,7 +2358,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.044</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.045</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -10925,7 +10925,7 @@
       const move = (ev) => { col.w = Math.max(36, Math.round(w0 + (ev.clientX - x0) / z)); isColW[scope][key] = col.w; isApplyColW(); };
       const up = async () => {
         document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
-        document.body.style.cursor = '';
+        document.body.style.cursor = ''; isState.rszAt = Date.now();
         if (col.w === w0) return;
         try { await settingsSave([{ key: IS_COLW_KEY, value: isColW }]); } catch (err) { showToastNotification('너비 저장 실패', dbErrorMessage(err), 'warning'); return; }
         isBroadcast('colw', {});
@@ -11688,11 +11688,13 @@
       isEl('isCols').innerHTML = `<col style="width:${IS_GUT_W}px">` + IS_COLS.map(c => `<col style="width:${c.w}px">`).join('');
       Object.assign(isEl('isTable').style, { width: '100%', minWidth: total + 'px' });
       isEl('isHead').innerHTML = `<th class="is-gut"><input type="checkbox" id="isCheckAll" class="w-3.5 h-3.5 align-middle cursor-pointer" title="전체 선택"></th>`
-        + IS_COLS.map(c => `<th title="${svEsc(c.h)}${c.auto ? ' (자동)' : ''}" style="${c.auto ? 'color:#9CA3AF' : ''}"><span class="is-rsz" data-rsz="${c.k}" title="끌어서 너비 조절"></span>${svEsc(c.h)}<button type="button" class="is-th-btn" data-is-filter="${c.k}" title="${svEsc(c.h)} 필터"><i class="ph-bold ph-caret-down text-[10px]"></i></button>${c.k === 'detail' ? '<button type="button" class="is-red-tg" data-red-toggle title="미처리 내역 : 상세내용에 빨간 글자가 있는 행만 보기"><span class="is-red-tg-lbl">미처리</span><span class="is-red-tg-sw"></span></button>' : ''}</th>`).join('');
+        + IS_COLS.map(c => `<th data-th-col="${c.k}" title="${svEsc(c.h)}${c.auto ? ' (자동)' : ''} · 눌러서 필터" style="cursor:pointer;${c.auto ? 'color:#9CA3AF' : ''}"><span class="is-rsz" data-rsz="${c.k}" title="끌어서 너비 조절"></span>${svEsc(c.h)}<button type="button" class="is-th-btn" data-is-filter="${c.k}" title="${svEsc(c.h)} 필터"><i class="ph-bold ph-caret-down text-[10px]"></i></button>${c.k === 'detail' ? '<button type="button" class="is-red-tg" data-red-toggle title="미처리 내역 : 상세내용에 빨간 글자가 있는 행만 보기"><span class="is-red-tg-lbl">미처리</span><span class="is-red-tg-sw"></span></button>' : ''}</th>`).join('');
       isEl('isHead').addEventListener('click', (e) => {
         const tg = e.target.closest('[data-red-toggle]');
         if (tg) { e.stopPropagation(); isState.redOnly = !isState.redOnly; isRenderBottom(); showToastNotification('미처리 내역', isState.redOnly ? '상세내용에 빨간 글자가 있는 행만 보여요.' : '모든 행을 보여요.', 'info'); return; }
-        const b = e.target.closest('[data-is-filter]'); if (b) { e.stopPropagation(); isOpenFilter(b.dataset.isFilter, b); } });
+        const b = e.target.closest('[data-is-filter]'); if (b) { e.stopPropagation(); isOpenFilter(b.dataset.isFilter, b); return; }
+        const th = e.target.closest('th[data-th-col]');                // 칸 이름을 눌러도 필터 (너비 조절 직후는 제외)
+        if (th && !e.target.closest('.is-rsz') && Date.now() - (isState.rszAt || 0) > 400) { e.stopPropagation(); if (!isEl('isFilterPop').classList.contains('hidden') && isFp.k === th.dataset.thCol) { isCloseFilter(); return; } const fb = th.querySelector('[data-is-filter]'); isOpenFilter(th.dataset.thCol, fb || th); } });
       isEl('isCheckAll').addEventListener('change', (e) => {
         const rows = isRowsView();
         if (e.target.checked) { rows.forEach(r => { if (!r._pend) isState.checked.add(r.id); }); isRender(); return; }
@@ -12375,7 +12377,7 @@
       const nChk = [...isState.checked].map(Number).filter(id => id > 0 && isState.rows.some(r => Number(r.id) === id && (scope === 'all' || String(r.delivery_date || '').slice(0, 10) !== isDl.sel))).length;
       isEl('isDlFmtSub').textContent = (scope === 'all' ? `전체 데이터 · ${isState.rows.length.toLocaleString()}건` : `배송일 ${isDl.sel}`) + (scope !== 'all' && nChk ? ` + 체크한 행 ${nChk}건` : '');
       const COLORS = ['#007AFF', '#FF9500', '#34C759', '#AF52DE', '#FF2D55', '#5856D6'];
-      const opts = [{ id: 'all', name: '전체 고객사', icon: 'ph-buildings' }].concat(isAllTabs().filter(t => t.id !== 'home' && t.id !== 'onenone' && t.id !== 'handover'));
+      const opts = [{ id: 'all', name: '전체 고객사', icon: 'ph-buildings' }].concat(isAllTabs().filter(t => t.id !== 'home' && t.id !== 'handover'));
       isEl('isDlFmtList').innerHTML = opts.map((t, i) => { const c = isDlRowsFor(t.id); return `<button type="button" onclick="isDlRun('${svEsc(t.id)}')" class="ios-btn-tap w-full flex items-center gap-2.5 px-3.5 py-3 rounded-2xl bg-gray-50 border border-gray-200 text-left hover:bg-blue-50"><i class="ph-bold ${t.icon || 'ph-folder-simple'} text-lg" style="color:${COLORS[i % COLORS.length]}"></i><span class="flex-1 min-w-0"><span class="block text-[14px] font-semibold text-gray-900">${svEsc(t.name)}</span><span class="block text-[11.5px] text-gray-500" data-dl-count>${scope === 'all' ? '전체' : '날짜'} ${c.nDate}건${c.nChk ? ` <b class="text-[#007AFF]">+ 체크 ${c.nChk}건</b>` : ''}</span></span><i class="ph-bold ph-download-simple text-gray-300"></i></button>`; }).join('');
       isDlShow('isDlFmtModal', true);
     }
@@ -12723,7 +12725,7 @@
       const has = (r, w) => String(r.client_name || '').includes(w) || String(r.store_name || '').includes(w);
       if (fmt === 'all') return rows;
       if (fmt === 'wellstory') return rows.filter(r => has(r, '웰스토리'));
-      if (fmt === 'distrib') return rows.filter(r => !has(r, '웰스토리'));
+      if (fmt === 'distrib') return rows.filter(r => !has(r, '웰스토리') && !has(r, '원앤원'));   // 웰스토리 · 원앤원은 각자 버튼으로
       const t = isAllTabs().find(x => x.id === fmt);
       return t ? rows.filter(r => has(r, t.name)) : rows;
     }
@@ -12907,7 +12909,7 @@
       isFp.vals.filter(([v]) => !q || v.toLowerCase().includes(q)).forEach(([v]) => { if (e.target.checked) isFp.sel.add(v); else isFp.sel.delete(v); });
       isRenderFilterList();
     });
-    document.addEventListener('mousedown', (e) => { const pop = isEl('isFilterPop'); if (!pop.classList.contains('hidden') && !pop.contains(e.target) && !e.target.closest('[data-is-filter]')) isCloseFilter(); });
+    document.addEventListener('mousedown', (e) => { const pop = isEl('isFilterPop'); if (!pop.classList.contains('hidden') && !pop.contains(e.target) && !e.target.closest('[data-is-filter]') && !e.target.closest('#isHead th[data-th-col]')) isCloseFilter(); });
 
     function isRenderOptionLists() {
       ['main_center', 'content', 'subject', 'fault'].forEach(k => { const dl = isEl('isOpt_' + k); if (dl) dl.innerHTML = (issueSheetOptions[k] || []).map(v => `<option value="${svEsc(v)}">`).join(''); });
