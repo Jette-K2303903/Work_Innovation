@@ -2353,7 +2353,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.041</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.042</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -11292,12 +11292,12 @@
       const cell = (st, html) => `<td style="${st}">${html}</td>`;
       const rows = hoSt.rows;
       const ttl = 'font-size:18pt;font-weight:700;';
-      let h = `<table style="width:${HO_W}px;border-collapse:collapse;table-layout:fixed;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;color:#000">
+      let h = `<table style="width:${HO_W}px;${print ? 'margin:0 auto;' : ''}border-collapse:collapse;table-layout:fixed;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;color:#000">
         <colgroup>${HO_COLS_PX.map(w => `<col style="width:${w}px">`).join('')}</colgroup>
-        <tr style="height:${hoPt(18.75)}px"><td colspan="4"></td></tr>
+        <thead data-ho-head style="display:table-header-group"><tr style="height:${hoPt(18.75)}px"><td colspan="4"></td></tr>
         <tr style="height:${hoPt(30)}px">${cell(`${ttl}text-align:center;vertical-align:middle`, '출고일')}${cell(`${ttl}text-align:center;vertical-align:middle`, m ? `${+m[2]}/${+m[3]}(${wk})` : '')}<td colspan="2" style="${ttl}text-align:center;vertical-align:middle">밀양센터 주간 → 야간 인수인계</td></tr>
         <tr style="height:${hoPt(30)}px"><td colspan="4"></td></tr>
-        <tr style="height:${hoPt(30)}px">${cell(`${rows.length ? bd : ''}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle`, '순번')}<td colspan="3" style="${rows.length ? bd : ''}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle">내용</td></tr>`;
+        <tr style="height:${hoPt(30)}px">${cell(`${rows.length ? bd : ''}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle`, '순번')}<td colspan="3" style="${rows.length ? bd : ''}font-size:14pt;font-weight:700;text-align:center;vertical-align:middle">내용</td></tr></thead><tbody>`;
       rows.forEach((r, i) => {
         const f = hoFmtOf(r), hpx = hoPt(+r.height_pt || 200);
         const editing = !print && hoSt.edit && hoSt.edit.id === r.id;
@@ -11308,13 +11308,15 @@
             ${print ? '' : `<div data-ho-rsz="${r.id}" class="ho-noprint" style="position:absolute;left:0;right:0;bottom:-4px;height:8px;cursor:row-resize;z-index:10" title="끌어서 높이 조절"></div>`}
           </td></tr>`;
       });
-      return h + '</table>';
+      return h + '</tbody></table>';
     }
-    function hoAutoZoom() {                                            // 쪽 너비 · 가장 큰 행이 한 쪽에 들어가도록
-      const pageW = (210 / 25.4 - 0.2) * 96, pageH = 297 / 25.4 * 96;
-      let z = pageW / HO_W;
-      const sheet = isEl('hoSheet');
-      if (sheet) sheet.querySelectorAll('tr[data-ho-row]').forEach(tr => { const h = tr.getBoundingClientRect().height / (hoSt.viewZoom || 1); if (h * z > pageH - 4) z = (pageH - 4) / h; });
+    const HO_HEAD_PT = 18.75 + 30 + 30 + 30, HO_PAGE_ROWS = 5, HO_ROW_PT = 200;
+    const HO_PAGE_H = 297 / 25.4 * 96 * 0.985;                         // A4 높이(px) · 반올림 여유
+    function hoAutoZoom() {                                            // 쪽 너비 · 머리말 + 기본 5칸이 한 장 · 가장 큰 행도 한 장에 들어가도록
+      const pageW = (210 / 25.4 - 0.2) * 96;
+      let z = Math.min(pageW / HO_W, HO_PAGE_H / (hoPt(HO_HEAD_PT) + HO_PAGE_ROWS * hoPt(HO_ROW_PT) + 8));
+      const sheet = isEl('hoSheet'), head = hoPt(HO_HEAD_PT);
+      if (sheet) sheet.querySelectorAll('tr[data-ho-row]').forEach(tr => { const h = tr.getBoundingClientRect().height / (hoSt.viewZoom || 1); if ((h + head) * z > HO_PAGE_H) z = HO_PAGE_H / (h + head); });
       return Math.max(0.3, Math.min(1, z));
     }
     function hoZoom() { const auto = hoAutoZoom(); return hoSt.zoom ? Math.min(hoSt.zoom / 100, auto) : auto; }   // 수동 배율도 잘리지 않게 보정
@@ -11324,9 +11326,10 @@
       sheet.innerHTML = hoSheetHtml(false) + (hoSt.rows.length ? '' : `<div class="ho-noprint py-6 text-center text-[13px] text-gray-400">${hoSt.loading ? '불러오는 중…' : hoSt.err ? '불러오지 못했어요: ' + svEsc(hoSt.err) : "'행 추가'를 눌러 인수인계 내용을 적어 주세요."}</div>`);
       const meta = isEl('hoMeta'); if (meta) meta.textContent = `출고일 ${hoSt.date} · ${hoSt.rows.length}건`;
       // 쪽 나뉨 위치 (인쇄 배율 기준)
-      const z = hoZoom(), pageH = 297 / 25.4 * 96 / z;
-      let y = 0, page = pageH; const marks = [];
-      sheet.querySelectorAll(':scope > table > tbody > tr, :scope > table > tr').forEach(tr => { const h = tr.offsetHeight; if (y + h > page) { marks.push(y); page = y + pageH; } y += h; });
+      const z = hoZoom(), pageH = HO_PAGE_H / z;
+      const hd = sheet.querySelector('[data-ho-head]'), headH = hd ? hd.offsetHeight : 0;
+      let used = headH; const marks = [];
+      sheet.querySelectorAll('tr[data-ho-row]').forEach(tr => { const h = tr.offsetHeight; if (used + h > pageH && used > headH) { marks.push(tr.offsetTop); used = headH; } used += h; });
       sheet.querySelectorAll('.ho-pagebreak').forEach(e => e.remove());
       marks.forEach(my => sheet.insertAdjacentHTML('beforeend', `<div class="ho-pagebreak ho-noprint absolute left-0 right-0 border-t-2 border-dashed border-[#007AFF]/60 pointer-events-none" style="top:${my}px"></div>`));
       const zr = isEl('hoZoom'), zt = isEl('hoZoomTxt');
