@@ -12972,7 +12972,7 @@
       const lastC = two ? 16 : 15;
       xlBox(ws, 2, 1, 2, lastC);
       if (rows.length) xlBox(ws, 3, 1, 2 + rows.length, lastC, { shrink: true });
-      for (let n = 3; n < 3 + rows.length; n++) ws.getRow(n).getCell(14).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };   // N : 상세내용은 가운데 · 자동 줄바꿈
+      for (let n = 3; n < 3 + rows.length; n++) [13, 14].forEach(c => { ws.getRow(n).getCell(c).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; });   // M(구분) · N(상세내용) : 가운데 · 자동 줄바꿈
       return { ws, boxW, boxH };
     }
     async function xlDistrib(rows, name, scope) {
