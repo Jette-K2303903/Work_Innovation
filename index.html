@@ -834,7 +834,7 @@
           <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">제품정보 업로드</h3><p id="muProductMeta" class="text-[11px] text-gray-500 whitespace-nowrap overflow-hidden text-ellipsis">불러오는 중…</p></div>
         </div>
         <div class="mb-3 p-3 bg-gray-50 border border-gray-200/80 rounded-2xl text-[12px] text-gray-700 leading-relaxed">
-          <div class="flex flex-wrap gap-1.5 mb-1.5"><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">A</b> 제품코드</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">B</b> 제품명</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">C</b> 품목지정</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">D</b> 고객사</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">E</b> 온도구분</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">F</b> 재고타입</span></div>
+          <div class="flex flex-wrap gap-1.5 mb-1.5"><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">A</b> 제품코드</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">B</b> 제품명</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">C</b> 품목지정</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">D</b> 고객사</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">E</b> 온도구분</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">F</b> 재고타입</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">G</b> 단위</span></div>
           <span class="block text-[11.5px] text-gray-500">제품코드 + 고객사가 같으면 덮어쓰고, 다르면 새 제품으로 쌓입니다. 첫 줄이 제목이면 자동으로 건너뜁니다. 행이 많으면 엑셀/CSV 파일을 바로 선택하는 것이 빠릅니다.</span>
         </div>
         <div class="flex-1 flex flex-col min-h-[220px] mb-3">
@@ -2362,7 +2362,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.063</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.064</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -16619,7 +16619,7 @@
       Store: { label: '매장정보', table: 'store_master', conflict: 'client_code,store_code', first: '고객사코드',
         cols: ['client_code', 'client_name', 'store_code', 'store_name', 'address'], req: ['store_code'], key: r => r.client_code + '|' + r.store_code },
       Product: { label: '제품정보', table: 'product_master', conflict: 'product_code,client', first: '제품코드',
-        cols: ['product_code', 'product_name', 'item_designation', 'client', 'temperature', 'stock_type'], req: ['product_code'], key: r => r.product_code + '|' + r.client }
+        cols: ['product_code', 'product_name', 'item_designation', 'client', 'temperature', 'stock_type', 'unit'], req: ['product_code'], key: r => r.product_code + '|' + r.client }
     };
     const muFile = { Store: null, Product: null };      // 파일로 읽은 행 (붙여넣기 대신)
     async function muRefreshMeta(key) {
