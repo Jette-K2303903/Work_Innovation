@@ -2359,7 +2359,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.061</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.062</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -10833,7 +10833,7 @@
             <button type="button" onclick="mlCloseCfg()" class="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-[13.5px] font-bold">취소</button>
             <button type="button" onclick="mlSaveCfg()" class="flex-[2] py-2.5 rounded-xl bg-[#007AFF] text-white text-[13.5px] font-bold">저장</button>
           </div></div>`;
-      m.addEventListener('mousedown', (e) => { if (e.target === m) mlCloseCfg(); });
+      xlModalGuard(m, mlCloseCfg);
       document.body.appendChild(m);
       return m;
     }
@@ -11800,7 +11800,7 @@
           <div id="hoImpList" class="flex-1 overflow-y-auto px-5 py-3 space-y-2" style="overflow-y:auto"></div>
           <div id="hoImpFoot" class="px-5 py-3 border-t border-gray-100 flex gap-2"></div>
         </div>`;
-      m.addEventListener('mousedown', (e) => { if (e.target === m) hoCloseImport(); });
+      xlModalGuard(m, hoCloseImport);
       document.body.appendChild(m);
       return m;
     }
@@ -14234,9 +14234,17 @@
           <div class="px-5 pt-4 pb-3 border-b border-gray-100 flex items-center gap-2"><h3 class="text-[16px] font-bold text-gray-900 flex-1">수정 기록 상세</h3><button type="button" onclick="isCloseLogDetail()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-600"><i class="ph-bold ph-x"></i></button></div>
           <div id="isLogBody" class="px-5 py-3 overflow-y-auto" style="overflow-y:auto"></div>
           <div id="isLogFoot" class="px-5 py-3 border-t border-gray-100 flex gap-2"></div></div>`;
-      m.addEventListener('mousedown', (e) => { if (e.target === m) isCloseLogDetail(); });
+      xlModalGuard(m, isCloseLogDetail);
       document.body.appendChild(m);
       return m;
+    }
+    function xlModalGuard(m, close) {                                   // 팝업 공통 : 바깥(어두운 곳)을 눌렀다 떼야 닫힘 · 창 안의 입력은 다른 기능에 넘기지 않음
+      let downOut = false;
+      m.addEventListener('pointerdown', (e) => { downOut = e.target === m; });
+      m.addEventListener('click', (e) => { if (downOut && e.target === m) close(); downOut = false; });
+      const box = m.firstElementChild;
+      if (box) ['mousedown', 'pointerdown', 'click', 'keydown', 'keyup', 'input'].forEach(t => box.addEventListener(t, (e) => { if (!(t === 'keydown' && e.key === 'Escape')) e.stopPropagation(); }));
+      m.style.pointerEvents = 'auto'; if (box) { box.style.pointerEvents = 'auto'; box.style.position = 'relative'; }
     }
     function isCloseLogDetail() { const m = isEl('isLogModal'); if (m) m.style.display = 'none'; }
     document.addEventListener('keydown', (e) => { const m = isEl('isLogModal'); if (e.key === 'Escape' && m && m.style.display === 'flex') isCloseLogDetail(); });
