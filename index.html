@@ -2359,7 +2359,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.058</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.059</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -11778,7 +11778,7 @@
       const qtyU = [r.qty, r.unit].map(v => String(v ?? '').trim()).filter(Boolean).join(' ');       // 수량 : 3 BOX
       const zone = /냉동/.test(String(r.temperature || '')) ? '냉동' : '냉장';      // 냉동 = 냉동 · 냉장 · 상온 = 냉장
       const text = minOrder
-        ? `○ 전달사항\n거래처명 : ${r.store_name || ''}\n제품명 : ${r.product_name || ''}\n수량 : ${qtyU}\n※ 최소주문금액 미달로 인한 미출고 예정입니다. / ${zone} 정상존에 보관 부탁드립니다.`
+        ? `○ 전달사항\n거래처명 : ${r.store_name || ''}\n제품명 : ${r.product_name || ''}\n수량 : ${qtyU}\n※ 최소주문금액 미달로 인한 미출고 예정입니다.\n※ ${zone} 정상존에 보관 부탁드립니다.`
         : `○ 전달사항\n매장명 : ${r.store_name || ''}\n제품명 : ${r.product_name || ''}\n수량 : ${qtyU}\n\n${r.detail || ''}`;
       return hoAdd(text, { c: 'red', b: 1 }, r.id, hoTomorrow());
     }
@@ -12285,6 +12285,23 @@
       }
       return homeDedupe(items, i => i.code + '|' + i.name, kw, 30);
     }
+    function isSugPlace(box, r) {                                       // 보이는 화면 안에 : 아래가 모자라면 칸 위로 · 오른쪽이 모자라면 왼쪽으로
+      const wrap = isEl('isWrap'); if (!wrap || !box) return;
+      box.style.maxHeight = ''; box.classList.remove('is-up');
+      const head = 34, gap = 2;
+      const visTop = wrap.scrollTop + head, visBot = wrap.scrollTop + wrap.clientHeight, visRight = wrap.scrollLeft + wrap.clientWidth;
+      const below = visBot - (r.y + r.h) - gap - 4, above = r.y - visTop - gap - 4;
+      const want = Math.min(260, box.scrollHeight);
+      if (want > below && above > below) {                              // 위로
+        const h = Math.max(80, Math.min(want, above));
+        box.style.maxHeight = h + 'px'; box.style.top = (r.y - gap - Math.min(h, box.scrollHeight)) + 'px'; box.classList.add('is-up');
+      } else {
+        box.style.maxHeight = Math.max(80, Math.min(260, below)) + 'px'; box.style.top = (r.y + r.h + gap) + 'px';
+      }
+      const bw = box.offsetWidth;
+      if (r.x + bw > visRight - 4) box.style.left = Math.max(wrap.scrollLeft + 4, visRight - bw - 4) + 'px';
+      const on = box.querySelector('.it.on'); if (on) on.scrollIntoView({ block: 'nearest' });
+    }
     function isSugRender() {
       const sg = isState.sug, ed = isState.edit;
       if (!sg || !ed) return;
@@ -12300,10 +12317,12 @@
         box.innerHTML = `<div class="px-2 pt-1 pb-1.5 text-[10.5px] font-bold text-gray-400">${svEsc(h)} 목록 — ${fx ? '이 중에서 골라 주세요' : '직접 입력도 돼요'}</div>`
           + (sg.items.length ? sg.items.map((it, i) => `<div class="it ${i === sg.idx ? 'on' : ''}" data-sug="${i}"><span class="flex-1 min-w-0 truncate font-bold text-gray-900">${svEsc(it.name)}</span></div>`).join('')
             : `<div class="px-2 pb-1.5 text-[11px] text-gray-400">목록이 비어 있어요. 데이터 관리 &gt; 사유 목록 &gt; 특이사항 관리에서 추가할 수 있어요.</div>`);
+        isSugPlace(box, r);
         return;
       }
       box.innerHTML = `<div class="px-2 pt-1 pb-1.5 text-[10.5px] font-bold text-gray-400">${sg.kind === 'store' ? '거래처 추천' : '제품 추천'}${ed.row && ed.row.delivery_date ? ` · ${svEsc(ed.row.delivery_date)} 배송일 기준` : ''} — 고르면 코드가 자동 입력됩니다</div>`
         + sg.items.map((it, i) => `<div class="it ${i === sg.idx ? 'on' : ''}" data-sug="${i}"><span class="flex-1 min-w-0 truncate font-bold text-gray-900">${svEsc(it.name)}</span><span class="font-mono text-[11px] text-[#007AFF] flex-none">${svEsc(it.code)}</span>${it.sub ? `<span class="text-[10.5px] text-gray-400 flex-none">${svEsc(it.sub)}</span>` : ''}</div>`).join('');
+      isSugPlace(box, r);
     }
     function isSugInput(all) {
       const ed = isState.edit; if (!ed) return;
