@@ -2362,7 +2362,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.064</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.065</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -12382,13 +12382,13 @@
         };
         const d = date ? ((store && await pick(true, true)) || await pick(false, true))          // 배송일이 있으면 그 배송일 자료만
                        : ((store && await pick(true, false)) || await pick(false, false));
-        let m = null;                                                    // 주문에 없으면 제품정보 업로드(product_master)로 보충
-        if (!d) {
-          const r = await supabaseClient.from('product_master').select('product_name,temperature,item_designation,stock_type').eq('product_code', code).order('updated_at', { ascending: false }).limit(1);
+        let m = null;                                                    // 주문에 없거나 단위가 비면 제품정보 업로드(product_master)로 보충
+        if (!d || !String(d.unit || '').trim()) {
+          const r = await supabaseClient.from('product_master').select('product_name,temperature,unit,item_designation,stock_type').eq('product_code', code).order('updated_at', { ascending: false }).limit(1);
           m = !r.error && r.data && r.data[0];
         }
-        res = d ? { found: true, product_name: d.product_name || IS_NODATA, temperature: d.temperature || '', unit: d.unit || '', item_designation: d.item_designation || '', stock_type: d.stock_type || '' }
-            : m ? { found: true, product_name: m.product_name || IS_NODATA, temperature: m.temperature || '', unit: '', item_designation: m.item_designation || '', stock_type: m.stock_type || '' }
+        res = d ? { found: true, product_name: d.product_name || IS_NODATA, temperature: d.temperature || '', unit: String(d.unit || '').trim() || (m && m.unit) || '', item_designation: d.item_designation || '', stock_type: d.stock_type || '' }
+            : m ? { found: true, product_name: m.product_name || IS_NODATA, temperature: m.temperature || '', unit: m.unit || '', item_designation: m.item_designation || '', stock_type: m.stock_type || '' }
                 : { found: false, product_name: IS_NODATA, temperature: '', unit: '', item_designation: '', stock_type: '' };
       } catch (e) { return null; }
       isState.cache.product.set(key, res);
