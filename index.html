@@ -2359,7 +2359,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.055</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.056</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -12664,11 +12664,11 @@
     // ===== 엑셀 사진 : 마우스를 올리면 크게 보기 (셀 메모에 사진 채우기 → 올리면 확대 · 벗어나면 사라짐) =====
     //  ExcelJS 가 만든 메모(VML)를 JSZip 으로 열어, 메모 배경을 큰 사진으로 바꾸고 크기를 정함
     const XL_JSZIP = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-    function xlHoverNote(ws, hovers, sheetName, row0, col0, zoom, wPx, hPx, anchor) {
+    function xlHoverNote(ws, hovers, sheetName, row0, col0, zoom, wPx, hPx, anchor, pos) {
       if (!zoom) return;
       const cell = ws.getRow(row0 + 1).getCell(col0 + 1);
       cell.note = { texts: [{ text: ' ' }] };
-      hovers.push({ sheet: sheetName, row0, col0, zoom, wPt: Math.round(wPx * 0.75), hPt: Math.round(hPx * 0.75), anchor });
+      hovers.push({ sheet: sheetName, row0, col0, zoom, wPt: Math.round(wPx * 0.75), hPt: Math.round(hPx * 0.75), anchor, leftPt: pos && pos.leftPt, topPt: pos && pos.topPt });
     }
     function xlXmlAttr(tag, name) { const m = new RegExp(`\\s${name.replace(':', '\\:')}="([^"]*)"`).exec(tag); return m ? m[1] : null; }
     function xlPathJoin(base, target) {
@@ -12710,7 +12710,7 @@
           const fill = `<${P}:fill xmlns:o="urn:schemas-microsoft-com:office:office" o:relid="${rid}" o:title="" recolor="t" rotate="t" type="frame"/>`;
           const fSelf = new RegExp(`<${P}:fill\\b[^>]*?\\/>`), fFull = new RegExp(`<${P}:fill\\b[\\s\\S]*?<\\/${P}:fill>`), open = new RegExp(`(<${P}:shape\\b[^>]*>)`);
           let s2 = fSelf.test(sh) ? sh.replace(fSelf, fill) : fFull.test(sh) ? sh.replace(fFull, fill) : sh.replace(open, `$1${fill}`);
-          s2 = s2.replace(new RegExp(`(<${P}:shape\\b[^>]*style=)(["'])([^"']*)\\2`), (m, a, q, st) => a + q + st.replace(/width:[^;]*/, `width:${h.wPt}pt`).replace(/height:[^;]*/, `height:${h.hPt}pt`) + q);
+          s2 = s2.replace(new RegExp(`(<${P}:shape\\b[^>]*style=)(["'])([^"']*)\\2`), (m, a, q, st) => { st = st.replace(/width:[^;]*/, `width:${h.wPt}pt`).replace(/height:[^;]*/, `height:${h.hPt}pt`); if (h.leftPt != null) st = st.replace(/margin-left:[^;]*/, `margin-left:${h.leftPt}pt`).replace(/margin-top:[^;]*/, `margin-top:${h.topPt}pt`); return a + q + st + q; });
           if (h.anchor) {
             const an = /<((?:\w+:)?)Anchor>[\s\S]*?<\/(?:\w+:)?Anchor>/;
             if (an.test(s2)) s2 = s2.replace(an, (m, X) => `<${X}Anchor>${h.anchor.join(', ')}</${X}Anchor>`);
@@ -12798,8 +12798,17 @@
       zip.file('[Content_Types].xml', ct);
       return zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
     }
+    async function xlStripPrivacy(buf) {                               // ExcelJS 가 켜 두는 '저장 시 개인 정보 제거'를 끔 → 저장 때 경고 없음
+      const zip = await window.JSZip.loadAsync(buf);
+      const f = zip.file('xl/workbook.xml'); if (!f) return buf;
+      const x = await f.async('string'), y = x.replace(/\sfilterPrivacy="[^"]*"/g, '');
+      if (x === y) return buf;
+      zip.file('xl/workbook.xml', y);
+      return zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+    }
     async function xlFinish(wb, name, hovers, mac) {
       let buf = await wb.xlsx.writeBuffer();
+      try { await costLoadScript(XL_JSZIP); if (window.JSZip) buf = await xlStripPrivacy(buf); } catch (e) { console.warn('개인 정보 설정을 바꾸지 못함:', e); }
       if (hovers && hovers.length) {
         try { await costLoadScript(XL_JSZIP); if (!window.JSZip) throw new Error('JSZip 없음'); buf = await xlInjectHover(buf, hovers); }
         catch (e) { console.warn('사진 확대 메모를 넣지 못함(사진은 그대로):', e); }
@@ -12897,10 +12906,11 @@
       xlBox(ws, 4, 3, 4 + rows.length * 4, two ? 10 : 7);
       await xlFinish(wb, name, hovers, { nsheets: 1, buttons: [{ sheet: '웰스토리', col: 7, row: 1, x1: 2, y1: 3, x2: 52, y2: 29 }] });   // H2 '사진' 버튼
     }
-    const XL_ISS_W = [10.5, 8.5, 16.13, 10.25, 20.88, 12, 50.75, 5.5, 6.25, 6.38, 6.38, 6.5, 8.25, 32.75, 8];
+    const XL_ISS_W = [10.5, 8.5, 16.13, 10.25, 20.88, 12, 50.75, 5.5, 6.25, 6.38, 6.88, 6.5, 8.25, 32.75, 8];   // K(재고타입) 6.88
     const XL_ISS_PH = 60;                                              // 사진 행 높이(pt)
     const XL_ISS_BOX = { w: xlColPx(8), h: Math.round(XL_ISS_PH * 4 / 3) };
     const XL_ISS_ZOOM = { w: XL_ISS_W.slice(7, 15).reduce((a, w) => a + xlColPx(w), 0), h: Math.round((12.75 + XL_ISS_PH * 7) * 4 / 3) };   // H2~O9
+    const XL_ISS_H2 = { leftPt: Math.round(XL_ISS_W.slice(0, 7).reduce((a, w) => a + xlColPx(w), 0) * 0.75 * 100) / 100, topPt: 30 };   // H2 왼쪽 위 (pt)
     const XL_DIS_ZH = 2;                                               // 유통물류 : 마우스 올리면 뜨는 확대 사진만 세로 2배 (행 높이는 그대로)
     const xlZoomAnchor = (ph, zh) => { const need = (12.75 + 420) * (zh || 1) - 12.75, n = Math.floor(need / ph), rem = Math.round((need - n * ph) * 4 / 3); return [7, 0, 1, 0, 15, 0, 2 + n, rem]; };   // 약 H2~O9 (세로 zh배)
     function xlIssueSheet(wb, rows, imgs, title, sheetName, hovers, ph, zh) {
@@ -12925,12 +12935,13 @@
         ((imgs && imgs.get(r.id)) || []).slice(0, two ? 2 : 1).forEach((img, k) => {          // O(·P) 칸에 꽉 맞춤
           const id = wb.addImage({ buffer: img.buf, extension: 'jpeg' });
           ws.addImage(id, { tl: { col: 14 + k, row: n - 1 }, br: { col: 15 + k, row: n }, editAs: 'twoCell' });
-          if (hovers && img.zoom) xlHoverNote(ws, hovers, sheetName, n - 1, 14 + k, img.zoom, XL_ISS_ZOOM.w, XL_ISS_ZOOM.h * (zh || 1), xlZoomAnchor(PH, zh));   // 확대 : 약 H2~O9
+          if (hovers && img.zoom) xlHoverNote(ws, hovers, sheetName, n - 1, 14 + k, img.zoom, XL_ISS_ZOOM.w, XL_ISS_ZOOM.h * (zh || 1), xlZoomAnchor(PH, zh), XL_ISS_H2);   // 확대 : H2 부터 (사진 왼쪽)
         });
       });
       const lastC = two ? 16 : 15;
       xlBox(ws, 2, 1, 2, lastC);
       if (rows.length) xlBox(ws, 3, 1, 2 + rows.length, lastC, { shrink: true });
+      for (let n = 3; n < 3 + rows.length; n++) ws.getRow(n).getCell(14).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };   // N : 상세내용은 자동 줄바꿈
       return { ws, boxW, boxH };
     }
     async function xlDistrib(rows, name, scope) {
