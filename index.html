@@ -828,7 +828,7 @@
           <button type="button" onclick="muUpload('Store')" class="ios-btn-tap py-3 bg-[#007AFF] active:bg-[#0062CC] text-white font-semibold rounded-xl text-[14px] shadow-md shadow-blue-500/25 flex items-center justify-center gap-1.5"><i class="ph-bold ph-cloud-arrow-up text-base"></i>업로드</button>
         </div>
       </div>
-      <div id="paneUploadProduct" class="hidden flex-1 min-h-0 flex flex-col bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
+      <div id="paneUploadProduct" class="hidden flex-1 min-h-0 flex flex-col overflow-y-auto bg-white rounded-[22px] border border-gray-200/80 ios-card-shadow p-4">
         <div class="flex items-center space-x-2.5 pb-3 mb-3 border-b border-gray-100 min-w-0">
           <div class="w-8 h-8 rounded-xl bg-purple-50 text-[#AF52DE] flex items-center justify-center flex-shrink-0"><i class="ph-bold ph-package text-lg"></i></div>
           <div class="min-w-0"><h3 class="text-[16px] font-bold text-gray-900 tracking-tight">제품정보 업로드</h3><p id="muProductMeta" class="text-[11px] text-gray-500 whitespace-nowrap overflow-hidden text-ellipsis">불러오는 중…</p></div>
@@ -836,6 +836,15 @@
         <div class="mb-3 p-3 bg-gray-50 border border-gray-200/80 rounded-2xl text-[12px] text-gray-700 leading-relaxed">
           <div class="flex flex-wrap gap-1.5 mb-1.5"><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">A</b> 제품코드</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">B</b> 제품명</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">C</b> 품목지정</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">D</b> 고객사</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">E</b> 온도구분</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">F</b> 재고타입</span><span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-mono text-[11px]"><b class="text-[#007AFF]">G</b> 단위</span></div>
           <span class="block text-[11.5px] text-gray-500">제품코드 + 고객사가 같으면 덮어쓰고, 다르면 새 제품으로 쌓입니다. 첫 줄이 제목이면 자동으로 건너뜁니다. 행이 많으면 엑셀/CSV 파일을 바로 선택하는 것이 빠릅니다.</span>
+        </div>
+        <div id="mpSearchBox" class="mb-3 p-3 bg-white border border-gray-200 rounded-2xl">
+          <div class="flex items-center gap-1.5 mb-2"><i class="ph-bold ph-magnifying-glass text-[#AF52DE]"></i><span class="text-[13px] font-bold text-gray-900">등록된 제품 검색 · 수정</span></div>
+          <div class="flex gap-1.5">
+            <input id="mpQClient" oninput="mpSearchSoon()" placeholder="고객사 (선택)" autocomplete="off" class="w-[34%] min-w-0 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[12.5px]">
+            <input id="mpQ" oninput="mpSearchSoon()" placeholder="제품코드 · 제품명 · 고객사" autocomplete="off" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[12.5px]">
+          </div>
+          <div id="mpInfo" class="mt-1.5 text-[11px] text-gray-400">고객사를 입력하면 그 고객사 제품 중에서만 찾아요. 이름이 비슷한 제품도 추천해요.</div>
+          <div id="mpList" class="mt-1.5 max-h-[260px] overflow-y-auto"></div>
         </div>
         <div class="flex-1 flex flex-col min-h-[220px] mb-3">
           <div class="flex justify-between items-center text-[12px] text-gray-500 mb-1 px-1 gap-2"><span>엑셀에서 복사해 붙여넣거나 파일을 선택하세요</span><span id="uploadProductStats" class="font-mono text-gray-400 whitespace-nowrap">0행 (0자)</span></div>
@@ -2362,7 +2371,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.065</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.066</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -16693,6 +16702,85 @@
       muRefreshMeta(key);
       try { isState.cache.store.clear(); isState.cache.product.clear(); } catch (e) {}
       showModal('저장 완료', { html: `${svEsc(spec.label)} <b>${rows.length.toLocaleString()}건</b>을 반영했습니다.<div style="margin-top:8px;font-size:12.5px;text-align:left;line-height:1.7">· 신규 등록 <b>${added.toLocaleString()}건</b><br>· 기존 정보 덮어쓰기 <b>${(rows.length - added).toLocaleString()}건</b>${errors.length ? `<br>· 코드가 비어 제외 <b>${errors.length}건</b>` : ''}${grid.length - errors.length > rows.length ? `<br>· 같은 파일 안 중복 정리 <b>${(grid.length - errors.length - rows.length).toLocaleString()}건</b>` : ''}</div>` });
+    }
+    // ===== 제품정보 검색 · 추천 · 수정 (product_master) =====
+    const mpSt = { seq: 0, timer: null, rows: [] };
+    const MP_FIELDS = [['product_code', '제품코드'], ['product_name', '제품명'], ['item_designation', '품목지정'], ['client', '고객사'], ['temperature', '온도구분'], ['stock_type', '재고타입'], ['unit', '단위']];
+    function mpClean(v) { return String(v || '').replace(/[,()"\\%_*]/g, ' ').replace(/\s+/g, ' ').trim(); }
+    function mpSearchSoon() { clearTimeout(mpSt.timer); mpSt.timer = setTimeout(mpSearch, 250); }
+    async function mpSearch() {
+      const list = isEl('mpList'), info = isEl('mpInfo'); if (!list || !supabaseClient) return;
+      const cli = mpClean(isEl('mpQClient').value), kw = mpClean(isEl('mpQ').value);
+      const seq = ++mpSt.seq;
+      if (!cli && !kw) { list.innerHTML = ''; info.textContent = '고객사를 입력하면 그 고객사 제품 중에서만 찾아요. 이름이 비슷한 제품도 추천해요.'; return; }
+      const COLS = 'id,product_code,product_name,item_designation,client,temperature,stock_type,unit';
+      const base = () => { let q = supabaseClient.from('product_master').select(COLS); if (cli) q = q.ilike('client', '%' + cli + '%'); return q; };
+      let rows = [], similar = false;
+      try {
+        if (!kw) { const r = await base().order('product_name').limit(100); rows = r.data || []; }
+        else {
+          const words = kw.split(' ').filter(Boolean), pat = '%' + words.join('%') + '%';
+          const ors = [`product_code.ilike.%${kw}%`, `product_name.ilike.${pat}`]; if (!cli) ors.push(`client.ilike.%${kw}%`);
+          const r = await base().or(ors.join(',')).limit(100); rows = r.data || [];
+          if (!rows.length) {                                          // 비슷한 이름 추천 : 낱말 하나씩 · 두 글자씩 나눠 찾고 많이 겹치는 순으로
+            const parts = [...new Set(words.flatMap(w => w.length > 2 ? [w, ...Array.from({ length: w.length - 1 }, (_, i) => w.slice(i, i + 2))] : [w]))].filter(x => x.length >= 2 || /\d/.test(x)).slice(0, 12);
+            if (parts.length) {
+              const r2 = await base().or(parts.map(x => `product_name.ilike.%${x}%`).join(',')).limit(300);
+              const score = (n) => parts.reduce((a, x) => a + (String(n || '').includes(x) ? x.length : 0), 0);
+              rows = (r2.data || []).map(x => [x, score(x.product_name)]).sort((a, b) => b[1] - a[1]).slice(0, 50).map(a => a[0]);
+              similar = rows.length > 0;
+            }
+          }
+        }
+      } catch (e) { rows = []; }
+      if (seq !== mpSt.seq) return;
+      mpSt.rows = rows;
+      info.textContent = rows.length ? `${similar ? '딱 맞는 제품이 없어 비슷한 제품을 추천해요 · ' : ''}${rows.length >= 100 ? '100건 이상 · 검색어를 더 입력해 주세요' : rows.length + '건'}${cli ? ` · 고객사 '${cli}' 안에서` : ''}` : `찾는 제품이 없어요${cli ? ` (고객사 '${cli}' 안에서)` : ''}.`;
+      list.innerHTML = rows.map((r, i) => `<div class="flex items-center gap-2 px-2 py-1.5 border-t border-gray-100 text-[12px]">
+          <span class="flex-none font-mono text-[11px] text-[#007AFF]">${svEsc(r.product_code || '')}</span>
+          <span class="flex-1 min-w-0 truncate font-semibold text-gray-900">${svEsc(r.product_name || '')}</span>
+          <span class="flex-none text-[11px] text-gray-500 truncate max-w-[40%]">${svEsc([r.client, r.temperature, r.stock_type, r.unit].filter(Boolean).join(' · '))}</span>
+          <button type="button" onclick="mpOpenEdit(${i})" class="flex-none ios-btn-tap px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-[#007AFF] text-[11.5px] font-bold">수정</button></div>`).join('');
+    }
+    function mpModalEl() {
+      let m = isEl('mpEditModal'); if (m) return m;
+      m = document.createElement('div'); m.id = 'mpEditModal';
+      m.style.cssText = 'position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px';
+      m.innerHTML = `<div style="background:#fff;border-radius:24px;width:100%;max-width:440px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden" class="shadow-2xl">
+          <div class="px-5 pt-4 pb-3 border-b border-gray-100 flex items-center gap-2"><h3 class="text-[16px] font-bold text-gray-900 flex-1">제품정보 수정</h3><button type="button" onclick="mpCloseEdit()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-600"><i class="ph-bold ph-x"></i></button></div>
+          <div class="px-5 py-4 space-y-2.5" style="overflow-y:auto">${MP_FIELDS.map(([k, h]) => `<div><div class="text-[12px] font-bold text-gray-600 mb-1">${h}${k === 'product_code' ? ' <span class="text-[#FF3B30]">*</span>' : ''}</div><input id="mpE_${k}" autocomplete="off" style="display:block;width:100%" class="px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px]"></div>`).join('')}
+            <div class="text-[11px] text-gray-400">제품코드 + 고객사가 다른 제품과 같아지면 저장할 수 없어요.</div></div>
+          <div class="px-5 py-3 border-t border-gray-100 flex gap-2">
+            <button type="button" onclick="mpCloseEdit()" class="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-[13.5px] font-bold">취소</button>
+            <button type="button" onclick="mpSaveEdit()" class="flex-[2] py-2.5 rounded-xl bg-[#007AFF] text-white text-[13.5px] font-bold">저장</button>
+          </div></div>`;
+      xlModalGuard(m, mpCloseEdit);
+      document.body.appendChild(m);
+      return m;
+    }
+    function mpOpenEdit(i) {
+      const r = mpSt.rows[i]; if (!r) return;
+      const m = mpModalEl(); m.dataset.id = r.id;
+      MP_FIELDS.forEach(([k]) => { isEl('mpE_' + k).value = r[k] || ''; });
+      m.style.display = 'flex'; setTimeout(() => isEl('mpE_product_name').focus(), 30);
+    }
+    function mpCloseEdit() { const m = isEl('mpEditModal'); if (m) m.style.display = 'none'; }
+    async function mpSaveEdit() {
+      const m = isEl('mpEditModal'); if (!m || !supabaseClient) return;
+      const v = {}; MP_FIELDS.forEach(([k]) => { v[k] = isEl('mpE_' + k).value.trim(); });
+      if (!v.product_code) { showToastNotification('입력 확인', '제품코드는 비워 둘 수 없어요.', 'warning'); return; }
+      showBusy('제품정보 저장 중...');
+      const { error } = await supabaseClient.from('product_master').update({ ...v, updated_at: new Date().toISOString() }).eq('id', +m.dataset.id);
+      hideBusy();
+      if (error) {
+        const dup = /duplicate|unique|23505/i.test(String(error.message || error.code || ''));
+        showModal('저장 실패', dup ? `제품코드 '${v.product_code}' + 고객사 '${v.client}' 제품이 이미 있어요. 다른 값으로 바꿔 주세요.` : dbErrorMessage(error));
+        return;
+      }
+      try { isState.cache.product.clear(); } catch (e) {}
+      mpCloseEdit();
+      showToastNotification('제품정보', `${v.product_name || v.product_code} 저장했어요.`, 'success');
+      mpSearch();
     }
     function clearUploadText(taId, statId) {
       document.getElementById(taId).value = '';
