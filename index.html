@@ -476,6 +476,9 @@
     button { min-width: 0; max-width: 100%; }
     .no-scrollbar > button, .no-scrollbar > a { flex-shrink: 0; }
     input, select { min-width: 0; text-overflow: ellipsis; }
+    #mlCfgModal label { white-space: normal; overflow: visible; text-overflow: clip; }
+    #mlCfgModal label > span { white-space: normal; }
+    #mlCfgModal textarea, #mlCfgModal input { display: block; }
     header > div { min-width: 0; }
     #headerPageTitle { max-width: calc(100vw - 170px); }
     button.segment-tab { font-size: clamp(10.5px, 3.1vw, 13px) !important; }
@@ -2359,7 +2362,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.062</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.063</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -10772,6 +10775,7 @@
           <div class="ml-auto flex items-center gap-1.5">
             <div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[13px]"></i><input id="mlQ" value="${svEsc(mlSt.q)}" oninput="mlFilter(this.value)" placeholder="이름 · 메일주소 검색" class="pl-7 pr-2 py-1.5 w-[180px] rounded-xl bg-gray-50 border border-gray-200 text-[12px]"></div>
             <button type="button" onclick="mlToggleUpload()" class="ios-btn-tap px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-[#007AFF] text-[12px] font-bold"><i class="ph-bold ph-upload-simple"></i> 업로드 등록</button>
+            <button type="button" onclick="mlDelAll()" class="ios-btn-tap px-3 py-1.5 rounded-xl bg-white border border-red-200 text-[#FF3B30] text-[12px] font-bold ${mlSt.rows.length ? '' : 'opacity-40 pointer-events-none'}"><i class="ph-bold ph-trash"></i> 전체삭제</button>
             <button type="button" onclick="mlOpenCfg()" class="ios-btn-tap w-8 h-8 rounded-xl bg-white border border-gray-200 text-gray-600 flex items-center justify-center" title="메일 설정 (제목 · 내용 · 표 간격)"><i class="ph-bold ph-gear-six text-[15px]"></i></button>
           </div>
         </div>
@@ -10818,14 +10822,14 @@
           <div class="px-5 pt-4 pb-3 border-b border-gray-100 flex items-center gap-2"><h3 class="text-[16px] font-bold text-gray-900 flex-1">메일 설정</h3><button type="button" onclick="mlCloseCfg()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-600"><i class="ph-bold ph-x"></i></button></div>
           <div class="px-5 py-4 space-y-3 overflow-y-auto" style="overflow-y:auto">
             <label class="block"><span class="text-[12.5px] font-bold text-gray-600">메일 제목</span>
-              <div class="mt-1 flex items-center gap-1.5"><span class="flex-none px-2 py-2 rounded-xl bg-gray-100 text-[12px] text-gray-500 font-mono" title="보내는 날의 날짜가 자동으로 붙어요">yymmdd</span><input id="mlCfgSubject" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px]"></div>
+              <div class="mt-1 flex items-center gap-1.5"><span class="flex-none px-2 py-2 rounded-xl bg-gray-100 text-[12px] text-gray-500 font-mono" title="보내는 날의 날짜가 자동으로 붙어요">yymmdd</span><input id="mlCfgSubject" style="display:block" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px]"></div>
               <span class="block mt-1 text-[11px] text-gray-400">제목 앞에 오늘 날짜(예: 261118)가 자동으로 붙어요.</span></label>
             <label class="block"><span class="text-[12.5px] font-bold text-gray-600">메일 내용</span>
-              <textarea id="mlCfgBody" rows="9" class="mt-1 w-full px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px] leading-relaxed"></textarea>
+              <textarea id="mlCfgBody" rows="9" style="display:block;width:100%;white-space:pre-wrap" class="mt-1 w-full px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px] leading-relaxed"></textarea>
               <span class="block mt-1 text-[11px] text-gray-500 leading-relaxed"><b class="text-[#007AFF]">#[자료사진]</b> : 이 자리에 웰스토리 표(B2부터, 사진 2장이 있으면 J열까지 · 없으면 G열까지)가 그림으로 들어가요. 없으면 내용 맨 아래에 들어가요.<br>[[B]]굵게[[/B]] · [[C:#FF0000]]빨간 글씨[[/C]] 도 쓸 수 있어요.</span></label>
             <div class="grid grid-cols-2 gap-3">
-              <label class="block"><span class="text-[12.5px] font-bold text-gray-600">표 간격 (px)</span><input id="mlCfgGap" type="number" min="0" max="200" class="mt-1 w-full px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px]"><span class="block mt-1 text-[11px] text-gray-400">표 위쪽 빈 칸</span></label>
-              <label class="block"><span class="text-[12.5px] font-bold text-gray-600">표 아래 간격 (px)</span><input id="mlCfgGapB" type="number" min="0" max="200" class="mt-1 w-full px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px]"><span class="block mt-1 text-[11px] text-gray-400">표 아래쪽 빈 칸</span></label>
+              <label class="block"><span class="text-[12.5px] font-bold text-gray-600">표 간격 (px)</span><input id="mlCfgGap" type="number" style="display:block;width:100%" min="0" max="200" class="mt-1 w-full px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px]"><span class="block mt-1 text-[11px] text-gray-400">표 위쪽 빈 칸</span></label>
+              <label class="block"><span class="text-[12.5px] font-bold text-gray-600">표 아래 간격 (px)</span><input id="mlCfgGapB" type="number" style="display:block;width:100%" min="0" max="200" class="mt-1 w-full px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13px]"><span class="block mt-1 text-[11px] text-gray-400">표 아래쪽 빈 칸</span></label>
             </div>
           </div>
           <div class="px-5 py-3 border-t border-gray-100 flex gap-2">
@@ -10874,6 +10878,11 @@
       if (isNeedUser()) return;
       const r = mlSt.rows[i]; if (!r) return;
       showConfirmModal(async () => { await mlSave(mlSt.rows.filter((x, k) => k !== i), `삭제 · ${r.kind} ${r.name || ''} ${r.email}`); }, '메일 주소 삭제', `${svEsc(r.kind)} ${svEsc(r.name || '')} (${svEsc(r.email)})을(를) 삭제할까요?`);
+    }
+    function mlDelAll() {                                                // 메일 주소 전체 삭제
+      if (isNeedUser()) return;
+      const n = mlSt.rows.length; if (!n) return;
+      showConfirmModal(async () => { await mlSave([], `전체 삭제 · ${n}건`); }, '메일 주소 전체 삭제', `등록된 메일 주소 ${n}건을 모두 삭제할까요? 되돌릴 수 없어요.`);
     }
     async function mlUploadRun() {
       if (isNeedUser()) return;
