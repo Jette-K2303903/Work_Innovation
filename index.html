@@ -2376,7 +2376,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.067</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.068</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -2983,7 +2983,22 @@
 
     let supabaseClient = null;
     if (window.supabase && SUPABASE_URL !== 'https://YOUR_PROJECT_ID.supabase.co') {
-      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      // 조회(GET)가 응답 없이 멈추면 화면이 '불러오는 중'에 갇히므로 : 20초 시간 제한 + 네트워크 오류 시 2번까지 다시 시도
+      const sbFetch = async (input, init) => {
+        const method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+        const url = String(typeof input === 'string' ? input : (input && input.url) || '');
+        if (method !== 'GET' || !/\/rest\/v1\//.test(url)) return fetch(input, init);
+        let lastErr = null;
+        for (let k = 0; k < 3; k++) {
+          const ac = new AbortController(), outer = init && init.signal;
+          if (outer) { if (outer.aborted) ac.abort(); else outer.addEventListener('abort', () => ac.abort(), { once: true }); }
+          const timer = setTimeout(() => ac.abort(), 20000);
+          try { const res = await fetch(input, { ...(init || {}), signal: ac.signal }); clearTimeout(timer); if (res.status >= 500 && k < 2) { lastErr = new Error('server ' + res.status); await new Promise(r => setTimeout(r, 600 * (k + 1))); continue; } return res; }
+          catch (e) { clearTimeout(timer); lastErr = e; if (outer && outer.aborted) throw e; await new Promise(r => setTimeout(r, 600 * (k + 1))); }
+        }
+        throw lastErr;
+      };
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { fetch: sbFetch } });
     }
 
     // 1. 날짜 기본값 세팅
@@ -4107,7 +4122,7 @@
         ? (uhPendOnly ? uploadHistoryRecords.filter(r => r.status === 'delete_requested') : uploadHistoryRecords)
         : uploadHistoryRecords.filter(r => r.status !== 'delete_requested');
 
-      uploadHistoryCountBadge.textContent = uhPendOnly ? `삭제요청 ${displayRecords.length}건` : `총 ${displayRecords.length}건`;
+      uploadHistoryCountBadge.textContent = `총 ${displayRecords.length}건`;
       if (uploadHistoryPendingBadge) uploadHistoryPendingBadge.classList.add('hidden');
       if (incidentLoadState.status === 'ok' && isOffice) uhSetPendCount(deleteRequestedCount);
       uhPaintToggle(isOffice);
@@ -10519,6 +10534,7 @@
     const isEl = (id) => document.getElementById(id);
     const isVisible = () => !isEl('issueSheetViewArea').classList.contains('hidden');
     const isHomeOn = () => isVisible() && isState.tab === 'home';
+    const isCanPaint = () => isVisible() && !isEl('isHomePane').classList.contains('hidden') && isEl('isWrap').clientHeight > 0;
     const isToday = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
     function isColor(name) { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return IS_COLORS[h % IS_COLORS.length]; }
     function isShort(name) { const n = String(name || '?').trim(); return n.length >= 3 ? n.slice(-2) : n; }
@@ -12108,6 +12124,7 @@
     function isScrollBottom() { const w = isEl('isWrap'); w.scrollTop = w.scrollHeight; isRenderBody(); }
     // 위쪽에 행이 더해져도(옛 자료 불러오기) 보던 행이 그 자리에 있도록 유지하고 다시 그림
     function isRenderKeep(stickBottom) {
+      if (!isCanPaint()) { isState.dirty = true; return; }               // 다른 화면 · 다른 탭에 있는 동안은 나중에 그림
       const w = isEl('isWrap'), v = isState.view || [];
       let anchor = null;
       if (!stickBottom && v.length) {
@@ -12119,6 +12136,8 @@
       if (anchor && isState.viewIdx.has(anchor.id)) { w.scrollTop = IS_HEAD_H + isState.offs[isState.viewIdx.get(anchor.id)] + anchor.off; isRenderBody(); }
     }
     function isRender() {
+      if (!isCanPaint()) { isState.dirty = true; try { if (isVisible()) isRenderMeta(); } catch (e) {} return; }
+      isState.dirty = false;
       if (!isEl('isHead').children.length) isRenderStatic();
       // 그리기 전에 맨 아래였거나(대부분), 저장 · 필터처럼 맨 아래로 가야 하는 경우 → 그린 뒤 맨 아래로
       const w0 = isEl('isWrap'), hadView = (isState.view || []).length > 0;
@@ -12135,6 +12154,7 @@
     }
     function isRenderBottom() { isState.forceBottom = true; isRender(); }
     function isRenderBody() {
+      if (!isCanPaint()) { isState.dirty = true; return; }
       const rows = isState.view || [];
       const body = isEl('isBody');
       if (!rows.length) {
@@ -12199,8 +12219,16 @@
       isState.peers.forEach(p => { if (p.name && p.name !== isState.me) by.set(p.name, p); });
       const list = (isState.me ? [{ name: isState.me, me: true }] : []).concat([...by.values()]);
       const show = list.slice(0, 5);
-      box.innerHTML = show.map(p => `<div class="is-ava ${p.me ? 'is-me' : ''}" style="background:${isColor(p.name)};--c:${isColor(p.name)}" title="${svEsc(p.name)}${p.me ? ' (나)' : ' · 접속 중'}">${svEsc(isShort(p.name))}</div>`).join('')
-        + (list.length > 5 ? `<div class="is-ava" style="background:#8E8E93" title="${svEsc(list.slice(5).map(p => p.name).join(', '))}">+${list.length - 5}</div>` : '');
+      const tabName = (t) => t === 'home' || !t ? '홈' : ((isAllTabs().find(x => x.id === t) || {}).name || t);
+      box.innerHTML = show.map(p => `<div class="is-ava ${p.me ? 'is-me' : ''}" ${p.me ? '' : `data-peer="${svEsc(p.cid)}" role="button"`} style="background:${isColor(p.name)};--c:${isColor(p.name)};${p.me ? '' : 'cursor:pointer'}" title="${svEsc(p.name)}${p.me ? ' (나)' : ` · '${svEsc(tabName(p.tab))}' 보는 중 · 누르면 같은 화면으로 이동`}">${svEsc(isShort(p.name))}</div>`).join('')
+        + (list.length > 5 ? `<div class="is-ava" data-peer-more="1" role="button" style="background:#8E8E93;cursor:pointer" title="${svEsc(list.slice(5).map(p => p.name).join(', '))}">+${list.length - 5}</div>` : '');
+      if (!box._peerClick) {
+        box._peerClick = true;
+        box.addEventListener('click', (e) => {
+          const a = e.target.closest('[data-peer]'); if (a) { isFollowPeer(a.dataset.peer); return; }
+          const more = e.target.closest('[data-peer-more]'); if (more) isOpenPeerPop(more);
+        });
+      }
       const btn = isEl('isMeBtn');
       btn.textContent = isState.me ? '사용자 변경' : '사용자 선택';
       btn.className = 'ios-btn-tap px-3 py-1.5 rounded-xl text-[12px] font-bold whitespace-nowrap ' + (isState.me ? 'bg-gray-100 text-gray-700' : 'bg-[#007AFF] text-white');
@@ -13660,7 +13688,50 @@
     //  → 연결이 잠시 끊겼다 붙거나 presence 동기화가 늦어도, 먼저 들어온 사람에게 나중에 들어온 사람이 새로고침 없이 보이도록
     let isTrackTimer = null, isBeatTimer = null, isRejoinTimer = null;
     function isTabSelOf() { const o = {}; if (isState.tab !== 'home' && isTabSt.tab) isListsOf(isAllTabs().find(t => t.id === isTabSt.tab) || { id: isTabSt.tab }).forEach(l => { const L = isTabSt.lists && isTabSt.lists[l.key]; if (L && L.checked && L.checked.size) o[l.key] = [...L.checked].slice(0, 300); }); return o; }
-    function isMyPresence() { return { cid: isState.cid, name: isState.me, sel: isIdle.on ? null : isState.sel, editing: isIdle.on ? false : !!isState.edit, idle: isIdle.on, at: Date.now(), tab: isState.tab || 'home', tsel: isIdle.on ? {} : isTabSelOf() }; }
+    function isMyView() {                                                 // 내가 보고 있는 위치 : 홈은 맨 위에 보이는 행, 다른 탭은 스크롤 위치
+      try {
+        if ((isState.tab || 'home') === 'home') { const w = isEl('isWrap'), v = isState.view || []; if (!v.length || !w.clientHeight) return {}; const i = Math.min(v.length - 1, isIdxAt(Math.max(0, w.scrollTop - IS_HEAD_H))); return { top: v[i] && v[i].id, bottom: isAtBottom() }; }
+        return { sy: Math.round(isEl('isTabPane').scrollTop || 0) };
+      } catch (e) { return {}; }
+    }
+    function isMyPresence() { return { cid: isState.cid, name: isState.me, sel: isIdle.on ? null : isState.sel, editing: isIdle.on ? false : !!isState.edit, idle: isIdle.on, at: Date.now(), tab: isState.tab || 'home', tsel: isIdle.on ? {} : isTabSelOf(), view: isMyView() }; }
+    function isFindPeer(cid) { return isState.peers.find(p => p.cid === cid) || null; }
+    function isFollowPeer(cid) {
+      isClosePeerPop();
+      const p = isFindPeer(cid);
+      if (!p) { showToastNotification('접속자', '지금은 접속해 있지 않아요.', 'info'); return; }
+      const tab = p.tab || 'home';
+      if (tab !== 'home' && !isAllTabs().some(t => t.id === tab)) { showToastNotification('접속자', `${p.name} 님이 보고 있는 탭을 찾지 못했어요.`, 'warning'); return; }
+      if (isState.edit) isCommit(isState.edit.el.value, null);
+      if (isState.tab !== tab) isSwitchTab(tab);
+      const v = p.view || {};
+      const go = (last) => {
+        const q = isFindPeer(cid) || p, vv = q.view || v;
+        if (tab === 'home') {
+          const w = isEl('isWrap');
+          if (vv.bottom) isScrollBottom();
+          else if (vv.top != null && isState.viewIdx && isState.viewIdx.has(vv.top)) { w.scrollTop = IS_HEAD_H + isState.offs[isState.viewIdx.get(vv.top)]; isRenderBody(); }
+          if (q.sel) { const td = isTd(q.sel.id, q.sel.col); if (td) isEnsureVisible(td); else if (last && isState.viewIdx && !isState.viewIdx.has(q.sel.id)) showToastNotification('접속자', `${p.name} 님이 선택한 행이 내 필터 때문에 안 보여요.`, 'info'); }
+          isDrawLayer();
+        } else if (vv.sy != null) isEl('isTabPane').scrollTop = vv.sy;
+      };
+      requestAnimationFrame(() => go(false)); setTimeout(() => go(false), 350); setTimeout(() => go(true), 900);   // 탭 내용이 늦게 그려져도 맞춰지도록
+      const tabName = tab === 'home' ? '홈' : ((isAllTabs().find(t => t.id === tab) || {}).name || tab);
+      showToastNotification('접속자 화면', `${p.name} 님이 보고 있는 '${tabName}' 화면으로 이동했어요.`, 'success');
+    }
+    function isClosePeerPop() { const m = isEl('isPeerPop'); if (m) m.remove(); }
+    document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('#isPeerPop [data-peer]'); if (b) isFollowPeer(b.dataset.peer); });
+    function isOpenPeerPop(anchor) {
+      isClosePeerPop();
+      const by = new Map(); isState.peers.forEach(p => { if (p.name && p.name !== isState.me) by.set(p.name, p); });
+      const list = [...by.values()]; if (!list.length) return;
+      const r = anchor.getBoundingClientRect(), m = document.createElement('div'); m.id = 'isPeerPop';
+      m.style.cssText = `position:fixed;z-index:90;top:${Math.round(r.bottom + 6)}px;left:${Math.round(Math.max(8, r.left - 120))}px;min-width:200px;background:#fff;border:1px solid #E5E5EA;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.15);padding:6px`;
+      const tabName = (t) => t === 'home' || !t ? '홈' : ((isAllTabs().find(x => x.id === t) || {}).name || t);
+      m.innerHTML = `<div class="px-2 py-1 text-[11px] text-gray-400">누르면 그 사람 화면으로 이동해요</div>` + list.map(p => `<button type="button" data-peer="${svEsc(p.cid)}" class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 text-left"><span class="is-ava" style="background:${isColor(p.name)};width:24px;height:24px;font-size:10px">${svEsc(isShort(p.name))}</span><span class="flex-1 min-w-0 truncate text-[13px] font-semibold text-gray-900">${svEsc(p.name)}</span><span class="text-[11px] text-gray-500">${svEsc(tabName(p.tab))}${p.idle ? ' · 자리 비움' : ''}</span></button>`).join('');
+      document.body.appendChild(m);
+      setTimeout(() => document.addEventListener('pointerdown', function h(e) { if (!m.contains(e.target)) { isClosePeerPop(); document.removeEventListener('pointerdown', h, true); } }, true), 0);
+    }
     const IS_IDLE_MS = 30 * 60 * 1000;
     const isIdle = { on: false, last: Date.now() };
     function isActivity() {
@@ -13813,7 +13884,17 @@
           else { const c = isState.rows[i]; if (!c.updated_at || !r.updated_at || r.updated_at >= c.updated_at) isState.rows[i] = r; }
         });
       };
-      const first = await page(0);
+      const pageTry = async (from) => {                                  // 잠깐 끊겨도 3번까지 다시 시도
+        let r = null;
+        for (let k = 0; k < 3; k++) {
+          try { r = await page(from); } catch (e) { r = { data: null, error: e }; }
+          if (!r.error || seq !== isLoadSeq) return r;
+          if (r.error && (r.error.code === 'PGRST205' || r.error.code === '42P01')) return r;
+          await new Promise(res => setTimeout(res, 700 * (k + 1)));
+        }
+        return r;
+      };
+      const first = await pageTry(0);
       const err = first.error || null;
       if (!err) {
         if (seq !== isLoadSeq) return;
@@ -13824,22 +13905,25 @@
         isState.loadedN = got.size;
         isState.missing = false; isEl('isNotice').classList.add('hidden');
         isRenderKeep(stick);
+        let complete = !isState.loadingAll;
         if (isState.loadingAll) {
           for (let from = PAGE; from < MAX; from += PAGE) {
             await new Promise(r => setTimeout(r, 30));          // 화면이 멈추지 않도록 잠깐씩 쉬면서
             if (seq !== isLoadSeq) return;
-            const { data, error } = await page(from);
-            if (error || seq !== isLoadSeq) break;
+            const { data, error } = await pageTry(from);
+            if (seq !== isLoadSeq) return;
+            if (error) { showToastNotification('특이사항 불러오기', '일부를 불러오지 못했어요. 잠시 뒤 다시 불러올게요.', 'warning'); setTimeout(() => { if (isVisible() && seq === isLoadSeq) isLoad(); }, 8000); break; }
             mergeIn(data);
             isState.loadedN = got.size;
-            isRenderKeep(isAtBottom());
-            if (!data || data.length < PAGE) break;
+            if (isCanPaint()) isRenderKeep(isAtBottom()); else isState.dirty = true;
+            if (!data || data.length < PAGE) { complete = true; break; }
           }
         }
         if (seq !== isLoadSeq) return;
-        // 다 받은 뒤 : 서버에서 지워진 행 정리 (불러오는 동안 새로 생긴 행은 유지)
-        isState.rows = isState.rows.filter(r => !isState.gone.has(r.id) && (got.has(r.id) || (r.created_at && r.created_at >= startIso)));
+        // 끝까지 다 받았을 때만 : 서버에서 지워진 행 정리 (불러오는 동안 새로 생긴 행은 유지) → 중간에 끊겨도 보던 행이 사라지지 않음
+        if (complete) isState.rows = isState.rows.filter(r => !isState.gone.has(r.id) && (got.has(r.id) || (r.created_at && r.created_at >= startIso)));
         isState.loadingAll = false;
+        if (complete) isState.loadedAt = Date.now();
         isRenderKeep(isAtBottom());
         return;
       }
@@ -13848,8 +13932,8 @@
       const notice = isEl('isNotice');
       notice.classList.toggle('hidden', !isState.missing);
       if (isState.missing) notice.textContent = "특이사항을 저장할 표가 서버에 아직 없습니다. Supabase SQL Editor 에서 '특이사항관리_DB.sql' 을 실행해 주세요. (그 전에는 접속자 표시만 동작합니다)";
-      else if (err) showToastNotification('특이사항 불러오기 실패', dbErrorMessage(err), 'warning');
-      isState.loaded = true;
+      else if (err) { showToastNotification('특이사항 불러오기 실패', '잠시 뒤 자동으로 다시 불러올게요. (' + dbErrorMessage(err) + ')', 'warning'); setTimeout(() => { if (isVisible() && seq === isLoadSeq) isLoad(); }, 6000); }
+      isState.loaded = isState.loaded || isState.missing || !err;
       isRender();
     }
 
@@ -13970,6 +14054,18 @@
       });
     }, { passive: true, capture: true });
     window.addEventListener('resize', () => { if (!isEl('issueSheetViewArea').classList.contains('hidden')) isRenderSoon(); });
+    try {
+      let isRoH = 0;
+      new ResizeObserver(() => {
+        const h = isEl('isWrap').clientHeight;
+        if (h > 0 && (isRoH === 0 || isState.dirty)) { isRoH = h; isRenderSoon(); } else isRoH = h;
+      }).observe(isEl('isWrap'));
+    } catch (e) {}
+    // 접속자에게 내가 보고 있는 위치 알리기 (스크롤 멈춘 뒤)
+    let isScrollTrackT = 0;
+    const isScrollTrack = () => { if (!isState.ch || !isState.me) return; clearTimeout(isScrollTrackT); isScrollTrackT = setTimeout(isTrack, 700); };
+    isEl('isWrap').addEventListener('scroll', isScrollTrack, { passive: true });
+    isEl('isTabPane').addEventListener('scroll', isScrollTrack, { passive: true });
     isEl('isWrap').addEventListener('mousemove', isOnMouse);
     isEl('isWrap').addEventListener('mouseleave', () => { if (isState.ch && isState.me) isBroadcast('cursor', { cid: isState.cid, hide: true }); });
     const isModalOpen = () => isEl('isUserModal').classList.contains('opacity-100') || isEl('isTabModal').classList.contains('opacity-100') || isEl('ibSetModal').classList.contains('opacity-100') || !isEl('isFilterPop').classList.contains('hidden');
@@ -16194,12 +16290,14 @@
       isState.panels = { chat: false, log: false };     // 들어올 때마다 기본은 접힘
       isApplyPanels();
       isState.tab = 'x'; isSwitchTab('home');
-      isLoadTabs();
-      isLoadColW();
+      const now = Date.now(), stale = (k, ms) => { if (now - (isState['_at_' + k] || 0) < ms) return false; isState['_at_' + k] = now; return true; };
+      if (stale('tabs', 120000)) isLoadTabs();
+      if (stale('colw', 120000)) isLoadColW();
       isRender();
+      requestAnimationFrame(() => requestAnimationFrame(() => { if (isVisible()) isRenderKeep(isAtBottom()); }));   // 화면 배치가 끝난 뒤 보이는 행을 한 번 더 그림
       isLoad();
       isLoadPending();
-      isLoadUsers();
+      if (stale('users', 300000)) isLoadUsers();
       isLoadChat();
       isLoadLogs();
       isJoin();
