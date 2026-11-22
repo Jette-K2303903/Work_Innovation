@@ -2083,7 +2083,7 @@
           <button type="button" onclick="changeCalendarMonth(-1)" class="ios-btn-tap p-1.5 rounded-full hover:bg-gray-100 text-gray-600">
             <i class="ph-bold ph-caret-left text-lg"></i>
           </button>
-          <span id="calendarMonthLabel" class="text-base font-bold text-gray-900 font-mono">2026. 10</span>
+          <span id="calendarMonthLabel" class="text-base font-bold text-gray-900 font-mono"></span>
           <button type="button" onclick="changeCalendarMonth(1)" class="ios-btn-tap p-1.5 rounded-full hover:bg-gray-100 text-gray-600">
             <i class="ph-bold ph-caret-right text-lg"></i>
           </button>
@@ -2376,7 +2376,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.068</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.069</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -5829,8 +5829,8 @@
     }
 
     // 8. 엑셀 다운로드 달력 시스템
-    let calendarCurrentYear = 2026;
-    let calendarCurrentMonth = 10;
+    let calendarCurrentYear = new Date().getFullYear();
+    let calendarCurrentMonth = new Date().getMonth() + 1;
     let selectedCalendarDateStr = null;
 
     const excelDownloadModal = document.getElementById('excelDownloadModal');
@@ -5851,6 +5851,7 @@
     function openExcelDownloadModal() {
       if (!excelDownloadModal) return;
       selectedCalendarDateStr = null;
+      const now = new Date(); calendarCurrentYear = now.getFullYear(); calendarCurrentMonth = now.getMonth() + 1;   // 열 때마다 오늘 기준 월
       downloadSelectedDateBtn.disabled = true;
       downloadSelectedDateLabel.textContent = '선택 날짜 엑셀 다운로드';
 
@@ -11454,7 +11455,10 @@
     const HO_COLS_PX = [11, 19.2, 41.25, 56.4].map(w => Math.floor(w * 7 + 5));
     const HO_W = HO_COLS_PX.reduce((a, b) => a + b, 0);
     const hoPt = (pt) => Math.round(pt * 4 / 3);                   // pt → px
-    const hoTomorrow = () => ibToday(1);
+    // 일요일은 배송이 없어 인수인계도 월~토만 사용 : 일요일이면 dir 방향(+1 월요일 / -1 토요일)으로 넘김
+    function hoIsSun(iso) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return !!m && new Date(+m[1], +m[2] - 1, +m[3]).getDay() === 0; }
+    function hoSkipSun(iso, dir) { if (!hoIsSun(iso)) return iso; const x = new Date(iso + 'T00:00:00'); x.setDate(x.getDate() + (dir < 0 ? -1 : 1)); return ibIso(x); }
+    const hoTomorrow = () => hoSkipSun(ibToday(1), 1);
     const hoSt = { date: null, rows: [], zoom: 0, edit: null, loading: false, remote: new Map(), later: false, msel: new Set(), anchor: null };
     function hoFmtOf(r) { const v = r && r.fmt; return { c: v && v.c === 'red' ? 'red' : '', b: !!(v && v.b), a: v && v.a === 'l' ? 'l' : 'c', r: (v && Array.isArray(v.r)) ? v.r : [] }; }
     function hoFmtPack(f) { const o = {}; if (f.c) o.c = f.c; if (f.b) o.b = 1; if (f.a === 'l') o.a = 'l'; if (f.r && f.r.length) o.r = f.r; return Object.keys(o).length ? o : null; }
@@ -11571,6 +11575,7 @@
     }
     async function hoLoad(remote) {
       if (!hoSt.date) hoSt.date = hoTomorrow();
+      if (hoIsSun(hoSt.date)) hoSt.date = hoSkipSun(hoSt.date, 1);
       const d = hoSt.date;
       if (!remote) { hoSt.loading = true; await hoEnsureDefaults(d); }
       let rows = null;
@@ -11724,8 +11729,13 @@
       const sb = isEl('hoSelBar'); if (sb) { sb.classList.toggle('hidden', !hoSt.msel.size); sb.querySelector('[data-n]').textContent = `${hoSt.msel.size}칸 선택됨`; }
     }
     function hoSetZoom(v) { hoSt.zoom = +v || 0; hoRenderSheet(); }
-    function hoSetDate(v) { if (!v) return; hoCommitEdit(); hoSt.date = v; hoSt.remote.clear(); hoSt.msel.clear(); hoSt.anchor = null; hoLoad(); }
-    function hoMoveDate(d) { const x = new Date((hoSt.date || hoTomorrow()) + 'T00:00:00'); x.setDate(x.getDate() + d); hoSetDate(ibIso(x)); const el = isEl('hoDate'); if (el) el.value = hoSt.date; }
+    function hoSetDate(v, dir) {
+      if (!v) return;
+      if (hoIsSun(v)) { v = hoSkipSun(v, dir || 1); if (!dir) showToastNotification('인수인계', '일요일은 배송이 없어 월요일로 이동했어요.', 'info'); }
+      hoCommitEdit(); hoSt.date = v; hoSt.remote.clear(); hoSt.msel.clear(); hoSt.anchor = null; hoLoad();
+      const el = isEl('hoDate'); if (el && el.value !== v) el.value = v;
+    }
+    function hoMoveDate(d) { const x = new Date((hoSt.date || hoTomorrow()) + 'T00:00:00'); x.setDate(x.getDate() + d); hoSetDate(hoSkipSun(ibIso(x), d), d); }
     async function hoAdd(content, fmt, sourceRowId, date) {
       if (isNeedUser()) return null;
       const d = date || hoSt.date || hoTomorrow();
@@ -11911,13 +11921,14 @@
       else ti.textContent = `${hoSt.date} 인수인계에 전체 불러오기`;
       // 처음 날짜 : 지금 보는 날짜보다 앞에서 내용이 있는 가장 최근 날짜
       let d = null;
-      try { const { data } = await supabaseClient.from(HO_TABLE).select('out_date').lt('out_date', hoSt.date).order('out_date', { ascending: false }).limit(1); d = data && data[0] && data[0].out_date; } catch (e) {}
-      hoImpSetDate(d || ibToday(0));
+      try { const { data } = await supabaseClient.from(HO_TABLE).select('out_date').lt('out_date', hoSt.date).order('out_date', { ascending: false }).limit(400); d = ((data || []).find(r => !hoIsSun(r.out_date)) || {}).out_date; } catch (e) {}
+      hoImpSetDate(d || hoSkipSun(ibToday(0), -1), -1);
     }
     function hoCloseImport() { const m = isEl('hoImpModal'); if (m) m.style.display = 'none'; }
-    function hoImpMove(k) { const x = new Date((hoImp.date || ibToday(0)) + 'T00:00:00'); x.setDate(x.getDate() + k); hoImpSetDate(ibIso(x)); }
-    async function hoImpSetDate(d) {
+    function hoImpMove(k) { const x = new Date((hoImp.date || ibToday(0)) + 'T00:00:00'); x.setDate(x.getDate() + k); hoImpSetDate(ibIso(x), k); }
+    async function hoImpSetDate(d, dir) {
       if (!d) return;
+      d = hoSkipSun(d, dir || -1);                                         // 일요일은 불러오기 대상에서 제외 → 토요일로
       hoImp.date = d; isEl('hoImpDate').value = d;
       isEl('hoImpList').innerHTML = '<div class="py-8 text-center text-[12.5px] text-gray-400">불러오는 중…</div>'; isEl('hoImpFoot').innerHTML = '';
       try { const { data } = await supabaseClient.from(HO_TABLE).select('*').eq('out_date', d).order('sort_order', { ascending: true }).order('id', { ascending: true }).limit(500); hoImp.rows = data || []; } catch (e) { hoImp.rows = []; }
@@ -12097,7 +12108,10 @@
     const IS_HEAD_H = 34, IS_VBUF = 25, IS_LINE_H = 16;
     let isRH = 33, isRenderRaf = 0;
     const isLines = (r) => { const d = r && r.detail; if (!d || String(d).indexOf('\n') < 0) return 1; return Math.min(30, String(d).split('\n').length); };
-    const isRowH = (r) => isRH + (isLines(r) - 1) * IS_LINE_H;
+    // 행 높이 : 실제로 그려 본 높이를 기억해 쓰고(내용이 바뀌면 다시 추정), 처음엔 줄 수로 추정
+    const isHC = new Map();
+    const isHKey = (r) => String(r.detail ?? '') + '|' + (r._pend ? 1 : 0) + '|' + (r._new ? 1 : 0);
+    const isRowH = (r) => { const c = isHC.get(r.id); if (c && c.k === isHKey(r)) return c.h; return isRH + (isLines(r) - 1) * IS_LINE_H; };
     function isBuildOffs(rows) {                    // 행마다 위쪽 끝 위치 (줄바꿈 행은 높이가 더 큼)
       const o = new Float64Array(rows.length + 1);
       for (let i = 0; i < rows.length; i++) o[i + 1] = o[i] + isRowH(rows[i]);
@@ -12147,12 +12161,23 @@
       isState.viewIdx = new Map(rows.map((r, i) => [r.id, i]));
       isState.offs = isBuildOffs(rows);
       isRenderMeta();
+      isState.wantBottom = stick && !isState.noStick;
       isRenderBody();
-      if (stick && !isState.noStick) { w0.scrollTop = w0.scrollHeight; isRenderBody(); }
+      if (stick && !isState.noStick) { w0.scrollTop = w0.scrollHeight; isRenderBody(); w0.scrollTop = w0.scrollHeight; }
+      isState.wantBottom = false;
+      if (stick && !isState.noStick) requestAnimationFrame(() => { if (isCanPaint() && !isAtBottom() && !isState.edit) { w0.scrollTop = w0.scrollHeight; isRenderBody(); } });
       isState.forceBottom = false;
       isRenderAfter(rows);
     }
-    function isRenderBottom() { isState.forceBottom = true; isRender(); }
+    // 필터 · 미처리 전환 · 저장 등 : 맨 아래(최신 행)로. 화면 배치가 늦게 바뀌어도 맞도록 잠시 뒤 한 번 더 (그 사이 직접 스크롤하면 그대로 둠)
+    let isUserScrollAt = 0;
+    ['wheel', 'touchmove', 'mousedown'].forEach(ev => isEl('isWrap').addEventListener(ev, () => { isUserScrollAt = Date.now(); }, { passive: true }));
+    function isRenderBottom() {
+      isState.forceBottom = true; isRender();
+      const t0 = Date.now();
+      const again = () => { if (isUserScrollAt > t0 || !isCanPaint() || isState.edit) return; const w = isEl('isWrap'); if (!isAtBottom()) { w.scrollTop = w.scrollHeight; isRenderBody(); w.scrollTop = w.scrollHeight; } };
+      setTimeout(again, 120); setTimeout(again, 450);
+    }
     function isRenderBody() {
       if (!isCanPaint()) { isState.dirty = true; return; }
       const rows = isState.view || [];
@@ -12188,10 +12213,43 @@
         </tr>`;
         }).join('') + spacer(o[rows.length] - o[e]);
         const tr = body.querySelector('tr[data-id]:not(.is-mlrow)');
-        if (tr && tr.offsetHeight > 10 && Math.abs(tr.offsetHeight - isRH) > 0.5) { isRH = tr.offsetHeight; isState.offs = isBuildOffs(rows); }
+        let fix = false;
+        if (tr && tr.offsetHeight > 10 && Math.abs(tr.offsetHeight - isRH) > 0.5) { isRH = tr.offsetHeight; fix = true; }
+        // 실제 높이가 추정과 다르면 기억 → 위치 계산(빈 칸 높이)을 바로 고침 : 필터 · 미처리 전환 뒤 행이 화면 밖에 그려지는 것 방지
+        const trs = body.querySelectorAll(':scope > tr[data-id]');
+        trs.forEach((t, k) => { const r = rows[s + k]; if (!r) return; const h = t.offsetHeight; if (h > 10 && Math.abs(h - isRowH(r)) > 0.5) { isHC.set(r.id, { k: isHKey(r), h }); fix = true; } });
+        if (fix) {
+          const o2 = isState.offs = isBuildOffs(rows);
+          const sp = body.querySelectorAll(':scope > tr.is-spacer > td');
+          const first = body.firstElementChild, last = body.lastElementChild;
+          if (first && first.classList.contains('is-spacer')) first.firstElementChild.style.height = o2[s] + 'px';
+          else if (o2[s] > 0) first.insertAdjacentHTML('beforebegin', spacer(o2[s]));
+          const bh = o2[rows.length] - o2[e];
+          if (last && last.classList.contains('is-spacer') && last !== body.firstElementChild) last.firstElementChild.style.height = bh + 'px';
+          else if (bh > 0) body.insertAdjacentHTML('beforeend', spacer(bh));
+          if (isState.wantBottom) { const w = isEl('isWrap'); w.scrollTop = w.scrollHeight; }
+        }
       }
       isPlaceEditor();
       isDrawLayer();
+      isHealSoon();
+    }
+    // 그린 뒤 화면에 보이는 행이 하나도 없으면(빈 화면) 한 번 더 그림
+    let isHealRaf = 0, isHealN = 0;
+    function isHealSoon() {
+      if (isHealRaf) return;
+      isHealRaf = requestAnimationFrame(() => {
+        isHealRaf = 0;
+        const rows = isState.view || [];
+        if (!rows.length || !isCanPaint()) { isHealN = 0; return; }
+        const w = isEl('isWrap'), wr = w.getBoundingClientRect();
+        const vis = [...isEl('isBody').querySelectorAll(':scope > tr[data-id]')].some(t => { const r = t.getBoundingClientRect(); return r.bottom > wr.top + 36 && r.top < wr.bottom - 2; });
+        if (vis) { isHealN = 0; return; }
+        if (++isHealN > 3) { isHealN = 0; return; }                         // 무한 반복 방지
+        if (isState.wantBottom || isAtBottom()) w.scrollTop = w.scrollHeight;
+        else w.scrollTop = Math.min(w.scrollTop, Math.max(0, w.scrollHeight - w.clientHeight));
+        isRenderBody();
+      });
     }
     function isRenderAfter(rows) {
       const all = isEl('isCheckAll');
@@ -12355,6 +12413,18 @@
       el.id = 'isEditor';
       el.addEventListener('keydown', (e) => {
         e.stopPropagation();                                      // 시트 단축키로 중복 처리되지 않도록
+        if ((e.isComposing || e.keyCode === 229) && col.ml && (e.altKey || e.shiftKey) && (e.code === 'Enter' || e.code === 'NumpadEnter' || e.key === 'Enter')) {
+          // 마지막 글자가 아직 조합 중일 때 Alt+Enter : 조합이 끝나는 대로 줄바꿈 (스페이스 · → 없이 바로)
+          if (!el._nlWait) {
+            el._nlWait = true;
+            const done = () => { if (!el._nlWait) return; el._nlWait = false; el.removeEventListener('compositionend', onEnd); setTimeout(() => { if (isState.edit && isState.edit.el === el) isEditorNewline(el); }, 0); };
+            const onEnd = () => done();
+            el.addEventListener('compositionend', onEnd);
+            setTimeout(done, 300);                                        // 조합 끝 신호가 안 와도 줄바꿈
+          }
+          e.preventDefault();
+          return;
+        }
         if (e.isComposing || e.keyCode === 229) return;          // 한글 조합 중에는 무시
         const sg = isState.sug;
         if (sg && sg.items.length) {
@@ -12369,10 +12439,8 @@
         }
         if (e.key === 'Enter' && col.ml && (e.altKey || e.shiftKey)) {          // 칸 안 줄바꿈
           e.preventDefault();
-          const a = el.selectionStart, b = el.selectionEnd;
-          el.value = el.value.slice(0, a) + '\n' + el.value.slice(b);
-          el.selectionStart = el.selectionEnd = a + 1;
-          isPlaceEditor();
+          if (el._nlWait) return;
+          isEditorNewline(el);
           return;
         }
         if (e.key === 'Enter') { e.preventDefault(); isCommit(el.value, 'down'); }
@@ -12391,6 +12459,12 @@
       else if (document.activeElement !== el) el.focus({ preventScroll: true });
       if (col.ml || adopt) el.addEventListener('input', isPlaceEditor);
       isTrack();
+    }
+    function isEditorNewline(el) {
+      const a = el.selectionStart, b = el.selectionEnd;
+      el.value = el.value.slice(0, a) + '\n' + el.value.slice(b);
+      el.selectionStart = el.selectionEnd = a + 1;
+      isPlaceEditor();
     }
     function isPlaceEditor() {
       const ed = isState.edit; if (!ed) return;
@@ -14082,13 +14156,7 @@
           (async () => { for (const [id, cols] of isSelCells()) for (const ck of cols) { const c = IS_COLS.find(x => x.k === ck); if (c && (!c.ro || IS_NODATA_EDIT[c.k]) && await isCanEdit(isFindRow(id), c)) await isSetCell(id, c.k, ''); } })();
           return;
         }
-        if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'c') {
-          const ks = IS_COLS.map(x => x.k), cells = isSelCells().sort((a, b) => (isState.viewIdx.get(a[0]) ?? 0) - (isState.viewIdx.get(b[0]) ?? 0));
-          const txt = cells.map(([id, cols]) => { const r = isFindRow(id) || {}; return cols.sort((a, b) => ks.indexOf(a) - ks.indexOf(b)).map(ck => String(r[ck] ?? '')).join('\t'); }).join('\n');
-          if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(() => {});
-          showToastNotification('복사', `${isState.msel.size}칸을 복사했어요.`, 'info');
-          return;
-        }
+        if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyC' || k.toLowerCase() === 'c' || k === 'ㅊ')) return;   // 복사는 copy 이벤트에서 처리
         if (/^Arrow/.test(k)) { isState.msel.clear(); isRenderBody(); }
       }
       if (k === 'ArrowDown') { e.preventDefault(); isMove(1, 0); }
@@ -14103,9 +14171,8 @@
         if (c && (!c.ro || IS_NODATA_EDIT[c.k]) && !isNeedUser()) isCanEdit(isFindRow(id), c).then(ok => { if (ok) isSetCell(id, c.k, ''); });
       }
       else if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyB' || k.toLowerCase() === 'b') && isState.sel) { e.preventDefault(); isSetBold('cell'); }
-      else if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'c' && isState.sel) {
-        const r = isFindRow(isState.sel.id);
-        if (r && navigator.clipboard) navigator.clipboard.writeText(String(r[isState.sel.col] ?? '')).catch(() => {});
+      else if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyC' || k.toLowerCase() === 'c' || k === 'ㅊ') && isState.sel) {
+        // 복사는 아래 copy 이벤트에서 처리 (한글 입력 상태에서도 동작)
       }
       else if (k.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && isState.sel) {
         if (document.activeElement && document.activeElement.id === 'isImeCatch') return;   // 글자는 입력 칸으로 들어가고 거기서 편집 시작
@@ -14120,11 +14187,38 @@
       const c = IS_COLS.find(x => x.k === isState.sel.col);
       if (c && (!c.ro || IS_NODATA_EDIT[c.k]) && c.type !== 'date') isBeginEdit('');
     });
+    function isCopyText() {                                                // 선택한 칸(여러 칸 포함) → 복사할 글
+      if (isState.msel.size) {
+        const ks = IS_COLS.map(x => x.k), cells = isSelCells().sort((a, b) => (isState.viewIdx.get(a[0]) ?? 0) - (isState.viewIdx.get(b[0]) ?? 0));
+        return { n: isState.msel.size, txt: cells.map(([id, cols]) => { const r = isFindRow(id) || {}; return cols.sort((a, b) => ks.indexOf(a) - ks.indexOf(b)).map(ck => String(r[ck] ?? '')).join('\t'); }).join('\n') };
+      }
+      if (!isState.sel) return null;
+      const r = isFindRow(isState.sel.id); if (!r) return null;
+      return { n: 1, txt: String(r[isState.sel.col] ?? '') };
+    }
+    document.addEventListener('copy', (e) => {
+      if (!isHomeOn() || isModalOpen() || isState.edit || isTyping()) return;
+      const a = document.activeElement;
+      if (a && a.id !== 'isImeCatch' && /^(INPUT|TEXTAREA)$/.test(a.tagName) && a.selectionStart !== a.selectionEnd) return;
+      const sl = window.getSelection && String(window.getSelection() || ''); if (sl && (!a || a.id !== 'isImeCatch')) return;   // 글자를 직접 드래그해 고른 경우는 그대로
+      const c = isCopyText(); if (!c) return;
+      e.preventDefault();
+      e.clipboardData.setData('text/plain', c.txt);
+      showToastNotification('복사', c.n > 1 ? `${c.n}칸을 복사했어요.` : '복사했어요.', 'info');
+    });
     document.addEventListener('paste', (e) => {
       if (!isHomeOn() || isModalOpen() || isState.edit || isTyping()) return;
       const t = e.clipboardData && e.clipboardData.getData('text');
       if (!t) return;
       e.preventDefault();
+      const selCol = isState.sel && IS_COLS.find(x => x.k === isState.sel.col);
+      if (selCol && selCol.ml && !t.includes('\t') && t.includes('\n')) {          // 여러 줄 칸(상세내용 등) : 행을 늘리지 않고 한 칸에 줄바꿈 그대로
+        let v = t.replace(/\r\n?/g, '\n').replace(/\n+$/, '');
+        if (/^"[\s\S]*"$/.test(v)) v = v.slice(1, -1).replace(/""/g, '"');        // 엑셀 한 칸 복사(따옴표로 감싸짐)
+        if (isNeedUser()) return;
+        const id = isState.sel.id; isCanEdit(isFindRow(id), selCol).then(ok => { if (ok) isSetCell(id, selCol.k, v); });
+        return;
+      }
       if (t.includes('\t') || t.includes('\n')) isPaste(t);
       else if (isState.sel && !isNeedUser()) { const c = IS_COLS.find(x => x.k === isState.sel.col), id = isState.sel.id; isCanEdit(isFindRow(id), c).then(ok => { if (ok) isSetCell(id, c.k, c.type === 'date' ? isNormDate(t) : t.trim()); }); }
     });
