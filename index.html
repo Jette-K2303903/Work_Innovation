@@ -2376,7 +2376,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.072</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.073</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -10804,6 +10804,7 @@
               <button type="button" onclick="isLoadTabItems('${svEsc(l.key)}')" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-arrows-clockwise"></i>새로고침</button>
               <button type="button" data-tab-zoom="${svEsc(l.key)}" onclick="isTabExpand('${svEsc(l.key)}')" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1"><i class="ph-bold ph-arrows-out"></i><span>확대</span></button>
               <button type="button" onclick="isOutDownload('${svEsc(l.key)}')" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 text-[12.5px] font-bold flex items-center gap-1" title="출고 기록 받기"><i class="ph-bold ph-download-simple"></i>다운로드</button>
+              <button type="button" onclick="isOpenOutMgr('${svEsc(l.key)}')" class="ios-btn-tap px-3 py-2 rounded-xl bg-white border border-orange-200 text-[#FF9500] text-[12.5px] font-bold flex items-center gap-1" title="출고한 기록을 되돌리거나 수정"><i class="ph-bold ph-arrow-counter-clockwise"></i>출고취소</button>
               <button type="button" id="isTabOutBtn_${svEsc(l.key)}" onclick="isTabOut('${svEsc(l.key)}')" class="ios-btn-tap px-3.5 py-2 rounded-xl bg-[#FF9500] text-white text-[12.5px] font-bold flex items-center gap-1 disabled:opacity-40"><i class="ph-bold ph-truck"></i><span>출고</span></button>
             </div>
           </div>
@@ -11150,6 +11151,196 @@
       [...new Set(recs.map(r => r.tab))].forEach(k => { isBroadcast('tabitems', { tab: k }); if (isEl('isTabBody_' + k)) isLoadTabItems(k); });
       isLog(recs.map(r => ({ action: '원복', row_id: null, field_key: opts.via === 'ttaettae' ? 'via:ttaettae' : '', field: '', old_value: '', new_value: `${r.out_store || ''}, ${r.product_name || r.product_code || ''}, ${r.qty || ''}, ${r.note || ''}`, row_label: `${isListName(r.tab)} 출고 원복 (${r.out_date || ''})` })));
       return recs;
+    }
+    // ----- 출고취소 · 출고 기록 수정 (목록별) -----
+    const omSt = { key: null, rows: [], checked: new Set(), q: '', date: '', loading: false };
+    function omModalEl() {
+      let m = isEl('omModal'); if (m) return m;
+      m = document.createElement('div'); m.id = 'omModal';
+      m.style.cssText = 'position:fixed;inset:0;z-index:46;background:rgba(0,0,0,.42);display:none;align-items:center;justify-content:center;padding:16px';
+      m.innerHTML = `<div style="background:#fff;border-radius:24px;width:100%;max-width:860px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden" class="shadow-2xl">
+          <div class="px-5 pt-4 pb-3 border-b border-gray-100 flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-orange-50 text-[#FF9500] flex items-center justify-center flex-none"><i class="ph-bold ph-arrow-counter-clockwise text-lg"></i></div>
+            <div class="min-w-0 flex-1"><h3 class="text-[16px] font-bold text-gray-900">출고취소 · 출고 기록</h3><p id="omSub" class="text-[11.5px] text-gray-500 truncate"></p></div>
+            <button type="button" onclick="omClose()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex-none"><i class="ph-bold ph-x"></i></button>
+          </div>
+          <div class="px-5 py-2.5 flex gap-2 border-b border-gray-100">
+            <input id="omQ" oninput="omSt.q=this.value.trim(); omRender()" placeholder="매장명 · 제품명 · 제품코드 검색" autocomplete="off" style="display:block" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[12.5px]">
+            <select id="omDate" onchange="omSt.date=this.value; omRender()" class="flex-none px-2 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[12.5px]"></select>
+          </div>
+          <div class="flex-1 min-h-0 overflow-auto">
+            <table class="w-full text-[12.5px] border-collapse" style="table-layout:fixed">
+              <colgroup><col style="width:36px"><col style="width:96px"><col style="width:150px"><col><col style="width:70px"><col style="width:150px"><col style="width:64px"></colgroup>
+              <thead class="bg-gray-50 sticky top-0 z-[1]"><tr class="text-[11.5px] text-gray-500">
+                <th class="py-2 text-center"><input type="checkbox" id="omAll" onchange="omCheckAll(this.checked)" class="w-3.5 h-3.5 align-middle"></th>
+                <th class="px-2 py-2 text-left">출고일자</th><th class="px-2 py-2 text-left">출고매장</th><th class="px-2 py-2 text-left">제품명</th><th class="px-2 py-2 text-right">수량</th><th class="px-2 py-2 text-left">비고</th><th></th>
+              </tr></thead>
+              <tbody id="omBody"></tbody>
+            </table>
+          </div>
+          <div class="px-5 py-3 border-t border-gray-100 flex items-center gap-2">
+            <span id="omInfo" class="text-[11.5px] text-gray-500 flex-1 min-w-0 truncate"></span>
+            <button type="button" onclick="omClose()" class="ios-btn-tap px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-[13px] font-bold">닫기</button>
+            <button type="button" id="omUndoBtn" onclick="omUndo()" class="ios-btn-tap px-4 py-2.5 rounded-xl bg-[#FF3B30] text-white text-[13px] font-bold disabled:opacity-40" disabled>선택 출고취소</button>
+          </div></div>`;
+      xlModalGuard(m, omClose);
+      m.firstElementChild.addEventListener('change', (e) => { const c = e.target.closest('[data-om-check]'); if (!c) return; const id = +c.dataset.omCheck; if (c.checked) omSt.checked.add(id); else omSt.checked.delete(id); omPaintFoot(); });
+      m.firstElementChild.addEventListener('click', (e) => { const b = e.target.closest('[data-om-edit]'); if (b) omOpenEdit(+b.dataset.omEdit); });
+      document.body.appendChild(m);
+      return m;
+    }
+    async function isOpenOutMgr(key) {
+      if (isNeedUser()) return;
+      const m = omModalEl();
+      omSt.key = key; omSt.rows = []; omSt.checked.clear(); omSt.q = ''; omSt.date = '';
+      isEl('omQ').value = ''; isEl('omSub').textContent = `${isListName(key)} · 출고한 기록을 목록으로 되돌리거나(출고취소) 수정해요.`;
+      m.style.display = 'flex';
+      await omLoad();
+    }
+    function omClose() { const m = isEl('omModal'); if (m) m.style.display = 'none'; omCloseEdit(); }
+    async function omLoad() {
+      omSt.loading = true; omRender();
+      const all = [];
+      try {
+        for (let from = 0; from < 5000; from += 1000) {
+          const { data, error } = await supabaseClient.from(IS_TAB_OUT).select('*').eq('tab', omSt.key).order('out_date', { ascending: false }).order('id', { ascending: false }).range(from, from + 999);
+          if (error) throw error;
+          all.push(...(data || []));
+          if (!data || data.length < 1000) break;
+        }
+      } catch (e) { showToastNotification('출고 기록', dbErrorMessage(e), 'warning'); }
+      omSt.rows = all; omSt.loading = false;
+      omSt.checked = new Set([...omSt.checked].filter(id => all.some(r => r.id === id)));
+      const dates = [...new Set(all.map(r => r.out_date).filter(Boolean))];
+      if (omSt.date && !dates.includes(omSt.date)) omSt.date = '';
+      isEl('omDate').innerHTML = `<option value="">전체 출고일 (${all.length}건)</option>` + dates.map(d => `<option value="${d}" ${d === omSt.date ? 'selected' : ''}>${d} (${all.filter(r => r.out_date === d).length}건)</option>`).join('');
+      omRender();
+    }
+    function omView() {
+      const q = omSt.q.toLowerCase();
+      return omSt.rows.filter(r => (!omSt.date || r.out_date === omSt.date) && (!q || [r.out_store, r.product_name, r.product_code, r.note].some(v => String(v || '').toLowerCase().includes(q))));
+    }
+    function omRender() {
+      const b = isEl('omBody'); if (!b) return;
+      if (omSt.loading) { b.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-gray-400">불러오는 중…</td></tr>'; omPaintFoot(); return; }
+      const v = omView();
+      b.innerHTML = v.length ? v.slice(0, 500).map(r => `<tr class="border-t border-gray-100 ${omSt.checked.has(r.id) ? 'bg-orange-50/60' : ''}">
+          <td class="py-1.5 text-center"><input type="checkbox" data-om-check="${r.id}" ${omSt.checked.has(r.id) ? 'checked' : ''} class="w-3.5 h-3.5 align-middle"></td>
+          <td class="px-2 py-1.5 font-mono text-[11.5px]">${svEsc(r.out_date || '')}</td>
+          <td class="px-2 py-1.5 truncate font-semibold" title="${svEsc(r.out_store || '')}">${svEsc(r.out_store || '')}</td>
+          <td class="px-2 py-1.5 truncate" title="${svEsc((r.product_code ? r.product_code + ' · ' : '') + (r.product_name || ''))}">${svEsc(r.product_name || r.product_code || '')}</td>
+          <td class="px-2 py-1.5 text-right font-bold">${svEsc(r.qty || '')}</td>
+          <td class="px-2 py-1.5 truncate text-gray-500" title="${svEsc(r.note || '')}">${svEsc(r.note || '')}</td>
+          <td class="py-1.5 pr-2 text-right"><button type="button" data-om-edit="${r.id}" class="ios-btn-tap px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-[#007AFF] text-[11.5px] font-bold">수정</button></td></tr>`).join('')
+        : `<tr><td colspan="7" class="py-10 text-center text-gray-400">${omSt.rows.length ? '검색 결과가 없어요.' : '아직 출고 기록이 없어요.'}</td></tr>`;
+      const all = isEl('omAll'); if (all) all.checked = v.length > 0 && v.every(r => omSt.checked.has(r.id));
+      omPaintFoot(v.length);
+    }
+    function omPaintFoot(n) {
+      const btn = isEl('omUndoBtn'), k = omSt.checked.size;
+      if (btn) { btn.disabled = !k; btn.textContent = k ? `선택 출고취소 (${k})` : '선택 출고취소'; }
+      const info = isEl('omInfo'); if (info && n != null) info.textContent = `${n}건 표시${n > 500 ? ' (최근 500건까지 보여요. 검색으로 좁혀 주세요)' : ''} · 출고취소하면 목록으로 되돌아가요.`;
+    }
+    function omCheckAll(on) { omView().slice(0, 500).forEach(r => on ? omSt.checked.add(r.id) : omSt.checked.delete(r.id)); omRender(); }
+    function omUndo() {
+      const ids = [...omSt.checked]; if (!ids.length) return;
+      const recs = omSt.rows.filter(r => omSt.checked.has(r.id));
+      showConfirmModal(async () => {
+        showBusy('출고취소 중...');
+        try { await isTabOutUndo(ids); omSt.checked.clear(); showToastNotification('출고취소', `${recs.length}건을 ${isListName(omSt.key)} 목록으로 되돌렸어요.`, 'success'); }
+        catch (e) { showToastNotification('출고취소 실패', dbErrorMessage(e), 'warning'); }
+        finally { hideBusy(); omLoad(); }
+      }, '출고취소', `선택한 ${recs.length}건의 출고를 취소하고 목록으로 되돌릴까요? (같은 품목이 목록에 남아 있으면 수량을 합쳐요)`);
+    }
+    // 수정 창
+    function omEditEl() {
+      let m = isEl('omEdit'); if (m) return m;
+      m = document.createElement('div'); m.id = 'omEdit';
+      m.style.cssText = 'position:fixed;inset:0;z-index:47;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:16px';
+      const fld = (id, h, type, extra = '') => `<div><div class="text-[12px] font-bold text-gray-600 mb-1">${h}</div><input id="${id}" type="${type}" autocomplete="off" ${extra} style="display:block;width:100%" class="px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13.5px]"></div>`;
+      m.innerHTML = `<div style="background:#fff;border-radius:24px;width:100%;max-width:420px;display:flex;flex-direction:column;overflow:hidden" class="shadow-2xl">
+          <div class="px-5 pt-4 pb-3 border-b border-gray-100 flex items-center gap-2"><div class="min-w-0 flex-1"><h3 class="text-[16px] font-bold text-gray-900">출고 기록 수정</h3><p id="omESub" class="text-[11.5px] text-gray-500 truncate"></p></div><button type="button" onclick="omCloseEdit()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-600"><i class="ph-bold ph-x"></i></button></div>
+          <div class="px-5 py-4 space-y-2.5">
+            ${fld('omEDate', '출고일자', 'date')}
+            <div><div class="text-[12px] font-bold text-gray-600 mb-1">출고매장</div><div style="position:relative"><input id="omEStore" type="text" autocomplete="off" oninput="omStoreInput()" style="display:block;width:100%" class="px-3 py-2 rounded-xl bg-white border border-gray-200 text-[13.5px]"><div id="omESug" class="hidden" style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:5;max-height:200px;overflow-y:auto;background:#fff;border:1px solid #E5E7EB;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.12)"></div></div></div>
+            ${fld('omEQty', '수량', 'text', 'inputmode="decimal"')}
+            <div id="omEQtyHint" class="text-[11px] text-gray-400 -mt-1"></div>
+            ${fld('omENote', '비고', 'text')}
+          </div>
+          <div class="px-5 py-3 border-t border-gray-100 flex gap-2">
+            <button type="button" onclick="omCloseEdit()" class="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-[13.5px] font-bold">취소</button>
+            <button type="button" onclick="omSaveEdit()" class="flex-[2] py-2.5 rounded-xl bg-[#007AFF] text-white text-[13.5px] font-bold">저장</button>
+          </div></div>`;
+      xlModalGuard(m, omCloseEdit);
+      m.firstElementChild.addEventListener('input', (e) => { if (e.target.id === 'omEQty') omQtyHint(); });
+      m.firstElementChild.addEventListener('click', (e) => { const b = e.target.closest('[data-om-store]'); if (b) { isEl('omEStore').value = b.dataset.omStore; isEl('omESug').classList.add('hidden'); } });
+      document.body.appendChild(m);
+      return m;
+    }
+    function omOpenEdit(id) {
+      const r = omSt.rows.find(x => x.id === id); if (!r) return;
+      const m = omEditEl(); m.dataset.id = id;
+      isEl('omESub').textContent = `${r.product_name || r.product_code || ''}${r.product_code ? ' · ' + r.product_code : ''}`;
+      isEl('omEDate').value = r.out_date || ''; isEl('omEStore').value = r.out_store || ''; isEl('omEQty').value = r.qty || ''; isEl('omENote').value = r.note || '';
+      isEl('omESug').classList.add('hidden'); omQtyHint();
+      m.style.display = 'flex'; setTimeout(() => isEl('omEQty').focus(), 40);
+    }
+    function omCloseEdit() { const m = isEl('omEdit'); if (m) m.style.display = 'none'; }
+    function omQtyHint() {
+      const m = isEl('omEdit'), r = m && omSt.rows.find(x => x.id === +m.dataset.id), h = isEl('omEQtyHint'); if (!r || !h) return;
+      const a = isQtyNum(r.qty), b = isQtyNum(isEl('omEQty').value);
+      h.textContent = a == null || b == null || a === b ? '수량을 줄이면 줄인 만큼 목록으로 되돌아가요. 늘리면 목록에 남은 같은 품목에서 더 빼요.'
+        : b < a ? `${isQtyFmt(a - b)}개를 목록으로 되돌려요.` : `목록에 남은 같은 품목에서 ${isQtyFmt(b - a)}개를 더 빼요. (목록에 없으면 기록만 고쳐요)`;
+    }
+    let omSugT = 0;
+    function omStoreInput() {
+      clearTimeout(omSugT);
+      const kw = isEl('omEStore').value.trim(), box = isEl('omESug');
+      if (!kw) { box.classList.add('hidden'); return; }
+      omSugT = setTimeout(async () => {
+        const like = `%${homeLikeEsc(kw)}%`, names = new Map();
+        omSt.rows.forEach(r => { if (r.out_store && r.out_store.includes(kw)) names.set(r.out_store, ''); });
+        try { const { data } = await supabaseClient.from('store_master').select('store_code,store_name').ilike('store_name', like).limit(15); (data || []).forEach(x => names.set(x.store_name, x.store_code)); } catch (e) {}
+        const list = [...names.entries()].slice(0, 12);
+        box.innerHTML = list.map(([n, c]) => `<button type="button" data-om-store="${svEsc(n)}" class="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-blue-50 border-b border-gray-100 last:border-0"><span class="flex-1 truncate text-[13px] font-semibold text-gray-900">${svEsc(n)}</span><span class="font-mono text-[11px] text-[#007AFF]">${svEsc(c || '')}</span></button>`).join('');
+        box.classList.toggle('hidden', !list.length);
+      }, 200);
+    }
+    async function omSaveEdit() {
+      const m = isEl('omEdit'), id = +m.dataset.id, r = omSt.rows.find(x => x.id === id); if (!r) return;
+      const v = { out_date: isEl('omEDate').value, out_store: isEl('omEStore').value.trim(), qty: isEl('omEQty').value.trim(), note: isEl('omENote').value.trim() || null };
+      if (!v.out_date) { showToastNotification('입력 확인', '출고일자를 넣어 주세요.', 'warning'); return; }
+      if (!v.out_store) { showToastNotification('입력 확인', '출고매장을 넣어 주세요.', 'warning'); return; }
+      const a = isQtyNum(r.qty), b = isQtyNum(v.qty);
+      if (!v.qty || (b != null && b <= 0)) { showToastNotification('입력 확인', '수량은 0보다 커야 해요. 전부 되돌리려면 출고취소를 써 주세요.', 'warning'); return; }
+      showBusy('출고 기록 저장 중...');
+      let note = '';
+      try {
+        if (a != null && b != null && a !== b) {
+          const src = r.source_item_id ? ((await supabaseClient.from(IS_TAB_ITEMS).select('id,qty').eq('id', r.source_item_id)).data || [])[0] : null;
+          const sq = src ? isQtyNum(src.qty) : null;
+          if (b < a) {                                                       // 줄인 만큼 목록으로
+            const back = a - b;
+            if (src && sq != null) { const up = await supabaseClient.from(IS_TAB_ITEMS).update({ qty: isQtyFmt(sq + back) }).eq('id', src.id); if (up.error) throw up.error; }
+            else { const ins = await supabaseClient.from(IS_TAB_ITEMS).insert({ tab: r.tab, product_code: r.product_code, product_name: r.product_name, temperature: r.temperature, qty: isQtyFmt(back), note: r.note, source_row_id: r.source_row_id, created_by: isState.me }); if (ins.error) throw ins.error; }
+            note = ` · ${isQtyFmt(back)}개 목록으로 되돌림`;
+          } else {                                                           // 늘린 만큼 목록에서 더 빼기
+            const more = b - a;
+            if (src && sq != null && sq >= more) {
+              const q = sq - more === 0 ? await supabaseClient.from(IS_TAB_ITEMS).delete().eq('id', src.id) : await supabaseClient.from(IS_TAB_ITEMS).update({ qty: isQtyFmt(sq - more) }).eq('id', src.id);
+              if (q.error) throw q.error; note = ` · 목록에서 ${isQtyFmt(more)}개 더 뺌`;
+            } else note = ' · 목록에 남은 수량이 없어 기록만 고침';
+          }
+        }
+        const up = await supabaseClient.from(IS_TAB_OUT).update(v).eq('id', id);
+        if (up.error) throw up.error;
+        const chg = [['출고일자', r.out_date, v.out_date], ['출고매장', r.out_store, v.out_store], ['수량', r.qty, v.qty], ['비고', r.note || '', v.note || '']].filter(x => String(x[1] ?? '') !== String(x[2] ?? ''));
+        if (chg.length) isLog(chg.map(([f, o, n]) => ({ action: '출고 수정', row_id: null, field_key: '', field: f, old_value: String(o ?? ''), new_value: String(n ?? ''), row_label: `${isListName(r.tab)} · ${r.product_name || r.product_code || ''}` })));
+        isBroadcast('tabitems', { tab: r.tab }); if (isEl('isTabBody_' + r.tab)) isLoadTabItems(r.tab);
+        omCloseEdit();
+        showToastNotification('출고 기록', `저장했어요.${note}`, 'success');
+      } catch (e) { showToastNotification('저장 실패', dbErrorMessage(e), 'warning'); }
+      finally { hideBusy(); omLoad(); }
     }
     async function isOutSave() {
       const d = isEl('isOutDate').value, st = isEl('isOutStore').value.trim();
