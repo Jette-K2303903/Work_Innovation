@@ -2376,7 +2376,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.070</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.071</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -12231,8 +12231,16 @@
         }
       }
       isPlaceEditor();
+      isPlaceCatch();
       isDrawLayer();
       isHealSoon();
+    }
+    // 입력 시작용 숨은 칸 : 선택한 칸이 화면(필터)에서 빠지면 맨 위로 옮김 → 옛 위치에 남아 스크롤 영역을 늘리는 것(빈 화면) 방지
+    function isPlaceCatch() {
+      const c = isEl('isImeCatch'); if (!c) return;
+      const td = isState.sel && isTd(isState.sel.id, isState.sel.col);
+      if (td) { const r = isRectIn(td); c.style.left = (r.x + 4) + 'px'; c.style.top = (r.y + 6) + 'px'; }
+      else { c.style.left = '0px'; c.style.top = '0px'; }
     }
     // 그린 뒤 화면에 보이는 행이 하나도 없으면(빈 화면) 한 번 더 그림
     let isHealRaf = 0, isHealN = 0;
