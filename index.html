@@ -2376,7 +2376,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.071</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.072</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -12465,7 +12465,7 @@
       isPlaceEditor();
       if (!adopt) { el.focus(); if (el.type === 'text' || col.ml) { const n = el.value.length; el.setSelectionRange(n, n); } }
       else if (document.activeElement !== el) el.focus({ preventScroll: true });
-      if (col.ml || adopt) el.addEventListener('input', isPlaceEditor);
+      if (col.ml || adopt) el.addEventListener('input', () => { isPlaceEditor(); isEditorFollow(); });
       isTrack();
     }
     function isEditorNewline(el) {
@@ -12473,6 +12473,26 @@
       el.value = el.value.slice(0, a) + '\n' + el.value.slice(b);
       el.selectionStart = el.selectionEnd = a + 1;
       isPlaceEditor();
+      isEditorFollow();
+    }
+    // 편집 칸이 길어져 표 아래로 넘어가면 그만큼 자동 스크롤 (입력 위치가 늘 보이게)
+    function isEditorFollow() {
+      const ed = isState.edit; if (!ed || ed.el.style.display === 'none') return;
+      const w = isEl('isWrap'), z = isZoomOf('home'), wr = w.getBoundingClientRect(), er = ed.el.getBoundingClientRect();
+      const bottom = wr.bottom - Math.max(0, w.offsetHeight - w.clientHeight) * z - 6;     // 가로 스크롤 막대 위까지
+      if (er.bottom > bottom) { w.scrollTop += (er.bottom - bottom) / z; ed.followed = true; isPlaceEditor(); }
+    }
+    // 입력 완료 · 취소 뒤 : 늘어났던 스크롤을 행에 맞춰 정리 (맨 아래 행이면 맨 아래로, 아니면 그 행이 다 보이게)
+    function isAfterEditFit(ed) {
+      const id = ed.id, col = ed.col;
+      const fit = () => {
+        if (isState.edit || !isCanPaint()) return;
+        if (isState.sel && isState.sel.id !== id) return;                   // Enter 로 다른 행으로 옮겨 간 경우는 그쪽 기준
+        const w = isEl('isWrap'), i = isState.viewIdx ? isState.viewIdx.get(id) : undefined;
+        if (i !== undefined && i >= (isState.view || []).length - 2) { w.scrollTop = w.scrollHeight; isRenderBody(); w.scrollTop = w.scrollHeight; return; }
+        const td = isTd(id, col); if (td) isEnsureVisible(td);
+      };
+      requestAnimationFrame(fit); setTimeout(fit, 120);
     }
     function isPlaceEditor() {
       const ed = isState.edit; if (!ed) return;
@@ -12490,6 +12510,7 @@
       isSugClose();
       isState.edit = null;
       ed.el.remove();
+      if (ed.followed) isAfterEditFit(ed);
       if (refocus) { isEl('isWrap').focus({ preventScroll: true }); setTimeout(isFocusCatch, 0); }
       isTrack();
     }
