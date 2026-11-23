@@ -1469,7 +1469,7 @@
         </div>
         <div class="grid grid-cols-7 text-center text-xs font-semibold text-gray-400 mb-1"><span class="text-red-500">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="text-blue-500">토</span></div>
         <div id="isDlGrid" class="grid grid-cols-7 gap-1 place-items-center py-1"></div>
-        <div class="text-[11px] text-gray-400 text-center py-2"><span class="inline-block w-2 h-2 rounded-full bg-[#007AFF] mr-1"></span>특이사항이 있는 배송일만 선택할 수 있어요.</div>
+        <div class="text-[11px] text-gray-400 text-center py-2"><span class="inline-block w-2 h-2 rounded-full bg-[#007AFF] mr-1"></span>파란 날짜는 특이사항이 있는 배송일이에요. 없는 날도 빈 양식으로 받을 수 있어요.</div>
         <div class="space-y-2 pt-2 border-t border-gray-100 mt-1">
           <button id="isDlSelBtn" type="button" onclick="isDlPick('date')" disabled class="ios-btn-tap w-full py-2.5 bg-[#007AFF] active:bg-[#0062CC] disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold rounded-xl text-[14px] flex items-center justify-center gap-1.5"><i class="ph-bold ph-calendar-check text-base"></i><span id="isDlSelLabel">날짜를 선택해 주세요</span></button>
           <button type="button" onclick="isDlPick('all')" class="ios-btn-tap w-full py-2.5 bg-[#34C759] active:bg-[#28A745] text-white font-semibold rounded-xl text-[14px] flex items-center justify-center gap-1.5"><i class="ph-bold ph-database text-base"></i><span id="isDlAllLabel">전체 데이터 다운로드</span></button>
@@ -2376,7 +2376,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.069</p>
+            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.070</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -12878,9 +12878,8 @@
     const isDlDates = () => new Set(isState.rows.map(r => String(r.delivery_date || '').slice(0, 10)).filter(Boolean));
     const isDlShow = (id, on) => { const m = isEl(id); m.classList.toggle('opacity-0', !on); m.classList.toggle('pointer-events-none', !on); m.classList.toggle('opacity-100', on); };
     function isOpenDl() {
-      const ds = [...isDlDates()].sort();
-      const last = ds[ds.length - 1] || isToday();
-      isDl.y = +last.slice(0, 4); isDl.m = +last.slice(5, 7); isDl.sel = null;
+      const today = isToday();
+      isDl.y = +today.slice(0, 4); isDl.m = +today.slice(5, 7); isDl.sel = null;          // 오늘 기준 월
       isEl('isDlAllLabel').textContent = `전체 데이터 다운로드 (${isState.rows.length.toLocaleString()}건${isState.loadingAll ? ' · 불러오는 중' : ''})`;
       isDlRender();
       isDlShow('isDlModal', true);
@@ -12895,7 +12894,7 @@
       for (let i = 0; i < first; i++) h += '<div class="w-9 h-9"></div>';
       for (let d = 1; d <= days; d++) {
         const ds = `${isDl.y}-${String(isDl.m).padStart(2, '0')}-${String(d).padStart(2, '0')}`, has = active.has(ds);
-        h += `<button type="button" ${has ? `onclick="isDlSelect('${ds}')"` : 'disabled'} class="calendar-day-btn ${has ? 'has-data' : 'disabled'} ${isDl.sel === ds ? 'active-selected' : ''}">${d}</button>`;
+        h += `<button type="button" onclick="isDlSelect('${ds}')" class="calendar-day-btn ${has ? 'has-data' : ''} ${isDl.sel === ds ? 'active-selected' : ''}" title="${has ? '특이사항 있음' : '특이사항 없음 · 빈 양식으로 받기'}">${d}</button>`;
       }
       isEl('isDlGrid').innerHTML = h;
       isEl('isDlSelBtn').disabled = !isDl.sel;
@@ -12931,12 +12930,12 @@
       const tab = isAllTabs().find(t => t.id === fmt);
       const label = fmt === 'all' ? '전체고객사' : (tab ? tab.name : fmt).replace(/\s/g, '');
       const tag = isDl.scope === 'all' ? '전체' : isDl.sel;
-      if (!rows.length && fmt !== 'distrib') { showToastNotification('다운로드', `${fmt === 'all' ? '' : label + ' '}받을 자료가 없습니다.`, 'warning'); return; }
       const done = () => {                                             // 받은 파일에 들어간 체크 행은 체크 해제 (고치는 중인 행은 그대로)
         const got = new Set(rows.map(r => Number(r.id)));
         const un = [...isState.checked].filter(id => got.has(Number(id)) && !isState.drafts.has(id));
         un.forEach(id => isState.checked.delete(id));
         if (un.length) isRenderKeep(isAtBottom());
+        if (!rows.length) { showToastNotification('다운로드', `${isDl.scope === 'all' ? '전체' : isDl.sel} 특이사항이 없어 빈 양식으로 받았어요.`, 'success'); return; }
         showToastNotification('다운로드', `${isDl.scope === 'all' ? '전체' : isDl.sel} ${nDate}건${nChk ? ` + 체크한 행 ${nChk}건` : ''}을 받았어요.${un.length ? ` (체크 ${un.length}건 해제)` : ''}`, 'success');
       };
       if (fmt === 'all') { isDownloadRows(rows, `${label}_특이사항_${tag}`); isCloseDlFmt(); isCloseDl(); done(); return; }
