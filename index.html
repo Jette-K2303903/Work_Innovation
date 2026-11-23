@@ -85,6 +85,23 @@
     #isSuggest .it { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 8px; cursor: pointer; font-size: 12.5px; }
     #isSuggest .it.on, #isSuggest .it:hover { background: #EFF6FF; }
     body.is-fullview #ibLauncher, body.is-fullview #ibPanel, body.is-fullview #ibBtn { display: none !important; }
+    /* 새 버전 알림 (때때) : 확대 상태에서도 보임 */
+    #upNote { position: fixed; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 84px); z-index: 48; display: flex; align-items: flex-end; gap: 10px; pointer-events: none; }
+    @media (min-width: 1024px) { #upNote { right: 24px; bottom: 24px; } }
+    #upNote > * { pointer-events: auto; }
+    #upNote .up-ava { position: relative; width: 56px; height: 56px; border-radius: 999px; background: #fff; box-shadow: 0 10px 24px rgba(0,0,0,.16); outline: 1px solid rgba(0,0,0,.05); display: flex; align-items: center; justify-content: center; flex: none; cursor: pointer; animation: upPop .5s cubic-bezier(.2,.9,.25,1.3) both; }
+    @media (min-width: 1024px) { #upNote .up-ava { width: 60px; height: 60px; } }
+    #upNote .up-ava img { width: 50px; height: 50px; border-radius: 999px; }
+    @media (min-width: 1024px) { #upNote .up-ava img { width: 54px; height: 54px; } }
+    #upNote .up-new { position: absolute; top: -9px; right: -6px; padding: 1px 6px; border-radius: 999px; background: #FF3B30; color: #fff; font-size: 10.5px; font-weight: 800; letter-spacing: .02em; box-shadow: 0 2px 6px rgba(255,59,48,.4); animation: upBounce 1.6s ease-in-out infinite; }
+    #upNote .up-min { position: absolute; top: -6px; left: -6px; width: 20px; height: 20px; border-radius: 999px; background: #fff; color: #636366; border: 1px solid #D1D1D6; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; line-height: 1; box-shadow: 0 2px 6px rgba(0,0,0,.12); cursor: pointer; }
+    #upNote .up-min:hover { background: #F2F2F7; color: #000; }
+    #upNote .up-bub { max-width: 270px; margin-bottom: 8px; background: #fff; border-radius: 18px 18px 4px 18px; box-shadow: 0 10px 28px rgba(0,0,0,.16); outline: 1px solid rgba(0,0,0,.05); padding: 10px 13px; font-size: 13px; color: #1C1C1E; cursor: pointer; animation: upPop .45s .1s cubic-bezier(.2,.9,.25,1.3) both; }
+    #upNote .up-bub b { color: #007AFF; }
+    @keyframes upPop { from { opacity: 0; transform: scale(.5); } to { opacity: 1; transform: scale(1); } }
+    @keyframes upBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+    @media (prefers-reduced-motion: reduce) { #upNote .up-ava, #upNote .up-bub, #upNote .up-new { animation: none !important; } }
+    @media print { #upNote { display: none !important; } }
     #issueSheetViewArea.is-full { position: fixed !important; inset: 0; z-index: 45; background: #F2F2F7; padding: 12px 16px !important; }
     .is-pv th, .is-pv td { border: 1px solid #E5E7EB; padding: 7px 10px; font-size: 12px; white-space: nowrap; }
     .is-pv thead th { background: #F3F4F6; color: #374151; font-weight: 800; }
@@ -1552,7 +1569,7 @@
         <input type="date" id="isOutDate" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[14px] border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
         <label class="block mt-3 text-[12px] font-semibold text-gray-600">출고매장</label>
         <div class="relative">
-          <input type="text" id="isOutStore" oninput="isOutStoreInput()" autocomplete="off" placeholder="매장명" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[14px] border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
+          <input type="text" id="isOutStore" oninput="isOutStoreInput()" autocomplete="off" placeholder="매장명 (비우면 - 로 저장)" class="mt-1 w-full px-3 py-2.5 bg-gray-100 rounded-xl text-[14px] border border-gray-200 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200">
           <div id="isOutSug" class="hidden absolute left-0 right-0 top-full mt-1 z-10 max-h-[220px] overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-xl"></div>
         </div>
         <div class="grid grid-cols-2 gap-2 mt-4">
@@ -2376,7 +2393,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5">제때 밀양센터 물류관리 v2.26.11.073</p>
+            <p class="text-xs text-gray-500 mt-0.5" style="cursor:pointer" onclick="upOpenLog()">제때 밀양센터 물류관리 v2.26.11.074</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -11308,9 +11325,8 @@
     }
     async function omSaveEdit() {
       const m = isEl('omEdit'), id = +m.dataset.id, r = omSt.rows.find(x => x.id === id); if (!r) return;
-      const v = { out_date: isEl('omEDate').value, out_store: isEl('omEStore').value.trim(), qty: isEl('omEQty').value.trim(), note: isEl('omENote').value.trim() || null };
+      const v = { out_date: isEl('omEDate').value, out_store: isEl('omEStore').value.trim() || '-', qty: isEl('omEQty').value.trim(), note: isEl('omENote').value.trim() || null };
       if (!v.out_date) { showToastNotification('입력 확인', '출고일자를 넣어 주세요.', 'warning'); return; }
-      if (!v.out_store) { showToastNotification('입력 확인', '출고매장을 넣어 주세요.', 'warning'); return; }
       const a = isQtyNum(r.qty), b = isQtyNum(v.qty);
       if (!v.qty || (b != null && b <= 0)) { showToastNotification('입력 확인', '수량은 0보다 커야 해요. 전부 되돌리려면 출고취소를 써 주세요.', 'warning'); return; }
       showBusy('출고 기록 저장 중...');
@@ -11343,9 +11359,8 @@
       finally { hideBusy(); omLoad(); }
     }
     async function isOutSave() {
-      const d = isEl('isOutDate').value, st = isEl('isOutStore').value.trim();
+      const d = isEl('isOutDate').value, st = isEl('isOutStore').value.trim() || '-';     // 출고매장을 비우면 '-'
       if (!d) { isEl('isOutDate').focus(); return; }
-      if (!st) { showToastNotification('출고매장', '출고매장을 입력해 주세요.', 'warning'); isEl('isOutStore').focus(); return; }
       const qty = {};
       for (const inp of isEl('isOutList').querySelectorAll('[data-out-qty]')) {          // 몇 개 출고할지 (1 ~ 전체)
         const v = parseFloat(inp.value), max = parseFloat(inp.max);
@@ -14815,6 +14830,161 @@
       { label: '부서활동비 얼마나 남았어?', action: 'say' },
       { label: '사용 방법 알려주세요', action: 'help' }
     ];
+
+    // ===== 새 버전 알림 (때때가 알려줌) · 업데이트 내역 =====
+    //  · 1~2분마다(그리고 화면으로 돌아올 때) 서버의 최신 버전을 확인 + 업로드 직후 실시간 신호(app-version)
+    //  · 강제 새로고침은 하지 않음 : 저장하지 않은 내용이 있으면 한 번 더 확인
+    const APP_VER = 'v2.26.11.074';
+    const APP_CHANGES = [
+      ['2026-08-14','최초','홈페이지 첫 업로드'],
+      ['2026-11-11','이전','기사님 페이지·실시간 대시보드·위치 공유, 특이사항 관리(실시간 협업 시트) 추가'],
+      ['2026-11-11','012','버전 표기 시작 (제때 밀양센터 물류관리)'],
+      ['2026-11-11','013','제품정보·매장정보 업로드, 특이사항 자동 채움 보충'],
+      ['2026-11-11','019','모바일 키보드가 뜰 때 화면이 비는 현상 대응'],
+      ['2026-11-11','020','때때 사진 판단 → 유형 선택 → 자동 등록'],
+      ['2026-11-12','021','때때 여러 제품 행 등록, 사이트 도우미'],
+      ['2026-11-12','022','메인센터 수기 입력·추천, 매장정보 주소 칸'],
+      ['2026-11-12','023','데이터 업로드 칸 안 줄바꿈 인식, 글자색 필터'],
+      ['2026-11-12','024','때때 자유 인사, 예산·배차 조회'],
+      ['2026-11-12','025','특이사항 관리 대용량 최적화'],
+      ['2026-11-12','026','칸 추천, 상세내용 줄바꿈(Alt+Enter), 다운로드 달력'],
+      ['2026-11-12','027','드래그한 글자 서식, 굵게(Ctrl+B)'],
+      ['2026-11-12','028','적용(체크 행 → 탭), 탭 출고, 현장 접수 확정·취소'],
+      ['2026-11-12','029','고객사별 다운로드 양식, 원앤원 재고'],
+      ['2026-11-12','030','유통물류·웰스토리 다운로드 서식 보완'],
+      ['2026-11-12','031','필터 검색 바로 적용, 30분 자리 비움 표시'],
+      ['2026-11-12','032','유통물류 오산·이천 목록 분리, 출고 기록 다운로드'],
+      ['2026-11-12','033','업로드 내역 삭제 대기 표시, 다운로드 사진 2장'],
+      ['2026-11-12','034','미처리 토글, 인수인계 탭(시트·인쇄)'],
+      ['2026-11-12','035','때때 차감이고 기록·원복, 탭 목록 쪽 나눔'],
+      ['2026-11-12','036','인수인계 기본 칸, 자동 완성 문구'],
+      ['2026-11-17','037','홈 맨 아래 유지, 파렛트 15개씩, 엑셀 사진 확대'],
+      ['2026-11-17','038','저장 후 위치 유지, 엑셀 사진 확대 메모 수정'],
+      ['2026-11-17','039','화면 확대·축소, 다운로드 후 체크 자동 해제'],
+      ['2026-11-17','040','탭·인수인계 실시간 연동'],
+      ['2026-11-17','041','다운로드에 체크한 행 포함, 버튼별 건수'],
+      ['2026-11-17','042','인수인계 인쇄 머리말, A4 한 장'],
+      ['2026-11-17','043','때때 등록 표시, 여러 칸 선택, 인수인계 머리말 수정'],
+      ['2026-11-17','044','원앤원 재고 직접 수정'],
+      ['2026-11-17','045','웰스토리·유통물류·원앤원 다운로드 분리, 칸 이름 눌러 필터'],
+      ['2026-11-17','046','엑셀 매크로 파일, 사진 붙여넣기 버튼'],
+      ['2026-11-17','047','사진 버튼 오류 수정, 확대 시 때때 숨김'],
+      ['2026-11-17','048','한글 첫 글자 조합 수정, 적용하면 자동 저장'],
+      ['2026-11-17','049','인수인계 앞 출고일 복사본, 최소주문금액 문구'],
+      ['2026-11-17','050','인수인계 불러오기, 자료등록 수량+단위'],
+      ['2026-11-17','051','탭 개별 체크 출고, 개별 불러오기'],
+      ['2026-11-17','052','출고 수량 지정, 남은 수량 유지'],
+      ['2026-11-17','053','때때 출고매장 추천'],
+      ['2026-11-17','054','때때 차감이고 바로 사용'],
+      ['2026-11-17','055','수정 기록 상세 팝업'],
+      ['2026-11-18','056','엑셀 개인 정보 경고 제거, 유통물류 칸 너비'],
+      ['2026-11-18','057','유통물류·원앤원 마우스 올리면 사진 확대(매크로)'],
+      ['2026-11-18','058','사진 지우면 확대 사진도 정리, M열 가운데'],
+      ['2026-11-18','059','최소주문금액 두 줄, 추천 목록 위로 표시'],
+      ['2026-11-18','060','웰스토리 메일 주소 관리, 메일발송 시트'],
+      ['2026-11-18','061','메일 설정, Outlook 메일 보내기 매크로'],
+      ['2026-11-18','062','팝업 창 안을 눌러도 닫히지 않게'],
+      ['2026-11-18','063','메일 설정 입력칸 수정, 메일 주소 전체삭제'],
+      ['2026-11-18','064','제품정보 업로드 G열 단위'],
+      ['2026-11-18','065','특이사항 단위 자동 입력 보충'],
+      ['2026-11-18','066','제품정보 검색·추천·수정'],
+      ['2026-11-20','067','업로드 내역 실시간 동기화, 삭제 요청 알림'],
+      ['2026-11-20','068','접속자 화면 따라가기, 하얀 화면 개선'],
+      ['2026-11-22','069','인수인계 일요일 제외, 붙여넣기·Ctrl+C·Alt+Enter 개선'],
+      ['2026-11-23','070','특이사항 없는 날도 빈 양식 다운로드'],
+      ['2026-11-23','071','필터·미처리 후 빈 화면 수정'],
+      ['2026-11-23','072','편집 칸이 길어지면 자동 스크롤'],
+      ['2026-11-23','073','출고취소·출고 기록 수정'],
+      ['2026-11-23','074','새 버전 알림(때때)·업데이트 내역, 출고매장 비우면 - 로 저장'],
+    ];
+    const upSt = { ver: null, note: '', open: false, ch: null };
+    const upVerNum = (v) => String(v || '').replace(/^v/, '');
+    function upSnoozed(ver) { try { const x = JSON.parse(sessionStorage.getItem('up_snooze') || 'null'); return x && x.ver === ver && Date.now() < x.until; } catch (e) { return false; } }
+    function upFound(ver, note) {
+      if (!ver || upVerNum(ver) <= upVerNum(APP_VER)) return;
+      if (upSt.ver !== ver) { upSt.ver = ver; upSt.note = note || ''; upSt.open = false; }
+      else if (note) upSt.note = note;
+      upRender();
+    }
+    async function upCheck() {
+      if (document.hidden) return;
+      try {
+        const res = await fetch(location.pathname + '?_vc=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) return;
+        const html = await res.text();
+        const m = /물류관리 (v2\.\d{2}\.\d{2}\.\d{3})/.exec(html); if (!m) return;
+        const num = m[1].split('.').pop();
+        const n = new RegExp("\\['\\d{4}-\\d{2}-\\d{2}','" + num + "','([^']*)'\\]").exec(html);
+        upFound(m[1], n ? n[1] : '');
+      } catch (e) {}
+    }
+    function upListen() {
+      if (upSt.ch || !supabaseClient || !supabaseClient.channel) return;
+      try {
+        upSt.ch = supabaseClient.channel('app-version').on('broadcast', { event: 'release' }, (msg) => { const p = (msg && msg.payload) || {}; upFound(p.ver, p.note); })
+          .subscribe((st) => { if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT' || st === 'CLOSED') { try { supabaseClient.removeChannel(upSt.ch); } catch (e) {} upSt.ch = null; } });
+      } catch (e) { upSt.ch = null; }
+    }
+    function upEl() {
+      let w = document.getElementById('upNote'); if (w) return w;
+      w = document.createElement('div'); w.id = 'upNote'; w.className = 'hidden';
+      w.addEventListener('click', (e) => {
+        const a = e.target.closest('[data-up]'); if (!a) return;
+        const k = a.dataset.up;
+        if (k === 'min' || k === 'later') upLater();
+        else if (k === 'reload') upReload();
+        else if (k === 'open') { upSt.open = !upSt.open; upRender(); }
+      });
+      document.body.appendChild(w);
+      return w;
+    }
+    function upRender() {
+      const w = upEl();
+      const show = !!upSt.ver && !upSnoozed(upSt.ver);
+      w.classList.toggle('hidden', !show); w.style.display = show ? '' : 'none';
+      if (!show) return;
+      const bub = upSt.open
+        ? `<div class="up-bub" style="cursor:default"><div class="text-[13.5px] font-bold text-gray-900">새 버전이 올라왔어요 🎉</div>
+             <div class="mt-0.5 text-[12px] text-gray-500">${svEsc(APP_VER)} → <b>${svEsc(upSt.ver)}</b></div>
+             ${upSt.note ? `<div class="mt-1.5 text-[12.5px] text-gray-800 leading-snug">${svEsc(upSt.note)}</div>` : ''}
+             <div class="mt-2.5 flex gap-1.5"><button type="button" data-up="later" class="flex-1 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-[12px] font-bold">나중에</button><button type="button" data-up="reload" class="flex-[2] py-1.5 rounded-lg bg-[#007AFF] text-white text-[12px] font-bold">지금 새로고침</button></div></div>`
+        : `<div class="up-bub" data-up="open">새로운 알림이 있어요.</div>`;
+      w.innerHTML = bub + `<div class="up-ava" data-up="open" title="때때 · 새 버전 알림"><img src="assets/ttaettae-icon.svg" alt=""><span class="up-new">New</span><span class="up-min" data-up="min" title="나중에">−</span></div>`;
+    }
+    function upLater() {
+      try { sessionStorage.setItem('up_snooze', JSON.stringify({ ver: upSt.ver, until: Date.now() + 10 * 60000 })); } catch (e) {}
+      upSt.open = false; upRender();
+      setTimeout(upRender, 10 * 60000 + 500);                               // 10분 뒤 다시 알려 줌
+    }
+    function upUnsaved() {
+      try { return (isState.drafts && isState.drafts.size > 0) || !!isState.edit || !!(typeof hoSt !== 'undefined' && hoSt.edit); } catch (e) { return false; }
+    }
+    function upReload() {
+      const go = () => location.reload();
+      if (upUnsaved()) showConfirmModal(go, '새로고침', '저장하지 않은 내용이 있어요. 새로고침하면 사라져요.<br>계속할까요?');
+      else go();
+    }
+    // 업데이트 내역 (메뉴의 버전 글자를 누르면)
+    function upOpenLog() {
+      let m = document.getElementById('upLogModal');
+      if (!m) {
+        m = document.createElement('div'); m.id = 'upLogModal';
+        m.style.cssText = 'position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.42);display:none;align-items:center;justify-content:center;padding:16px';
+        const byDate = new Map(); [...APP_CHANGES].reverse().forEach(([d, v, t]) => { if (!byDate.has(d)) byDate.set(d, []); byDate.get(d).push([v, t]); });
+        m.innerHTML = `<div style="background:#fff;border-radius:24px;width:100%;max-width:520px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden" class="shadow-2xl">
+            <div class="px-5 pt-4 pb-3 border-b border-gray-100 flex items-center gap-2.5"><img src="assets/ttaettae-icon.svg" alt="" class="w-8 h-8 rounded-full flex-none"><div class="flex-1 min-w-0"><h3 class="text-[16px] font-bold text-gray-900">업데이트 내역</h3><p class="text-[11.5px] text-gray-500">지금 버전 ${svEsc(APP_VER)}</p></div><button type="button" data-up-close class="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex-none"><i class="ph-bold ph-x"></i></button></div>
+            <div class="px-5 py-3 overflow-y-auto">${[...byDate.entries()].map(([d, list]) => `<div class="mb-3"><div class="text-[12px] font-bold text-[#007AFF] mb-1">${svEsc(d)}</div>${list.map(([v, t]) => `<div class="flex gap-2 py-0.5 text-[12.5px]"><span class="flex-none w-[58px] font-mono text-[11px] text-gray-400 pt-[2px]">${/^\d+$/.test(v) ? '.' + svEsc(v) : svEsc(v)}</span><span class="text-gray-800 leading-snug">${svEsc(t)}</span></div>`).join('')}</div>`).join('')}</div></div>`;
+        xlModalGuard(m, () => { m.style.display = 'none'; });
+        m.firstElementChild.addEventListener('click', (e) => { if (e.target.closest('[data-up-close]')) m.style.display = 'none'; });
+        document.body.appendChild(m);
+      }
+      m.style.display = 'flex';
+    }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const m = document.getElementById('upLogModal'); if (m && m.style.display === 'flex') m.style.display = 'none'; } });
+    setTimeout(() => { upListen(); upCheck(); }, 4000);
+    setInterval(() => { upListen(); upCheck(); }, 90000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) upCheck(); });
+    window.addEventListener('focus', () => upCheck());
     // PC(넓은 화면) + 사무실 로그인일 때 어느 화면에서나 오른쪽 아래 때때 아이콘 표시
     function ibUpdateLauncher() {
       const on = isLoggedIn && currentRole === 'office';
