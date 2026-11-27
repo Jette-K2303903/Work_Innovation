@@ -2393,7 +2393,7 @@
         <div class="px-5 pt-8 pb-4 flex items-center justify-between border-b border-[#E5E5EA] bg-white">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-gray-900">전체 메뉴</h2>
-            <p class="text-xs text-gray-500 mt-0.5" style="cursor:pointer" onclick="upOpenLog()">제때 밀양센터 물류관리 v2.26.11.074</p>
+            <p class="text-xs text-gray-500 mt-0.5" style="cursor:pointer" onclick="upOpenLog()">제때 밀양센터 물류관리 v2.26.11.075</p>
           </div>
           <button id="menuCloseBtn" type="button" class="ios-btn-tap w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
             <i class="ph-bold ph-x text-base"></i>
@@ -12242,8 +12242,34 @@
       root.innerHTML = `<div style="zoom:${hoZoom()}">${hoSheetHtml(true)}</div>`;
       document.body.classList.add('ho-printing');
     }
-    function hoPrint() { hoCommitEdit(); hoBuildPrint(); setTimeout(() => window.print(), 50); }
-    window.addEventListener('beforeprint', () => { if (isState.tab === 'handover' && !isEl('issueSheetViewArea').classList.contains('hidden')) hoBuildPrint(); });
+    // 인쇄 : 인수인계 내용만 담은 작은 인쇄 전용 창(iframe)으로 인쇄 → 사이트 전체(특이사항 수천 행 · 숨은 화면)를 인쇄 미리보기에 복사하지 않아
+    //        메모리 부족으로 브라우저 탭이 멈추거나 '오류' 후 새로고침되는 것을 막음. 안 되면 예전 방식으로
+    let hoPrinting = false;
+    function hoPrint() {
+      if (hoPrinting) return;
+      hoCommitEdit();
+      const z = hoZoom();
+      const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>인수인계 ${svEsc(hoSt.date || '')}</title>
+        <style>@page { size: A4 portrait; margin: 0 0.1in; } html, body { margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .ho-noprint { display: none !important; }</style>
+        </head><body><div style="zoom:${z}">${hoSheetHtml(true)}</div></body></html>`;
+      const old = isEl('hoPrintFrame'); if (old) old.remove();
+      const f = document.createElement('iframe'); f.id = 'hoPrintFrame'; f.setAttribute('aria-hidden', 'true');
+      f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none';
+      document.body.appendChild(f);
+      const fallback = () => { try { f.remove(); } catch (e) {} hoBuildPrint(); setTimeout(() => window.print(), 50); };
+      try {
+        const w = f.contentWindow, d = w.document;
+        d.open(); d.write(html); d.close();
+        hoPrinting = true;
+        const done = () => { hoPrinting = false; setTimeout(() => { try { f.remove(); } catch (e) {} }, 800); };
+        w.addEventListener('afterprint', done);
+        setTimeout(() => {
+          try { w.focus(); w.print(); } catch (e) { hoPrinting = false; fallback(); return; }
+          setTimeout(() => { if (hoPrinting) done(); }, 60000);              // afterprint 가 안 와도 정리
+        }, 120);
+      } catch (e) { hoPrinting = false; fallback(); }
+    }
+    window.addEventListener('beforeprint', () => { if (!hoPrinting && isState.tab === 'handover' && !isEl('issueSheetViewArea').classList.contains('hidden')) hoBuildPrint(); });   // 브라우저 메뉴로 인쇄한 경우
     window.addEventListener('afterprint', () => { document.body.classList.remove('ho-printing'); const r = isEl('hoPrintRoot'); if (r) r.innerHTML = ''; });
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'p' && isState.tab === 'handover' && !isEl('issueSheetViewArea').classList.contains('hidden')) { e.preventDefault(); hoPrint(); }
@@ -14834,7 +14860,7 @@
     // ===== 새 버전 알림 (때때가 알려줌) · 업데이트 내역 =====
     //  · 1~2분마다(그리고 화면으로 돌아올 때) 서버의 최신 버전을 확인 + 업로드 직후 실시간 신호(app-version)
     //  · 강제 새로고침은 하지 않음 : 저장하지 않은 내용이 있으면 한 번 더 확인
-    const APP_VER = 'v2.26.11.074';
+    const APP_VER = 'v2.26.11.075';
     const APP_CHANGES = [
       ['2026-08-14','최초','홈페이지 첫 업로드'],
       ['2026-11-11','이전','기사님 페이지·실시간 대시보드·위치 공유, 특이사항 관리(실시간 협업 시트) 추가'],
@@ -14896,6 +14922,7 @@
       ['2026-11-23','072','편집 칸이 길어지면 자동 스크롤'],
       ['2026-11-23','073','출고취소·출고 기록 수정'],
       ['2026-11-23','074','새 버전 알림(때때)·업데이트 내역, 출고매장 비우면 - 로 저장'],
+      ['2026-11-27','075','인수인계 인쇄를 인쇄 전용 창으로 (인쇄 중 오류 방지)'],
     ];
     const upSt = { ver: null, note: '', open: false, ch: null };
     const upVerNum = (v) => String(v || '').replace(/^v/, '');
